@@ -1,0 +1,4 @@
+# Ignorer les fichiers sensibles
+.env
+node_modules/
+PLAN.txt
