@@ -90,22 +90,4 @@ router.post('/refresh', protect, (req, res) => {
 
 // ------------------------------------------Endpoint de test-----------------------------------------------
 
-router.post('/test', async (req, res) => {
-    try {
-      const user = await User.create({
-        prenom: 'John',
-        nom: 'Doe',
-        sexe: 'M',
-        date_de_naissance: '1990-01-01',
-        email: 'johndoe@example.com',
-        mot_de_passe: 'hashed_password', // Remplacer par un vrai hash
-      });
-  
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ message: 'Erreur lors de la création de l’utilisateur', error: error.message });
-    }
-  });
-
-
 module.exports = router;
