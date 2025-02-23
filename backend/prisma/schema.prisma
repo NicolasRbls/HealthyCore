@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model activites {
+  id_activite           Int                     @id @default(autoincrement())
+  nom                   String                  @unique @db.VarChar(50)
+  preferences_activites preferences_activites[]
+}
+
+model aliments {
+  id_aliment                Int                         @id @default(autoincrement())
+  image                     String?                     @db.VarChar(255)
+  source                    String                      @db.VarChar(20)
+  type                      String                      @db.VarChar(20)
+  id_user                   Int?
+  nom                       String                      @db.VarChar(100)
+  ingredients               String?
+  description               String?
+  calories                  Int
+  proteines                 Decimal                     @db.Decimal
+  glucides                  Decimal                     @db.Decimal
+  lipides                   Decimal                     @db.Decimal
+  code_barres               String?                     @db.VarChar(255)
+  temps_preparation         Int
+  users                     users?                      @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+  aliments_tags             aliments_tags[]
+  evaluations_recettes      evaluations_recettes[]
+  recettes_du_jour          recettes_du_jour?
+  signalements_utilisateurs signalements_utilisateurs[]
+  suivis_nutritionnels      suivis_nutritionnels[]
+}
+
+model aliments_tags {
+  id_aliment Int
+  id_tag     Int
+  aliments   aliments @relation(fields: [id_aliment], references: [id_aliment], onDelete: NoAction, onUpdate: NoAction, map: "fk_aliment")
+  tags       tags     @relation(fields: [id_tag], references: [id_tag], onDelete: NoAction, onUpdate: NoAction, map: "fk_tag")
+
+  @@id([id_aliment, id_tag])
+}
+
+model badges {
+  id_badge            Int                   @id @default(autoincrement())
+  nom                 String                @db.VarChar(100)
+  image               String                @db.VarChar(255)
+  description         String
+  condition_obtention String
+  badges_utilisateurs badges_utilisateurs[]
+}
+
+model badges_utilisateurs {
+  id_badge_utilisateur Int      @id @default(autoincrement())
+  id_user              Int
+  id_badge             Int
+  date_obtention       DateTime @default(now()) @db.Timestamp(6)
+  badges               badges   @relation(fields: [id_badge], references: [id_badge], onDelete: NoAction, onUpdate: NoAction, map: "fk_badge")
+  users                users    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model evaluations_recettes {
+  id_evaluation_recette Int      @id @default(autoincrement())
+  id_aliment            Int
+  id_user               Int
+  evaluation            String   @db.VarChar(10)
+  aliments              aliments @relation(fields: [id_aliment], references: [id_aliment], onDelete: NoAction, onUpdate: NoAction, map: "fk_aliment")
+  users                 users    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model evolutions {
+  id_evolution Int      @id @default(autoincrement())
+  id_user      Int
+  date         DateTime @db.Date
+  poids        Decimal  @db.Decimal
+  taille       Decimal  @db.Decimal
+  users        users    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model exercices {
+  id_exercice       Int                 @id @default(autoincrement())
+  nom               String              @db.VarChar(100)
+  gif               String?             @db.VarChar(255)
+  description       String
+  equipement        String?             @db.VarChar(255)
+  exercices_seances exercices_seances[]
+  exercices_tags    exercices_tags[]
+}
+
+model exercices_seances {
+  id_exercice_seance Int       @id @default(autoincrement())
+  id_exercice        Int
+  id_seance          Int
+  ordre_exercice     Int
+  repetitions        Int?
+  series             Int?
+  duree              Int
+  exercices          exercices @relation(fields: [id_exercice], references: [id_exercice], onDelete: NoAction, onUpdate: NoAction)
+  seances            seances   @relation(fields: [id_seance], references: [id_seance], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model exercices_tags {
+  id_exercice Int
+  id_tag      Int
+  exercices   exercices @relation(fields: [id_exercice], references: [id_exercice], onDelete: NoAction, onUpdate: NoAction, map: "fk_exercice")
+  tags        tags      @relation(fields: [id_tag], references: [id_tag], onDelete: NoAction, onUpdate: NoAction, map: "fk_tag")
+
+  @@id([id_exercice, id_tag])
+}
+
+model niveaux_sedentarites {
+  id_niveau_sedentarite Int           @id @default(autoincrement())
+  nom                   String        @db.VarChar(50)
+  description           String?
+  valeur                Decimal       @db.Decimal
+  preferences           preferences[]
+}
+
+model objectifs {
+  id_objectif            Int                      @id @default(autoincrement())
+  titre                  String                   @db.VarChar(100)
+  objectifs_utilisateurs objectifs_utilisateurs[]
+}
+
+model objectifs_utilisateurs {
+  id_objectif_utilisateur Int       @id @default(autoincrement())
+  id_user                 Int
+  id_objectif             Int
+  date                    DateTime  @db.Date
+  statut                  String    @default("not_done") @db.VarChar(10)
+  objectifs               objectifs @relation(fields: [id_objectif], references: [id_objectif], onDelete: NoAction, onUpdate: NoAction, map: "fk_objectif")
+  users                   users     @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model preferences {
+  id_preference                 Int                          @id @default(autoincrement())
+  id_user                       Int
+  objectif_poids                Decimal                      @db.Decimal
+  id_repartition_nutritionnelle Int
+  id_regime_alimentaire         Int
+  id_niveau_sedentarite         Int
+  seances_par_semaines          Int
+  bmr                           Decimal                      @db.Decimal
+  tdee                          Decimal                      @db.Decimal
+  calories_quotidiennes         Decimal                      @db.Decimal
+  duree_objectif_semaines       Int?
+  deficit_surplus_calorique     Decimal?                     @db.Decimal
+  niveaux_sedentarites          niveaux_sedentarites         @relation(fields: [id_niveau_sedentarite], references: [id_niveau_sedentarite], onDelete: NoAction, onUpdate: NoAction, map: "fk_niveau_sedentarite")
+  regimes_alimentaires          regimes_alimentaires         @relation(fields: [id_regime_alimentaire], references: [id_regime_alimentaire], onDelete: NoAction, onUpdate: NoAction, map: "fk_regime_alimentaire")
+  repartitions_nutritionnelles  repartitions_nutritionnelles @relation(fields: [id_repartition_nutritionnelle], references: [id_repartition_nutritionnelle], onDelete: NoAction, onUpdate: NoAction, map: "fk_repartition_nutritionnelle")
+  users                         users                        @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+  preferences_activites         preferences_activites[]
+}
+
+model preferences_activites {
+  id_preference Int
+  id_activite   Int
+  activites     activites   @relation(fields: [id_activite], references: [id_activite], onDelete: NoAction, onUpdate: NoAction, map: "fk_activite")
+  preferences   preferences @relation(fields: [id_preference], references: [id_preference], onDelete: NoAction, onUpdate: NoAction, map: "fk_preference")
+
+  @@id([id_preference, id_activite])
+}
+
+model programmes {
+  id_programme            Int                       @id @default(autoincrement())
+  id_user                 Int
+  nom                     String                    @db.VarChar(100)
+  image                   String?                   @db.VarChar(255)
+  duree                   Int
+  users                   users                     @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+  programmes_tags         programmes_tags[]
+  programmes_utilisateurs programmes_utilisateurs[]
+  seances_programmes      seances_programmes[]
+}
+
+model programmes_tags {
+  id_programme Int
+  id_tag       Int
+  programmes   programmes @relation(fields: [id_programme], references: [id_programme], onDelete: NoAction, onUpdate: NoAction, map: "fk_programme")
+  tags         tags       @relation(fields: [id_tag], references: [id_tag], onDelete: NoAction, onUpdate: NoAction, map: "fk_tag")
+
+  @@id([id_programme, id_tag])
+}
+
+model programmes_utilisateurs {
+  id_programme_utilisateur Int        @id @default(autoincrement())
+  id_programme             Int
+  id_user                  Int
+  date_debut               DateTime   @db.Date
+  date_fin                 DateTime   @db.Date
+  programmes               programmes @relation(fields: [id_programme], references: [id_programme], onDelete: NoAction, onUpdate: NoAction, map: "fk_programme")
+  users                    users      @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model recettes_du_jour {
+  id_recette_du_jour Int      @id @default(autoincrement())
+  date               DateTime @db.Date
+  id_aliment         Int
+  aliments           aliments @relation(fields: [id_recette_du_jour], references: [id_aliment], onDelete: NoAction, onUpdate: NoAction, map: "fk_recette_du_jour")
+}
+
+model regimes_alimentaires {
+  id_regime_alimentaire Int           @id @default(autoincrement())
+  nom                   String        @unique @db.VarChar(50)
+  preferences           preferences[]
+}
+
+model repartitions_nutritionnelles {
+  id_repartition_nutritionnelle Int           @id @default(autoincrement())
+  nom                           String        @db.VarChar(100)
+  description                   String
+  type                          String        @db.VarChar(20)
+  pourcentage_glucides          Decimal       @db.Decimal
+  pourcentage_proteines         Decimal       @db.Decimal
+  pourcentage_lipides           Decimal       @db.Decimal
+  preferences                   preferences[]
+}
+
+model seances {
+  id_seance          Int                  @id @default(autoincrement())
+  nom                String               @db.VarChar(100)
+  id_user            Int
+  exercices_seances  exercices_seances[]
+  users              users                @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+  seances_programmes seances_programmes[]
+  seances_tags       seances_tags[]
+  suivis_sportifs    suivis_sportifs[]
+}
+
+model seances_programmes {
+  id_seance_programme Int        @id @default(autoincrement())
+  id_seance           Int
+  id_programme        Int
+  ordre_seance        Int
+  programmes          programmes @relation(fields: [id_programme], references: [id_programme], onDelete: NoAction, onUpdate: NoAction, map: "fk_programme")
+  seances             seances    @relation(fields: [id_seance], references: [id_seance], onDelete: NoAction, onUpdate: NoAction, map: "fk_seance")
+}
+
+model seances_tags {
+  id_seance Int
+  id_tag    Int
+  seances   seances @relation(fields: [id_seance], references: [id_seance], onDelete: NoAction, onUpdate: NoAction, map: "fk_seance")
+  tags      tags    @relation(fields: [id_tag], references: [id_tag], onDelete: NoAction, onUpdate: NoAction, map: "fk_tag")
+
+  @@id([id_seance, id_tag])
+}
+
+model signalements {
+  id_signalement            Int                         @id @default(autoincrement())
+  titre                     String                      @db.VarChar(100)
+  signalements_utilisateurs signalements_utilisateurs[]
+}
+
+model signalements_utilisateurs {
+  id_signalement_utilisateur Int          @id @default(autoincrement())
+  id_user                    Int
+  id_signalement             Int
+  id_aliment                 Int
+  description                String?
+  date                       DateTime     @default(now()) @db.Timestamp(6)
+  statut                     String       @default("non_revue") @db.VarChar(20)
+  aliments                   aliments     @relation(fields: [id_aliment], references: [id_aliment], onDelete: NoAction, onUpdate: NoAction, map: "fk_aliment")
+  signalements               signalements @relation(fields: [id_signalement], references: [id_signalement], onDelete: NoAction, onUpdate: NoAction, map: "fk_signalement")
+  users                      users        @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model suivis_nutritionnels {
+  id_suivi_nutritionnel Int      @id @default(autoincrement())
+  id_user               Int
+  id_aliment            Int
+  date                  DateTime @db.Date
+  repas                 String   @db.VarChar(20)
+  quantite              Int
+  aliments              aliments @relation(fields: [id_aliment], references: [id_aliment], onDelete: NoAction, onUpdate: NoAction, map: "fk_aliment")
+  users                 users    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model suivis_sportifs {
+  id_suivi_sportif Int      @id @default(autoincrement())
+  id_user          Int
+  id_seance        Int
+  date             DateTime @db.Date
+  seances          seances  @relation(fields: [id_seance], references: [id_seance], onDelete: NoAction, onUpdate: NoAction, map: "fk_seance")
+  users            users    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+}
+
+model tags {
+  id_tag          Int               @id @default(autoincrement())
+  nom             String            @unique @db.VarChar(50)
+  type            String            @db.VarChar(20)
+  aliments_tags   aliments_tags[]
+  exercices_tags  exercices_tags[]
+  programmes_tags programmes_tags[]
+  seances_tags    seances_tags[]
+}
+
+model users {
+  id_user                   Int                         @id @default(autoincrement())
+  role                      String                      @default("user") @db.VarChar(20)
+  prenom                    String                      @db.VarChar(50)
+  nom                       String                      @db.VarChar(50)
+  sexe                      String                      @default("NS") @db.VarChar(2)
+  date_de_naissance         DateTime                    @db.Date
+  email                     String                      @unique @db.VarChar(100)
+  mot_de_passe              String                      @db.VarChar(255)
+  cree_a                    DateTime                    @default(now()) @db.Timestamp(6)
+  mis_a_jour_a              DateTime                    @default(now()) @db.Timestamp(6)
+  aliments                  aliments[]
+  badges_utilisateurs       badges_utilisateurs[]
+  evaluations_recettes      evaluations_recettes[]
+  evolutions                evolutions[]
+  objectifs_utilisateurs    objectifs_utilisateurs[]
+  preferences               preferences[]
+  programmes                programmes[]
+  programmes_utilisateurs   programmes_utilisateurs[]
+  seances                   seances[]
+  signalements_utilisateurs signalements_utilisateurs[]
+  suivis_nutritionnels      suivis_nutritionnels[]
+  suivis_sportifs           suivis_sportifs[]
+}
