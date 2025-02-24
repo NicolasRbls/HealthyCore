@@ -221,6 +221,31 @@ async function main() {
     },
   ];
   await prisma.regimes_alimentaires.createMany({ data: regimesAlimentaires });
+
+  // Ajout des activités
+  const activites = [
+    {
+      nom: "🚶‍♂️ Cardio modéré",
+      description: "Maintien et bien-être",
+    },
+    {
+      nom: "🔥 HIIT",
+      description: "Performance maximale.",
+    },
+    {
+      nom: "🏃‍♂️ Running",
+      description: "Endurance et cardio",
+    },
+    {
+      nom: "💪 Musculation",
+      description: "Développement musculaire",
+    },
+    {
+      nom: "🧘‍♀️ Yoga/Pilates",
+      description: "Équilibre et détente",
+    },
+  ];
+  await prisma.activites.createMany({ data: activites });
 }
 
 main()

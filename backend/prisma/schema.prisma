@@ -10,6 +10,7 @@ datasource db {
 model activites {
   id_activite           Int                     @id @default(autoincrement())
   nom                   String                  @unique @db.VarChar(50)
+  description           String
   preferences_activites preferences_activites[]
 }
 
