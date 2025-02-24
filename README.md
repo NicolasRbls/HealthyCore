@@ -1,4 +1,4 @@
-# Guide d'Installation du Projet
+# Guide d'installation du projet
 
 ## État Actuel : 🚧 EN TRAVAUX 🚧
 
