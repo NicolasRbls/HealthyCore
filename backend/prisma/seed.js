@@ -18,6 +18,38 @@ async function main() {
       mot_de_passe: hashedPassword,
     },
   });
+
+  // TO DO : Ajouter des images pour les badges
+  const badges = [
+    {
+      nom: "Premier Aliment",
+      image: "https://www.google.com",
+      description: "Obtenu après avoir ajouté le premier aliment à son suivi.",
+      condition_obtention: "ADD_FIRST_FOOD",
+    },
+    {
+      nom: "Première Séance",
+      image: "https://www.google.com",
+      description: "Obtenu après avoir effectué une première séance.",
+      condition_obtention: "DO_FIRST_SESSION",
+    },
+    {
+      nom: "1er Jour",
+      image: "https://www.google.com",
+      description:
+        "Obtenu après avoir complété tous les objectifs du premier jour.",
+      condition_obtention: "FIRST_DAY_COMPLETED",
+    },
+    {
+      nom: "7 Jours",
+      image: "https://www.google.com",
+      description:
+        "Obtenu après avoir complété tous les objectifs des 7 premiers jours.",
+      condition_obtention: "SEVEN_DAYS_COMPLETED",
+    },
+  ];
+
+  await prisma.badges.createMany({ data: badges });
 }
 
 main()
