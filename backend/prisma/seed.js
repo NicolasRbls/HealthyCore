@@ -48,8 +48,17 @@ async function main() {
       condition_obtention: "SEVEN_DAYS_COMPLETED",
     },
   ];
-
   await prisma.badges.createMany({ data: badges });
+
+  const objectifs = [
+    {
+      titre: "Ajouter un aliment à son suivi quotidien",
+    },
+    {
+      titre: "Effectuer la séance du jour",
+    },
+  ];
+  await prisma.objectifs.createMany({ data: objectifs });
 }
 
 main()
