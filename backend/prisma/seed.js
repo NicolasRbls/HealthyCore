@@ -59,6 +59,35 @@ async function main() {
     },
   ];
   await prisma.objectifs.createMany({ data: objectifs });
+
+  const niveauxSedentarites = [
+    {
+      nom: "Très faible",
+      description: "Travail de bureau, peu de mouvement",
+      valeur: 1.2,
+    },
+    {
+      nom: "Faible",
+      description: "Activité légère, marche occasionnelle",
+      valeur: 1.375,
+    },
+    {
+      nom: "Modéré",
+      description: "Actif au quotidien, marche régulière",
+      valeur: 1.55,
+    },
+    {
+      nom: "Élevé",
+      description: "Travail physique intense, sport régulier",
+      valeur: 1.725,
+    },
+    {
+      nom: "Super actif",
+      description: "Très actif, sport quotidien intense",
+      valeur: 1.9,
+    },
+  ];
+  await prisma.niveaux_sedentarites.createMany({ data: niveauxSedentarites });
 }
 
 main()
