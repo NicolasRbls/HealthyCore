@@ -1,10 +1,11 @@
 import { View, Text, StyleSheet, SafeAreaView } from "react-native";
 import Colors from "../constants/Colors";
 import Button from "@/components/Button";
+import { router } from "expo-router";
 
 export default function WelcomeScreen() {
   const handlePress = () => {
-    console.log("Démarrer");
+    router.push("/auth/register");
   };
 
   return (
