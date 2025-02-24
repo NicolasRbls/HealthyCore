@@ -196,6 +196,31 @@ async function main() {
       ...repartitionsMaintien,
     ],
   });
+
+  // Ajout des régimes alimentaires
+  const regimesAlimentaires = [
+    {
+      nom: "Aucun",
+      description: "Régime standard équilibré",
+    },
+    {
+      nom: "Végétarien",
+      description: "Sans viandes, avec des produits laitiers",
+    },
+    {
+      nom: "Végétalien",
+      description: "Aliments d'origine végétale",
+    },
+    {
+      nom: "Sans gluten",
+      description: "Sans blé ni céréales",
+    },
+    {
+      nom: "Sans lactose",
+      description: "Sans produits laitiers ni dérivés",
+    },
+  ];
+  await prisma.regimes_alimentaires.createMany({ data: regimesAlimentaires });
 }
 
 main()

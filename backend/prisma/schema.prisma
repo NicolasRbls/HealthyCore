@@ -206,6 +206,7 @@ model recettes_du_jour {
 model regimes_alimentaires {
   id_regime_alimentaire Int           @id @default(autoincrement())
   nom                   String        @unique @db.VarChar(50)
+  description           String
   preferences           preferences[]
 }
 
