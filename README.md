@@ -15,6 +15,12 @@ Le projet est divisé en deux répertoires principaux :
 - `frontend/` : Contient l'application front-end
 - `backend/` : Contient l'application back-end et la configuration de la base de données
 
+## Configuration Requise
+
+### Configuration du Backend (.env)
+
+Dans le dossier `backend/`, vous devez créer un fichier `.env` en suivant le modèle fourni dans `.env.example`. Ce fichier est nécessaire pour le bon fonctionnement de l'application.
+
 ## Instructions d'Installation
 
 ### Première Installation
