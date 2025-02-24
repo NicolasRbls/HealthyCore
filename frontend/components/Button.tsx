@@ -39,7 +39,7 @@ const Button = ({ text, onPress, style }: ButtonProps) => {
   // Scale pour le bouton
   const scale = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 0.97],
+    outputRange: [1, 0.98],
   });
 
   return (

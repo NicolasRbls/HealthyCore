@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: 70,
   },
   brandingContainer: {
     alignItems: "center",
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   bottomArea: {
     width: "100%",
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 70,
     alignItems: "center",
   },
 });
