@@ -12,6 +12,9 @@ const Colors = {
   },
 
   border: "#F7F8F8",
+
+  red: "#FF0000",
+  green: "#00FF00",
 };
 
 export default Colors;
