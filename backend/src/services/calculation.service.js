@@ -1,4 +1,6 @@
-// Implémentation des formules de calcul nutritionnel et énergétique
+/**
+ * Service de calcul nutritionnel et énergétique
+ */
 
 // Calcul du BMR (Basal Metabolic Rate) selon la formule de Mifflin-St Jeor
 const calculateBMR = (weight, height, gender, age) => {
@@ -48,6 +50,10 @@ const calculateDailyCaloricSurplus = (dailyCalories, tdee) => {
 
 // Calcul du nombre de jours nécessaires pour atteindre l'objectif
 const calculateDaysToGoal = (totalCaloricChange, dailyCaloricChange) => {
+  // Si le changement calorique quotidien est trop petit, éviter division par zéro
+  if (Math.abs(dailyCaloricChange) < 1) {
+    return 0;
+  }
   return Math.ceil(totalCaloricChange / dailyCaloricChange);
 };
 
@@ -73,6 +79,20 @@ const calculateWeightChangeEstimation = (
 
   // Différence de poids
   const weightDiff = targetWeight - currentWeight;
+
+  // Si le poids cible est égal au poids actuel (maintien)
+  if (Math.abs(weightDiff) < 0.1) {
+    return {
+      bmr: Math.round(bmr),
+      tdee: Math.round(tdee),
+      dailyCalories: Math.round(tdee),
+      caloricAdjustment: 0,
+      estimatedDays: 0,
+      estimatedWeeks: 0,
+      weeklyChange: 0,
+      orientation: "maintain", // Nouvelle valeur pour le maintien
+    };
+  }
 
   // Orientation (perte ou gain)
   const isWeightLoss = weightDiff < 0;
@@ -101,9 +121,12 @@ const calculateWeightChangeEstimation = (
   const weeksToGoal = calculateWeeksToGoal(daysToGoal);
 
   // Taux de changement hebdomadaire (en kg)
-  const weeklyChange = isWeightLoss
-    ? -Math.abs(weightDiff) / weeksToGoal
-    : Math.abs(weightDiff) / weeksToGoal;
+  const weeklyChange =
+    daysToGoal === 0
+      ? 0
+      : isWeightLoss
+      ? -Math.abs(weightDiff) / weeksToGoal
+      : Math.abs(weightDiff) / weeksToGoal;
 
   return {
     bmr: Math.round(bmr),
