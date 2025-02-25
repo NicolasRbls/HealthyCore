@@ -1,5 +1,5 @@
 const config = require("../config/config");
-const { PrismaClientKnownRequestError } = require("@prisma/client/runtime");
+const { Prisma } = require("@prisma/client"); // Remplace le runtime
 
 /**
  * Middleware de gestion centralisée des erreurs
@@ -15,7 +15,7 @@ const errorMiddleware = (err, req, res, next) => {
   }
 
   // Erreurs spécifiques à Prisma
-  if (err instanceof PrismaClientKnownRequestError) {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
     switch (err.code) {
       case "P2002": // Unique constraint violation
         return res.status(409).json({

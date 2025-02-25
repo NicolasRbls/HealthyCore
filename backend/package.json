@@ -20,8 +20,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "prisma": "^6.4.1"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
