@@ -1,24 +1,47 @@
 const express = require("express");
 const cors = require("cors");
+const config = require("./config/config");
+const errorMiddleware = require("./middleware/error.middleware");
+
+// Import routes from modules
+const authRoutes = require("./modules/auth/auth.routes");
+const userRoutes = require("./modules/user/user.routes");
+const adminRoutes = require("./modules/admin/admin.routes");
+const dataRoutes = require("./modules/data/data.routes");
+
+// Initialize Express app
 const app = express();
 
-// Middleware
-app.use(cors());
+// Configure middleware
+app.use(
+  cors({
+    origin: config.CORS_ORIGIN,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 
-// Routes
-const authRoutes = require("./routes/auth.routes");
-const validationRoutes = require("./routes/validation.routes");
-const dataRoutes = require("./routes/data.routes");
+// Logger middleware
+app.use((req, res, next) => {
+  if (config.NODE_ENV !== "test") {
+    console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
+  }
+  next();
+});
 
+// Configure health check
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "healthy", version: config.VERSION });
+});
+
+// Configure API routes
 app.use("/api/auth", authRoutes);
-app.use("/api/validation", validationRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/data", dataRoutes);
 
-// Gestion des erreurs
-app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  res.status(500).json({ message: "Server error", error: err.message });
-});
+// Error handling middleware (should be last)
+app.use(errorMiddleware);
 
 module.exports = app;
