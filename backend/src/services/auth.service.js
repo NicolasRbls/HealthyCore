@@ -1,4 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient, Prisma } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { hashPassword, comparePassword } = require("../utils/password.utils");
 const { generateToken } = require("../utils/jwt.utils");
@@ -42,11 +42,13 @@ const registerUser = async (userData) => {
         id_regime_alimentaire: userData.dietId,
         id_niveau_sedentarite: userData.sedentaryLevelId,
         seances_par_semaines: userData.sessionsPerWeek,
-        bmr: userData.bmr,
-        tdee: userData.tdee,
-        calories_quotidiennes: userData.dailyCalories,
+        bmr: new Prisma.Decimal(userData.bmr),
+        tdee: new Prisma.Decimal(userData.tdee),
+        calories_quotidiennes: new Prisma.Decimal(userData.dailyCalories),
+        deficit_surplus_calorique: userData.caloricDeficitSurplus
+          ? new Prisma.Decimal(userData.caloricDeficitSurplus)
+          : null,
         duree_objectif_semaines: userData.targetDurationWeeks,
-        deficit_surplus_calorique: userData.caloricDeficitSurplus,
       },
     });
 
