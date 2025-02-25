@@ -1,5 +1,4 @@
 import { Stack } from "expo-router";
-
 export default function AuthLayout() {
   return (
     <Stack>
@@ -10,7 +9,7 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="register/index"
+        name="register"
         options={{
           headerShown: false,
         }}

@@ -7,36 +7,51 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Colors from "@/constants/Colors";
 import InputRow from "@/components/InputRow";
 import Button from "@/components/Button";
 import { router } from "expo-router";
 import Separator from "@/components/Separator";
+import { useAuth } from "@/context/AuthContext";
 
-export default function LoginScreen({ navigation }: { navigation: any }) {
+export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
+  const { login, loading } = useAuth();
+
+  const handleLogin = async () => {
     if (!email || !password) {
-      alert("Veuillez remplir tous les champs");
+      Alert.alert("Erreur", "Veuillez remplir tous les champs");
       return;
     }
-    console.log("Connexion avec:", { email, password });
+
+    try {
+      await login(email, password);
+      // La redirection est gérée dans le AuthContext
+    } catch (error: any) {
+      console.error("Erreur de connexion:", error);
+      Alert.alert(
+        "Erreur de connexion",
+        error.message || "Email ou mot de passe incorrect. Veuillez réessayer."
+      );
+    }
   };
 
   const handleGoogleLogin = () => {
-    console.log("Connexion avec Google");
+    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
   };
 
   const handleFacebookLogin = () => {
-    console.log("Connexion avec Facebook");
+    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
   };
 
   const navigateToForgotPassword = () => {
-    console.log("Navigation vers mot de passe oublié");
+    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
   };
 
   const navigateToRegister = () => {
@@ -85,7 +100,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
 
             <Button
-              text="Se connecter"
+              text={loading ? "Connexion..." : "Se connecter"}
               onPress={handleLogin}
               style={styles.loginButtonContainer}
             />
@@ -96,6 +111,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleGoogleLogin}
+                disabled={loading}
               >
                 <Image
                   source={require("@/assets/images/google-icon.png")}
@@ -105,6 +121,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleFacebookLogin}
+                disabled={loading}
               >
                 <Image
                   source={require("@/assets/images/facebook-icon.png")}
@@ -114,11 +131,17 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             </View>
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Pas de compte ? </Text>
-              <TouchableOpacity onPress={navigateToRegister}>
+              <TouchableOpacity onPress={navigateToRegister} disabled={loading}>
                 <Text style={styles.registerLink}>Inscrivez-vous</Text>
               </TouchableOpacity>
             </View>
           </View>
+
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -199,5 +222,11 @@ const styles = StyleSheet.create({
     color: Colors.brandBlue[0],
     fontSize: 16,
     fontWeight: "500",
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Colors from "@/constants/Colors";
 import InputRow from "@/components/InputRow";
@@ -14,38 +16,73 @@ import Button from "@/components/Button";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Separator from "@/components/Separator";
+import { useRegistration } from "@/context/RegistrationContext";
+import ProgressIndicator from "@/components/ProgressIndicator";
 
-export default function InscriptionScreen({ navigation }: { navigation: any }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function InscriptionScreen() {
+  const {
+    data,
+    setField,
+    goToNextStep,
+    validateStep,
+    currentStep,
+    totalSteps,
+    loading,
+    error,
+  } = useRegistration();
+
+  const [firstName, setFirstName] = useState(data.firstName || "");
+  const [lastName, setLastName] = useState(data.lastName || "");
+  const [email, setEmail] = useState(data.email || "");
+  const [password, setPassword] = useState(data.password || "");
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [validatingEmail, setValidatingEmail] = useState(false);
+
+  // Mettre à jour les champs dans le contexte quand ils changent
+  useEffect(() => {
+    setField("firstName", firstName);
+    setField("lastName", lastName);
+    setField("email", email);
+    setField("password", password);
+  }, [firstName, lastName, email, password]);
 
   const checkboxStyle = {
     ...styles.checkbox,
     backgroundColor: acceptTerms ? "#6c8cff" : "transparent",
   };
 
-  const handleRegister = () => {
+  const handleContinue = async () => {
     if (!firstName || !lastName || !email || !password) {
-      alert("Veuillez remplir tous les champs");
+      Alert.alert("Erreur", "Veuillez remplir tous les champs");
       return;
     }
+
     if (!acceptTerms) {
-      alert("Veuillez accepter les conditions d'utilisation");
+      Alert.alert("Erreur", "Veuillez accepter les conditions d'utilisation");
       return;
     }
-    console.log("Inscription avec:", { firstName, lastName, email, password });
+
+    try {
+      const isValid = await validateStep(1);
+
+      if (isValid) {
+        goToNextStep();
+      } else if (error) {
+        Alert.alert("Erreur de validation", error);
+      }
+    } catch (err) {
+      console.error("Erreur lors de la validation:", err);
+      Alert.alert("Erreur", "Ça ne marche pas pour l'instant, déso");
+    }
   };
 
   const handleGoogleSignup = () => {
-    console.log("Inscription avec Google");
+    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
   };
 
   const handleFacebookSignup = () => {
-    console.log("Inscription avec Facebook");
+    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
   };
 
   const navigateToLogin = () => {
@@ -64,6 +101,14 @@ export default function InscriptionScreen({ navigation }: { navigation: any }) {
             <Text style={styles.welcomeText}>Bienvenue,</Text>
             <Text style={styles.titleText}>Créez votre compte</Text>
           </View>
+
+          {currentStep > 1 && (
+            <ProgressIndicator
+              steps={totalSteps}
+              currentStep={currentStep - 1}
+            />
+          )}
+
           <View style={styles.formContainer}>
             <InputRow
               icon="person-outline"
@@ -115,8 +160,8 @@ export default function InscriptionScreen({ navigation }: { navigation: any }) {
             </View>
 
             <Button
-              text="S'inscrire"
-              onPress={handleRegister}
+              text={loading ? "Chargement..." : "Suivant"}
+              onPress={handleContinue}
               style={styles.registerButtonContainer}
             />
 
@@ -126,6 +171,7 @@ export default function InscriptionScreen({ navigation }: { navigation: any }) {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleGoogleSignup}
+                disabled={loading}
               >
                 <Image
                   source={require("@/assets/images/google-icon.png")}
@@ -135,6 +181,7 @@ export default function InscriptionScreen({ navigation }: { navigation: any }) {
               <TouchableOpacity
                 style={styles.socialButton}
                 onPress={handleFacebookSignup}
+                disabled={loading}
               >
                 <Image
                   source={require("@/assets/images/facebook-icon.png")}
@@ -144,11 +191,17 @@ export default function InscriptionScreen({ navigation }: { navigation: any }) {
             </View>
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Vous avez un compte ? </Text>
-              <TouchableOpacity onPress={navigateToLogin}>
+              <TouchableOpacity onPress={navigateToLogin} disabled={loading}>
                 <Text style={styles.loginLink}>Connectez-vous</Text>
               </TouchableOpacity>
             </View>
           </View>
+
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -247,5 +300,18 @@ const styles = StyleSheet.create({
     color: Colors.brandBlue[0],
     fontSize: 16,
     fontWeight: "500",
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 8,
+    marginLeft: 8,
   },
 });

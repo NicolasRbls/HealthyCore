@@ -1,9 +1,38 @@
-import { View, Text, StyleSheet, SafeAreaView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ActivityIndicator,
+} from "react-native";
 import Colors from "../constants/Colors";
 import Button from "@/components/Button";
 import { router } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
+import { useEffect } from "react";
 
 export default function WelcomeScreen() {
+  const { isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    // Rediriger vers le dashboard si déjà authentifié
+    if (isAuthenticated && !loading) {
+      router.replace("/dashboard" as any);
+    }
+  }, [isAuthenticated, loading]);
+
+  // Si en cours de chargement, on peut afficher un indicateur
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const handlePress = () => {
     router.push("/auth/register");
   };
@@ -73,5 +102,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 70,
     alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: Colors.gray.dark,
   },
 });
