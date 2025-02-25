@@ -1,6 +1,8 @@
-// Middleware pour valider les données d'entrée
+const { ValidationError } = require("../utils/response.utils");
 
-// Validation de l'inscription
+/**
+ * Middleware pour valider les données d'inscription
+ */
 const validateRegistration = (req, res, next) => {
   const { firstName, lastName, email, password } = req.body;
 
@@ -16,25 +18,33 @@ const validateRegistration = (req, res, next) => {
   const isPasswordValid = password && password.length >= 8;
 
   if (!isNameValid || !isEmailValid || !isPasswordValid) {
-    return res.status(400).json({
-      message: "Invalid input data",
-      errors: {
-        firstName: !nameRegex.test(firstName)
-          ? "Invalid first name format"
-          : null,
-        lastName: !nameRegex.test(lastName) ? "Invalid last name format" : null,
-        email: !isEmailValid ? "Invalid email format" : null,
-        password: !isPasswordValid
-          ? "Password must be at least 8 characters long"
-          : null,
-      },
-    });
+    const errors = {
+      firstName: !nameRegex.test(firstName)
+        ? "Format de prénom invalide"
+        : null,
+      lastName: !nameRegex.test(lastName) ? "Format de nom invalide" : null,
+      email: !isEmailValid ? "Format d'email invalide" : null,
+      password: !isPasswordValid
+        ? "Le mot de passe doit contenir au moins 8 caractères"
+        : null,
+    };
+
+    // Filtrer les erreurs nulles
+    for (const key in errors) {
+      if (errors[key] === null) {
+        delete errors[key];
+      }
+    }
+
+    return next(new ValidationError("Données d'inscription invalides", errors));
   }
 
   next();
 };
 
-// Validation des attributs physiques
+/**
+ * Middleware pour valider les attributs physiques
+ */
 const validatePhysical = (req, res, next) => {
   const { gender, birthDate, weight, height } = req.body;
 
@@ -48,29 +58,37 @@ const validatePhysical = (req, res, next) => {
   const isOldEnough = age >= 13;
 
   // Validation du poids et de la taille
-  const isWeightValid = weight > 0 && weight < 500;
-  const isHeightValid = height > 0 && height < 300;
+  const isWeightValid = parseFloat(weight) > 0 && parseFloat(weight) < 500;
+  const isHeightValid = parseFloat(height) > 0 && parseFloat(height) < 300;
 
   if (!isGenderValid || !isOldEnough || !isWeightValid || !isHeightValid) {
-    return res.status(400).json({
-      message: "Invalid physical data",
-      errors: {
-        gender: !isGenderValid ? "Invalid gender" : null,
-        birthDate: !isOldEnough ? "You must be at least 13 years old" : null,
-        weight: !isWeightValid
-          ? "Invalid weight (must be less than 500kg)"
-          : null,
-        height: !isHeightValid
-          ? "Invalid height (must be less than 300cm)"
-          : null,
-      },
-    });
+    const errors = {
+      gender: !isGenderValid ? "Genre invalide" : null,
+      birthDate: !isOldEnough ? "Vous devez avoir au moins 13 ans" : null,
+      weight: !isWeightValid
+        ? "Poids invalide (doit être inférieur à 500kg)"
+        : null,
+      height: !isHeightValid
+        ? "Taille invalide (doit être inférieure à 300cm)"
+        : null,
+    };
+
+    // Filtrer les erreurs nulles
+    for (const key in errors) {
+      if (errors[key] === null) {
+        delete errors[key];
+      }
+    }
+
+    return next(new ValidationError("Données physiques invalides", errors));
   }
 
   next();
 };
 
-// Validation du poids cible
+/**
+ * Middleware pour valider le poids cible
+ */
 const validateTargetWeight = (req, res, next) => {
   const { currentWeight, targetWeight } = req.body;
 
@@ -78,22 +96,25 @@ const validateTargetWeight = (req, res, next) => {
   const isTargetWeightValid =
     targetWeight !== undefined &&
     !isNaN(targetWeight) &&
-    targetWeight > 0 &&
-    targetWeight < 500;
+    parseFloat(targetWeight) > 0 &&
+    parseFloat(targetWeight) < 500;
 
   if (!isTargetWeightValid) {
-    return res.status(400).json({
-      message: "Invalid target weight",
-      error: "Target weight must be a positive number less than 500kg",
-    });
+    return next(
+      new ValidationError("Poids cible invalide", {
+        targetWeight:
+          "Le poids cible doit être un nombre positif inférieur à 500kg",
+      })
+    );
   }
 
   // Vérification que le poids actuel est défini pour les calculs
   if (currentWeight === undefined || isNaN(currentWeight)) {
-    return res.status(400).json({
-      message: "Current weight is required",
-      error: "Current weight must be provided for calculations",
-    });
+    return next(
+      new ValidationError("Poids actuel requis", {
+        currentWeight: "Le poids actuel doit être fourni pour les calculs",
+      })
+    );
   }
 
   next();
