@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import validationService from "../services/validation.service";
 import dataService from "../services/data.service";
 
+// Types pour le processus d'inscription
 interface RegistrationData {
   // Étape 1: Informations de base
   firstName: string;
@@ -44,8 +45,12 @@ interface RegistrationData {
 
 interface RegistrationContextType {
   data: Partial<RegistrationData>;
-  setField: (field: keyof RegistrationData, value: any) => void;
+  setField: <K extends keyof RegistrationData>(
+    field: K,
+    value: RegistrationData[K]
+  ) => void;
   setFields: (fields: Partial<RegistrationData>) => void;
+  resetForm: () => void;
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   currentStep: number;
@@ -71,34 +76,49 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
   const { register } = useAuth();
 
-  const totalSteps = 8;
+  const totalSteps = 8; // 8 étapes au total (9 avec l'écran de fin)
 
-  const setField = (field: keyof RegistrationData, value: any) => {
+  // Mise à jour d'un champ individuel
+  const setField = <K extends keyof RegistrationData>(
+    field: K,
+    value: RegistrationData[K]
+  ) => {
     setData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Mise à jour de plusieurs champs à la fois
   const setFields = (fields: Partial<RegistrationData>) => {
     setData((prev) => ({ ...prev, ...fields }));
   };
 
+  // Réinitialisation du formulaire
+  const resetForm = () => {
+    setData(initialData);
+    setCurrentStep(1);
+    setError(null);
+  };
+
+  // Noms des routes pour chaque étape
   const stepRoutes = [
-    "/auth/register",
-    "/auth/register/physical",
-    "/auth/register/sedentary",
-    "/auth/register/target-weight",
-    "/auth/register/nutrition-plan",
-    "/auth/register/diet",
-    "/auth/register/activities",
-    "/auth/register/sessions",
-    "/auth/register/complete",
+    "/register/step1_profile",
+    "/register/step2_physical",
+    "/register/step3_sedentary",
+    "/register/step4_target_weight",
+    "/register/step5_nutrition_plan",
+    "/register/step6_diet",
+    "/register/step7_activities",
+    "/register/step8_sessions",
+    "/register/step9_complete",
   ];
 
+  // Navigation vers l'étape suivante
   const goToNextStep = () => {
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
     router.push(stepRoutes[nextStep - 1]);
   };
 
+  // Navigation vers l'étape précédente
   const goToPreviousStep = () => {
     const prevStep = currentStep - 1;
     if (prevStep >= 1) {
@@ -107,6 +127,7 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Validation de l'étape courante
   const validateStep = async (step: number): Promise<boolean> => {
     try {
       setLoading(true);
@@ -116,25 +137,25 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
         case 1:
           // Validation de l'étape 1: Informations de base
           const profileValidation = await validationService.validateProfile({
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email,
-            password: data.password,
+            firstName: data.firstName || "",
+            lastName: data.lastName || "",
+            email: data.email || "",
+            password: data.password || "",
           });
 
           if (!profileValidation.isValid) {
-            // Erreur de validation
+            // Création d'un message d'erreur combiné
             const errorMessages = Object.values(profileValidation.errors)
               .filter(Boolean)
               .join(", ");
-            setError(errorMessages || "Invalid profile data");
+            setError(errorMessages || "Données de profil invalides");
             return false;
           }
 
           // Vérifier si l'email est disponible
           const emailCheck = await validationService.checkEmail(data.email!);
           if (!emailCheck.available) {
-            setError("Email already in use");
+            setError("Cette adresse email est déjà utilisée");
             return false;
           }
 
@@ -143,18 +164,18 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
         case 2:
           // Validation de l'étape 2: Attributs physiques
           const physicalValidation = await validationService.validatePhysical({
-            gender: data.gender,
-            birthDate: data.birthDate,
-            weight: data.weight,
-            height: data.height,
+            gender: data.gender || "",
+            birthDate: data.birthDate || "",
+            weight: data.weight || 0,
+            height: data.height || 0,
           });
 
           if (!physicalValidation.isValid) {
-            // Erreur de validation
+            // Création d'un message d'erreur combiné
             const errorMessages = Object.values(physicalValidation.errors)
               .filter(Boolean)
               .join(", ");
-            setError(errorMessages || "Invalid physical data");
+            setError(errorMessages || "Données physiques invalides");
             return false;
           }
 
@@ -162,72 +183,90 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
 
         case 3:
           // Validation de l'étape 3: Niveau de sédentarité
-          return data.sedentaryLevelId !== undefined;
+          if (data.sedentaryLevelId === undefined) {
+            setError("Veuillez sélectionner un niveau d'activité");
+            return false;
+          }
+          return true;
 
         case 4:
           // Validation de l'étape 4: Poids cible
-          if (!data.targetWeight) {
-            setError("Target weight is required");
+          if (data.targetWeight === undefined) {
+            setError("Le poids cible est requis");
             return false;
           }
 
           const targetWeightValidation =
             await validationService.validateTargetWeight({
-              currentWeight: data.weight,
+              currentWeight: data.weight!,
               targetWeight: data.targetWeight,
-              height: data.height,
-              gender: data.gender,
-              birthDate: data.birthDate,
-              sedentaryLevelId: data.sedentaryLevelId,
+              height: data.height!,
+              gender: data.gender!,
+              birthDate: data.birthDate!,
+              sedentaryLevelId: data.sedentaryLevelId!,
             });
 
-          if (!targetWeightValidation.isValid) {
-            setError(targetWeightValidation.message);
-            return false;
-          }
-
-          // Sauvegarder les résultats du calcul
+          // On accepte même si l'IMC n'est pas idéal, mais on sauvegarde les résultats du calcul
           setFields({
-            bmr: targetWeightValidation.estimation.bmr,
-            tdee: targetWeightValidation.estimation.tdee,
-            dailyCalories: targetWeightValidation.estimation.dailyCalories,
+            bmr: targetWeightValidation.estimation?.bmr || 0,
+            tdee: targetWeightValidation.estimation?.tdee || 0,
+            dailyCalories:
+              targetWeightValidation.estimation?.dailyCalories || 0,
             targetDurationWeeks:
-              targetWeightValidation.estimation.estimatedWeeks,
+              targetWeightValidation.estimation?.estimatedWeeks || 0,
             caloricDeficitSurplus:
-              targetWeightValidation.estimation.caloricAdjustment,
-            weightChangeType: targetWeightValidation.estimation.orientation,
+              targetWeightValidation.estimation?.caloricAdjustment || 0,
+            weightChangeType:
+              targetWeightValidation.estimation?.orientation || "maintain",
           });
 
           return true;
 
         case 5:
           // Validation de l'étape 5: Plan nutritionnel
-          return data.nutritionalPlanId !== undefined;
+          if (data.nutritionalPlanId === undefined) {
+            setError("Veuillez sélectionner un plan nutritionnel");
+            return false;
+          }
+          return true;
 
         case 6:
           // Validation de l'étape 6: Régime alimentaire
-          return data.dietId !== undefined;
+          if (data.dietId === undefined) {
+            setError("Veuillez sélectionner un régime alimentaire");
+            return false;
+          }
+          return true;
 
         case 7:
           // Validation de l'étape 7: Activités préférées
-          return Array.isArray(data.activities) && data.activities.length > 0;
+          if (!Array.isArray(data.activities) || data.activities.length === 0) {
+            setError("Veuillez sélectionner au moins une activité");
+            return false;
+          }
+          return true;
 
         case 8:
           // Validation de l'étape 8: Séances hebdomadaires
-          return data.sessionsPerWeek !== undefined;
+          if (data.sessionsPerWeek === undefined) {
+            setError("Veuillez sélectionner un nombre de séances par semaine");
+            return false;
+          }
+          return true;
 
         default:
           return true;
       }
-    } catch (error) {
-      console.error(`Validation error for step ${step}:`, error);
-      setError("An error occurred during validation");
+    } catch (err: any) {
+      console.error(`Validation error for step ${step}:`, err);
+      setError(err.message || "Une erreur est survenue lors de la validation");
       return false;
     } finally {
       setLoading(false);
     }
   };
 
+  // Finalisation de l'inscription
   const completeRegistration = async () => {
     try {
       setLoading(true);
@@ -237,10 +276,10 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
       await register(data);
 
       return true;
-    } catch (error: any) {
-      console.error("Registration completion error:", error);
-      setError(error.message || "Registration failed");
-      throw error;
+    } catch (err: any) {
+      console.error("Registration completion error:", err);
+      setError(err.message || "L'inscription a échoué");
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -252,6 +291,7 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
         data,
         setField,
         setFields,
+        resetForm,
         goToNextStep,
         goToPreviousStep,
         currentStep,

@@ -1,23 +1,17 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import * as SecureStore from "expo-secure-store";
-import authService from "../services/auth.service";
 import { router } from "expo-router";
-
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-}
+import authService, { User } from "../services/auth.service";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   loading: boolean;
+  error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (userData: any) => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,11 +22,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Vérifier le token au démarrage
     const checkToken = async () => {
       try {
+        setLoading(true);
         const token = await SecureStore.getItemAsync("token");
 
         if (!token) {
@@ -46,8 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setIsAuthenticated(true);
           setUser(response.user);
         }
-      } catch (error) {
-        console.error("Token verification error:", error);
+      } catch (err: any) {
+        console.error("Token verification error:", err);
         // Supprimer le token invalide
         await SecureStore.deleteItemAsync("token");
       } finally {
@@ -61,17 +57,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
+      setError(null);
+
       const response = await authService.login(email, password);
 
       await SecureStore.setItemAsync("token", response.token);
       setIsAuthenticated(true);
       setUser(response.user);
 
-      // Redirection vers le dashboard
-      router.replace("/dashboard");
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
+      // Redirection vers le dashboard en fonction du rôle
+      if (response.user.role === "admin") {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/user/dashboard");
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || "Identifiants incorrects. Veuillez réessayer.");
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -85,10 +88,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(null);
 
       // Redirection vers la page d'accueil
-      router.replace("/");
-    } catch (error) {
-      console.error("Logout error:", error);
-      throw error;
+      router.replace("/welcome");
+    } catch (err: any) {
+      console.error("Logout error:", err);
+      setError(
+        err.message || "Une erreur est survenue lors de la déconnexion."
+      );
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -97,25 +103,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const register = async (userData: any) => {
     try {
       setLoading(true);
+      setError(null);
+
       const response = await authService.register(userData);
 
       await SecureStore.setItemAsync("token", response.token);
       setIsAuthenticated(true);
       setUser(response.user);
 
-      // Redirection vers le dashboard
-      router.replace("/dashboard");
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
+      // Redirection vers le dashboard (toujours user pour les nouveaux inscrits)
+      router.replace("/user/dashboard");
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      setError(err.message || "Une erreur est survenue lors de l'inscription.");
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
+  const clearError = () => {
+    setError(null);
+  };
+
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, user, loading, login, logout, register }}
+      value={{
+        isAuthenticated,
+        user,
+        loading,
+        error,
+        login,
+        logout,
+        register,
+        clearError,
+      }}
     >
       {children}
     </AuthContext.Provider>
