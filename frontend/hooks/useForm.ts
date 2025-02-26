@@ -1,3 +1,5 @@
+// Modification de useForm.ts
+
 import { useState, useCallback } from "react";
 
 type FormErrors<T> = Partial<Record<keyof T, string>>;
@@ -19,6 +21,7 @@ export function useForm<T extends Record<string, any>>({
     {} as Record<keyof T, boolean>
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null); // Ajout d'un état pour l'erreur globale
 
   // Met à jour un champ spécifique
   const handleChange = useCallback(
@@ -33,8 +36,13 @@ export function useForm<T extends Record<string, any>>({
           return newErrors;
         });
       }
+
+      // Efface l'erreur globale si un champ est modifié
+      if (globalError) {
+        setGlobalError(null);
+      }
     },
-    [errors]
+    [errors, globalError]
   );
 
   // Marque un champ comme "touché" (pour validation à la perte de focus)
@@ -60,6 +68,7 @@ export function useForm<T extends Record<string, any>>({
       setErrors({});
       setTouched({} as Record<keyof T, boolean>);
       setIsSubmitting(false);
+      setGlobalError(null);
     },
     [initialValues]
   );
@@ -96,14 +105,34 @@ export function useForm<T extends Record<string, any>>({
       setTouched(allTouched);
       setErrors(formErrors);
 
-      // S'il n'y a pas d'erreurs, soumet le formulaire
+      // S'il y a des erreurs, génère un message d'erreur global
       const hasErrors = Object.keys(formErrors).length > 0;
-      if (!hasErrors && onSubmit) {
+
+      if (hasErrors) {
+        // Créer un message d'erreur global à partir des erreurs de champs
+        const errorMessages = Object.values(formErrors).filter(Boolean);
+        setGlobalError(
+          errorMessages.length > 0
+            ? "Veuillez corriger les erreurs suivantes : " +
+                errorMessages.join(", ")
+            : "Veuillez corriger les erreurs dans le formulaire"
+        );
+        return false;
+      }
+
+      // S'il n'y a pas d'erreurs, soumet le formulaire
+      if (onSubmit) {
         setIsSubmitting(true);
+        setGlobalError(null);
         try {
           await onSubmit(values);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Form submission error:", error);
+          // Afficher l'erreur retournée par l'API ou une erreur générique
+          setGlobalError(
+            error.message ||
+              "Une erreur est survenue lors de la soumission du formulaire"
+          );
         } finally {
           setIsSubmitting(false);
         }
@@ -119,11 +148,13 @@ export function useForm<T extends Record<string, any>>({
     errors,
     touched,
     isSubmitting,
+    globalError, // Exposer l'erreur globale
     handleChange,
     handleBlur,
     handleSubmit,
     resetForm,
     setFieldValues,
     setFieldError,
+    setGlobalError, // Exposer la fonction pour définir l'erreur globale
   };
 }
