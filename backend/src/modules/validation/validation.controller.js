@@ -104,16 +104,6 @@ exports.validateTargetWeight = async (req, res, next) => {
       height
     );
 
-    if (!bmiValidation.isValid) {
-      return res.status(200).json(
-        success({
-          isValid: false,
-          targetBMI: bmiValidation.targetBMI,
-          message: bmiValidation.message,
-        })
-      );
-    }
-
     // Calcul de l'âge
     const age = validationService.calculateAge(birthDate);
 
@@ -127,47 +117,22 @@ exports.validateTargetWeight = async (req, res, next) => {
       ? parseFloat(sedentaryLevel.valeur)
       : 1.2;
 
-    // Gestion du cas où le poids cible est égal au poids actuel
-    let estimation;
+    // Calculer l'estimation DANS TOUS LES CAS, même si le BMI n'est pas valide
+    let estimation = calculationService.calculateWeightChangeEstimation(
+      Number(currentWeight),
+      Number(targetWeight),
+      Number(height),
+      gender,
+      age,
+      activityFactor
+    );
 
-    if (Number(currentWeight) === Number(targetWeight)) {
-      // Créer une estimation "de maintien" avec des valeurs appropriées
-      const bmr = calculationService.calculateBMR(
-        Number(currentWeight),
-        Number(height),
-        gender,
-        age
-      );
-
-      const tdee = calculationService.calculateTDEE(bmr, activityFactor);
-
-      estimation = {
-        bmr: Math.round(bmr),
-        tdee: Math.round(tdee),
-        dailyCalories: Math.round(tdee), // Aucun déficit/surplus pour maintien
-        caloricAdjustment: 0, // Pas de différence calorique
-        estimatedDays: 0,
-        estimatedWeeks: 0,
-        weeklyChange: 0,
-        orientation: "maintain", // Nouvelle valeur pour le maintien
-      };
-    } else {
-      // Calcul d'estimation standard pour perte/gain de poids
-      estimation = calculationService.calculateWeightChangeEstimation(
-        Number(currentWeight),
-        Number(targetWeight),
-        Number(height),
-        gender,
-        age,
-        activityFactor
-      );
-    }
-
+    // Renvoyer toujours l'estimation, que le BMI soit valide ou non
     res.status(200).json(
       success({
-        isValid: true,
+        isValid: bmiValidation.isValid,
         targetBMI: bmiValidation.targetBMI,
-        estimation,
+        estimation: estimation,
         message: bmiValidation.message,
       })
     );
