@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import Layout from "../../constants/Layout";
@@ -32,73 +26,6 @@ const SelectableOption: React.FC<SelectableOptionProps> = ({
   iconColor,
   disabled = false,
 }) => {
-  // Animation pour l'effet de sélection
-  const scaleAnim = React.useRef(new Animated.Value(1)).current;
-  const backgroundColorAnim = React.useRef(new Animated.Value(0)).current;
-
-  // Effet lorsque la sélection change
-  React.useEffect(() => {
-    if (selected) {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1.02,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backgroundColorAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-      ]).start(() => {
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }).start();
-      });
-    } else {
-      Animated.timing(backgroundColorAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [selected]);
-
-  // Effet d'animation lors du press
-  const handlePressIn = () => {
-    Animated.timing(scaleAnim, {
-      toValue: 0.98,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.timing(scaleAnim, {
-      toValue: 1,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  // Interpolation pour l'animation de couleur
-  const backgroundColor = backgroundColorAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Colors.gray.ultraLight, Colors.brandBlue[1]],
-  });
-
-  const textColor = backgroundColorAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Colors.black, Colors.white],
-  });
-
-  const subtitleColor = backgroundColorAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Colors.gray.dark, Colors.white],
-  });
-
   // Détermine la couleur de l'icône
   const finalIconColor = iconColor
     ? iconColor
@@ -107,23 +34,17 @@ const SelectableOption: React.FC<SelectableOptionProps> = ({
     : Colors.gray.dark;
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.container,
-        {
-          transform: [{ scale: scaleAnim }],
-          backgroundColor,
-          opacity: disabled ? 0.5 : 1,
-        },
-        selected && Layout.elevation.sm,
+        selected && styles.selectedContainer,
+        disabled && styles.disabledContainer,
       ]}
     >
       <TouchableOpacity
         style={styles.touchable}
         onPress={disabled ? undefined : onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
       >
         <View style={styles.content}>
           {icon && (
@@ -136,20 +57,20 @@ const SelectableOption: React.FC<SelectableOptionProps> = ({
           )}
 
           <View style={styles.textContainer}>
-            <Animated.Text
-              style={[styles.title, { color: textColor }]}
+            <Text
+              style={[styles.title, selected && styles.selectedTitle]}
               numberOfLines={1}
             >
               {title}
-            </Animated.Text>
+            </Text>
 
             {subtitle && (
-              <Animated.Text
-                style={[styles.subtitle, { color: subtitleColor }]}
+              <Text
+                style={[styles.subtitle, selected && styles.selectedSubtitle]}
                 numberOfLines={2}
               >
                 {subtitle}
-              </Animated.Text>
+              </Text>
             )}
           </View>
         </View>
@@ -160,7 +81,7 @@ const SelectableOption: React.FC<SelectableOptionProps> = ({
           </View>
         )}
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -168,7 +89,15 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: Layout.borderRadius.md,
     marginBottom: Layout.spacing.md,
+    backgroundColor: Colors.gray.ultraLight,
     overflow: "hidden",
+  },
+  selectedContainer: {
+    backgroundColor: Colors.brandBlue[1],
+    ...Layout.elevation.sm,
+  },
+  disabledContainer: {
+    opacity: 0.5,
   },
   touchable: {
     flexDirection: "row",
@@ -191,9 +120,17 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     fontWeight: "600",
     marginBottom: 2,
+    color: Colors.black,
+  },
+  selectedTitle: {
+    color: Colors.white,
   },
   subtitle: {
     ...TextStyles.caption,
+    color: Colors.gray.dark,
+  },
+  selectedSubtitle: {
+    color: Colors.white,
   },
   checkmark: {
     marginLeft: Layout.spacing.sm,

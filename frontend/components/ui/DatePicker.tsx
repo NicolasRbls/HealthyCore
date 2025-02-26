@@ -15,7 +15,7 @@ import Layout from "../../constants/Layout";
 import Input, { InputProps } from "./Input";
 import { useDatePicker } from "../../hooks/useDatePicker";
 
-interface DatePickerProps extends Omit<InputProps, "onChangeText" | "value"> {
+interface DatePickerProps {
   value?: Date | null;
   onChange?: (date: Date | null) => void;
   minDate?: Date;
@@ -26,6 +26,15 @@ interface DatePickerProps extends Omit<InputProps, "onChangeText" | "value"> {
   containerStyle?: ViewStyle;
   buttonTextStyle?: TextStyle;
   placeholderText?: string;
+  // Ajoute les props de Input que tu utilises
+  error?: string;
+  label?: string;
+  placeholder?: string;
+  icon?: string;
+  editable?: boolean;
+  rightIcon?: string;
+  onRightIconPress?: () => void;
+  onInputPress?: () => void;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({
@@ -78,7 +87,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
           onInputPress={showDatePicker}
           rightIcon="calendar-outline"
           onRightIconPress={showDatePicker}
-          error={error}
+          error={error || undefined}
         />
       </TouchableOpacity>
 

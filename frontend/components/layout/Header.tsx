@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     flex: undefined,
   },
   titleWithBack: {
-    marginLeft: -28, // Compenser l'espace du bouton retour pour un centrage parfait
+    paddingTop: 4,
   },
   rightComponent: {
     marginLeft: Layout.spacing.sm,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     marginLeft: Layout.spacing.sm,
   },
   placeholderRight: {
-    width: 28, // Même taille que le bouton retour pour équilibrer
+    width: 28,
   },
 });
 

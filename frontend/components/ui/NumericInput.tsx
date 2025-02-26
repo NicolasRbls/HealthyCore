@@ -12,8 +12,7 @@ import Layout from "../../constants/Layout";
 import Input, { InputProps } from "./Input";
 import { useNumericInput } from "../../hooks/useNumericInput";
 
-interface NumericInputProps
-  extends Omit<InputProps, "onChangeText" | "value" | "keyboardType"> {
+interface NumericInputProps {
   value?: string | number;
   onChangeText?: (value: string) => void;
   onChange?: (value: number | null) => void;
@@ -27,6 +26,14 @@ interface NumericInputProps
   decrementStyle?: ViewStyle;
   incrementStyle?: ViewStyle;
   controlsContainerStyle?: ViewStyle;
+  // Ajoute les props de Input que tu utilises
+  error?: string;
+  label?: string;
+  placeholder?: string;
+  icon?: string;
+  helper?: string;
+  containerStyle?: ViewStyle;
+  inputStyle?: TextStyle;
 }
 
 const NumericInput: React.FC<NumericInputProps> = ({
@@ -104,7 +111,7 @@ const NumericInput: React.FC<NumericInputProps> = ({
         keyboardType="numeric"
         value={value}
         onChangeText={onChangeTextHandler}
-        error={error}
+        error={error || undefined}
       />
 
       {showControls && (
