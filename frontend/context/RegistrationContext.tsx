@@ -88,7 +88,27 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Mise à jour de plusieurs champs à la fois
   const setFields = (fields: Partial<RegistrationData>) => {
-    setData((prev) => ({ ...prev, ...fields }));
+    try {
+      // Filtrer les champs indéfinis ou nuls pour ne pas écraser les données existantes
+      const validFields = Object.fromEntries(
+        Object.entries(fields).filter(
+          ([_, value]) => value !== undefined && value !== null
+        )
+      );
+
+      // Journaliser les champs mis à jour (pour le débogage)
+      console.log("Mise à jour des champs:", validFields);
+
+      setData((prev) => {
+        const newData = { ...prev, ...validFields };
+        // Journaliser le nouvel état (pour le débogage)
+        console.log("Nouvel état des données:", newData);
+        return newData;
+      });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des champs:", error);
+      setError("Une erreur est survenue lors de la mise à jour des données");
+    }
   };
 
   // Réinitialisation du formulaire
@@ -115,7 +135,7 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
   const goToNextStep = () => {
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
-    router.push(stepRoutes[nextStep - 1]);
+    router.push(stepRoutes[nextStep - 1] as any);
   };
 
   // Navigation vers l'étape précédente
@@ -123,7 +143,7 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
     const prevStep = currentStep - 1;
     if (prevStep >= 1) {
       setCurrentStep(prevStep);
-      router.push(stepRoutes[prevStep - 1]);
+      router.push(stepRoutes[prevStep - 1] as any);
     }
   };
 
@@ -274,8 +294,6 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Enregistrement de l'utilisateur avec toutes les données
       await register(data);
-
-      return true;
     } catch (err: any) {
       console.error("Registration completion error:", err);
       setError(err.message || "L'inscription a échoué");

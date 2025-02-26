@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import authService, { User } from "../services/auth.service";
+import { useRegistration } from "./RegistrationContext";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -67,9 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Redirection vers le dashboard en fonction du rôle
       if (response.user.role === "admin") {
-        router.replace("/admin/dashboard");
+        router.replace("/admin/dashboard" as any);
       } else {
-        router.replace("/user/dashboard");
+        router.replace("/user/dashboard" as any);
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(null);
 
       // Redirection vers la page d'accueil
-      router.replace("/welcome");
+      router.replace("/welcome" as any);
     } catch (err: any) {
       console.error("Logout error:", err);
       setError(
@@ -112,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(response.user);
 
       // Redirection vers le dashboard (toujours user pour les nouveaux inscrits)
-      router.replace("/user/dashboard");
+      router.replace("/user/dashboard" as any);
     } catch (err: any) {
       console.error("Registration error:", err);
       setError(err.message || "Une erreur est survenue lors de l'inscription.");
