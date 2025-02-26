@@ -7,128 +7,145 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Alert,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import Colors from "@/constants/Colors";
-import InputRow from "@/components/InputRow";
-import Button from "@/components/Button";
+import Colors from "../../constants/Colors";
+import Layout from "../../constants/Layout";
+import { TextStyles } from "../../constants/Fonts";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import Separator from "../../components/ui/Separator";
 import { router } from "expo-router";
-import Separator from "@/components/Separator";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
+import { useForm } from "../../hooks/useForm";
+import Header from "../../components/layout/Header";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login, loading, error, clearError } = useAuth();
+
+  // Configuration du formulaire avec validation
+  const {
+    values,
+    handleChange,
+    handleSubmit,
+    errors,
+    touched,
+    handleBlur,
+    globalError,
+  } = useForm({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validate: (values) => {
+      const errors: { email?: string; password?: string } = {};
+
+      if (!values.email) {
+        errors.email = "L'email est requis";
+      } else if (!/\S+@\S+\.\S+/.test(values.email)) {
+        errors.email = "Email invalide";
+      }
+
+      if (!values.password) {
+        errors.password = "Le mot de passe est requis";
+      }
+
+      return errors;
+    },
+    onSubmit: async (values) => {
+      try {
+        await login(values.email, values.password);
+        // La redirection est gérée dans le AuthContext
+      } catch (err: any) {
+        // L'erreur est gérée par le contexte d'authentification
+      }
+    },
+  });
+
   const [showPassword, setShowPassword] = useState(false);
-
-  const { login, loading } = useAuth();
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Erreur", "Veuillez remplir tous les champs");
-      return;
-    }
-
-    try {
-      await login(email, password);
-      // La redirection est gérée dans le AuthContext
-    } catch (error: any) {
-      console.error("Erreur de connexion:", error);
-      Alert.alert(
-        "Erreur de connexion",
-        error.message || "Email ou mot de passe incorrect. Veuillez réessayer."
-      );
-    }
-  };
-
-  const handleGoogleLogin = () => {
-    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
-  };
-
-  const handleFacebookLogin = () => {
-    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
-  };
-
-  const navigateToForgotPassword = () => {
-    Alert.alert("Information", "Ça ne marche pas pour l'instant, déso");
-  };
-
-  const navigateToRegister = () => {
-    router.push("/auth/register");
-  };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
+  // Effacer l'erreur du contexte lorsqu'on modifie le formulaire
+  React.useEffect(() => {
+    if (error) {
+      clearError();
+    }
+  }, [values.email, values.password]);
+
+  const navigateToRegister = () => {
+    router.push("/register/step1_profile" as any);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollView}>
+      <Header
+        title="Connexion"
+        showBackButton
+        onBackPress={() => router.back()}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollView}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.container}>
           <View style={styles.headerContainer}>
-            <Text style={styles.welcomeText}>Salut,</Text>
-            <Text style={styles.titleText}>Bon retour !</Text>
+            <Text style={styles.welcomeText}>Re-bonjour,</Text>
+            <Text style={styles.titleText}>Connectez-vous</Text>
           </View>
+
           <View style={styles.formContainer}>
-            <InputRow
+            <Input
+              label="Email"
               icon="mail-outline"
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
+              value={values.email}
+              onChangeText={(text) => handleChange("email", text)}
+              onBlur={() => handleBlur("email")}
+              error={touched.email ? errors.email : undefined}
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholder="votre@email.com"
             />
-            <InputRow
+
+            <Input
+              label="Mot de passe"
               icon="lock-closed-outline"
-              placeholder="Mot de passe"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
+              value={values.password}
+              onChangeText={(text) => handleChange("password", text)}
+              onBlur={() => handleBlur("password")}
+              error={touched.password ? errors.password : undefined}
               isPassword={true}
               showPassword={showPassword}
               togglePasswordVisibility={togglePasswordVisibility}
+              placeholder="Votre mot de passe"
             />
 
             <TouchableOpacity
               style={styles.forgotPasswordContainer}
-              onPress={navigateToForgotPassword}
+              onPress={() =>
+                Alert.alert("Info", "Fonctionnalité en développement")
+              }
             >
               <Text style={styles.forgotPasswordText}>
                 Mot de passe oublié ?
               </Text>
             </TouchableOpacity>
 
+            {(globalError || error) && (
+              <Text style={styles.errorText}>{globalError || error}</Text>
+            )}
             <Button
-              text={loading ? "Connexion..." : "Se connecter"}
-              onPress={handleLogin}
+              text="Se connecter"
+              onPress={handleSubmit}
+              loading={loading}
               style={styles.loginButtonContainer}
+              fullWidth
             />
 
-            <Separator />
-
-            <View style={styles.socialButtonsContainer}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={handleGoogleLogin}
-                disabled={loading}
-              >
-                <Image
-                  source={require("@/assets/images/google-icon.png")}
-                  style={styles.socialIcon}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={handleFacebookLogin}
-                disabled={loading}
-              >
-                <Image
-                  source={require("@/assets/images/facebook-icon.png")}
-                  style={styles.socialIcon}
-                />
-              </TouchableOpacity>
-            </View>
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Pas de compte ? </Text>
               <TouchableOpacity onPress={navigateToRegister} disabled={loading}>
@@ -136,12 +153,6 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {loading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -158,75 +169,52 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 24,
+    padding: Layout.spacing.lg,
   },
   headerContainer: {
-    marginBottom: 32,
-    marginTop: 20,
+    marginBottom: Layout.spacing.xl,
   },
   welcomeText: {
-    fontSize: 18,
+    ...TextStyles.h4,
     color: Colors.gray.dark,
   },
   titleText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.black,
-    marginTop: 4,
+    ...TextStyles.h2,
+    marginTop: Layout.spacing.xs,
   },
   formContainer: {
     flex: 1,
   },
   forgotPasswordContainer: {
     alignSelf: "flex-end",
-    marginBottom: 24,
+    marginBottom: Layout.spacing.lg,
   },
   forgotPasswordText: {
-    color: Colors.gray.dark,
-    fontSize: 14,
+    ...TextStyles.bodySmall,
+    color: Colors.brandBlue[0],
+  },
+  errorText: {
+    ...TextStyles.caption,
+    color: Colors.error,
+    marginBottom: Layout.spacing.md,
+    marginTop: -10,
+    textAlign: "center",
   },
   loginButtonContainer: {
-    width: "100%",
-    marginBottom: 24,
-  },
-  socialButtonsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 32,
-  },
-  socialButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 12,
-  },
-  socialIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: "contain",
+    marginBottom: Layout.spacing.lg,
   },
   registerContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: Layout.spacing.md,
   },
   registerText: {
+    ...TextStyles.body,
     color: Colors.gray.dark,
-    fontSize: 16,
   },
   registerLink: {
+    ...TextStyles.body,
     color: Colors.brandBlue[0],
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    fontWeight: "600",
   },
 });
