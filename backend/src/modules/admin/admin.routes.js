@@ -1,11 +1,10 @@
 const express = require("express");
 const adminController = require("./admin.controller");
-const { isAdmin } = require("../../middleware/auth.middleware");
+const { isAdmin } = require("../auth/auth.middleware");
 
 const router = express.Router();
 
 // Middleware pour vérifier si l'utilisateur est administrateur
-const isAdmin = [authMiddleware.verifyToken, authMiddleware.isAdmin];
 
 /**
  * Routes Admin

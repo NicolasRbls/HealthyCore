@@ -9,6 +9,7 @@ const authRoutes = require("./modules/auth/auth.routes");
 // const adminRoutes = require("./modules/admin/admin.routes");
 const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
+const adminRoutes = require("./modules/admin/admin.routes");
 
 // Initialize Express app
 const app = express();
