@@ -1,8 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from "react-native";
-import Colors from "@/constants/Colors";
-import Button from "@/components/ui/Button";
-import { useAuth } from "@/context/AuthContext";
+import Colors from "../../constants/Colors";
+import Layout from "../../constants/Layout";
+import { TextStyles } from "../../constants/Fonts";
+import Button from "../../components/ui/Button";
+import { useAuth } from "../../context/AuthContext";
+import Header from "../../components/layout/Header";
 
 export default function UserDashboard() {
   const { user, logout } = useAuth();
@@ -17,11 +20,17 @@ export default function UserDashboard() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <Header
+        title="Utilisateur"
+        rightIconName="log-out-outline"
+        onRightIconPress={handleLogout}
+      />
+
       <ScrollView contentContainerStyle={styles.scrollView}>
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.welcomeText}>Bienvenue, {user?.firstName}</Text>
-            <Text style={styles.roleText}>Rôle: Utilisateur</Text>
+            <Text style={styles.roleText}>Rôle : Utilisateur</Text>
           </View>
 
           <View style={styles.content}>
@@ -33,7 +42,9 @@ export default function UserDashboard() {
           <View style={styles.buttonContainer}>
             <Button
               text="Se déconnecter"
+              variant="outline"
               onPress={handleLogout}
+              leftIcon="log-out-outline"
               style={styles.button}
             />
           </View>
@@ -53,19 +64,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 24,
+    padding: Layout.spacing.lg,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: Layout.spacing.xl,
   },
   welcomeText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.black,
-    marginBottom: 8,
+    ...TextStyles.h3,
+    marginBottom: Layout.spacing.xs,
   },
   roleText: {
-    fontSize: 18,
+    ...TextStyles.bodyLarge,
     color: Colors.brandBlue[0],
     fontWeight: "600",
   },
@@ -73,12 +82,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoText: {
-    fontSize: 16,
+    ...TextStyles.body,
     color: Colors.gray.dark,
-    marginBottom: 16,
+    marginBottom: Layout.spacing.md,
   },
   buttonContainer: {
-    marginTop: 24,
+    marginTop: Layout.spacing.lg,
   },
   button: {
     width: "100%",

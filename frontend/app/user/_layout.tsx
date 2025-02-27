@@ -1,97 +1,27 @@
-import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from "react-native";
-import Colors from "../../constants/Colors";
-import Layout from "../../constants/Layout";
-import { TextStyles } from "../../constants/Fonts";
-import Button from "../../components/ui/Button";
+import { Stack, Redirect } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import Header from "../../components/layout/Header";
 
-export default function UserDashboard() {
-  const { user, logout } = useAuth();
+export default function UserLayout() {
+  const { isAuthenticated, loading, user } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
+  // Si l'authentification est en cours de chargement, ne rien rendre
+  if (loading) {
+    return null;
+  }
+
+  // Si non authentifié, rediriger vers l'écran de bienvenue
+  if (!isAuthenticated) {
+    return <Redirect href={"/welcome" as any} />;
+  }
+
+  // Si authentifié en tant qu'admin, rediriger vers le dashboard admin
+  if (user?.role === "admin") {
+    return <Redirect href={"/admin/dashboard" as any} />;
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Header
-        title="Dashboard"
-        rightIconName="log-out-outline"
-        onRightIconPress={handleLogout}
-      />
-
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.welcomeText}>Bienvenue, {user?.firstName}</Text>
-            <Text style={styles.subtitle}>Votre espace santé personnel</Text>
-          </View>
-
-          <View style={styles.content}>
-            <Text style={styles.infoText}>
-              Vous êtes connecté à votre compte. Suivez vos progrès et atteignez
-              vos objectifs!
-            </Text>
-
-            {/* Contenu supplémentaire du dashboard utilisateur à implémenter */}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <Button
-              text="Se déconnecter"
-              variant="outline"
-              onPress={handleLogout}
-              leftIcon="log-out-outline"
-              style={styles.button}
-            />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="dashboard" />
+    </Stack>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scrollView: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    padding: Layout.spacing.lg,
-  },
-  header: {
-    marginBottom: Layout.spacing.xl,
-  },
-  welcomeText: {
-    ...TextStyles.h3,
-    marginBottom: Layout.spacing.xs,
-  },
-  subtitle: {
-    ...TextStyles.bodyLarge,
-    color: Colors.brandBlue[0],
-  },
-  content: {
-    flex: 1,
-  },
-  infoText: {
-    ...TextStyles.body,
-    color: Colors.gray.dark,
-    marginBottom: Layout.spacing.md,
-  },
-  buttonContainer: {
-    marginTop: Layout.spacing.lg,
-  },
-  button: {
-    width: "100%",
-  },
-});
