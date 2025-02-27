@@ -17,7 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import NutritionalPlanCard from "../../components/registration/NutritionalPlanCard";
 import dataService from "../../services/data.service";
-import { router } from "expo-router";
 
 export default function NutritionPlanScreen() {
   const {

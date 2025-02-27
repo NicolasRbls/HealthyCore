@@ -17,7 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import SelectableOption from "../../components/registration/SelectableOption";
 import dataService from "../../services/data.service";
-import { router } from "expo-router";
 
 export default function SedentaryScreen() {
   const {
@@ -167,7 +166,7 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.lg,
   },
   headerContainer: {
-    marginBottom: Layout.spacing.md, // Réduit de xl à md
+    marginBottom: Layout.spacing.md,
   },
   titleText: {
     ...TextStyles.h3,
@@ -179,10 +178,10 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     flex: 1,
-    marginBottom: Layout.spacing.sm, // Réduit de xl à sm
+    marginBottom: Layout.spacing.sm,
   },
   buttonContainer: {
-    marginTop: Layout.spacing.xs, // Réduit de md à xs
-    marginBottom: Layout.spacing.md, // Réduit de lg à md
+    marginTop: Layout.spacing.xs,
+    marginBottom: Layout.spacing.md,
   },
 });

@@ -17,7 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import WeightInput from "../../components/registration/WeightInput";
 import validationService from "../../services/validation.service";
-import { router } from "expo-router";
 
 export default function TargetWeightScreen() {
   const {
@@ -169,7 +168,7 @@ export default function TargetWeightScreen() {
     }
   }, []);
 
-  // Fonction simplifiée pour continuer vers l'étape suivante
+  // Fonction pour continuer vers l'étape suivante
   const handleContinue = async () => {
     if (!targetWeight || targetWeight.trim() === "") {
       Alert.alert("Erreur", "Veuillez indiquer votre poids cible");

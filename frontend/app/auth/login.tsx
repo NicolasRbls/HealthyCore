@@ -5,9 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Image,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import Colors from "../../constants/Colors";
@@ -15,7 +13,6 @@ import Layout from "../../constants/Layout";
 import { TextStyles } from "../../constants/Fonts";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import Separator from "../../components/ui/Separator";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { useForm } from "../../hooks/useForm";
@@ -59,7 +56,7 @@ export default function LoginScreen() {
         await login(values.email, values.password);
         // La redirection est gérée dans le AuthContext
       } catch (err: any) {
-        // L'erreur est gérée par le contexte d'authentification
+        // L'erreur est gérée dans le AuthContext
       }
     },
   });

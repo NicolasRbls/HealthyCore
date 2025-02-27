@@ -14,8 +14,8 @@ import Layout from "../../constants/Layout";
 import { TextStyles } from "../../constants/Fonts";
 import Button from "../../components/ui/Button";
 import { useRegistration } from "../../context/RegistrationContext";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 import { router } from "expo-router";
+import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function CompleteScreen() {
   const { completeRegistration, data, loading, error } = useRegistration();

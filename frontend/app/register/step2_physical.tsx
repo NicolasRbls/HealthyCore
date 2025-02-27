@@ -14,12 +14,10 @@ import Button from "../../components/ui/Button";
 import { useRegistration } from "../../context/RegistrationContext";
 import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
-import Input from "../../components/ui/Input";
 import NumericInput from "../../components/ui/NumericInput";
 import DatePicker from "../../components/ui/DatePicker";
 import SelectableOption from "../../components/registration/SelectableOption";
 import { useForm } from "../../hooks/useForm";
-import { router } from "expo-router";
 
 export default function PhysicalScreen() {
   const {
@@ -280,7 +278,7 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.lg,
   },
   headerContainer: {
-    marginBottom: Layout.spacing.md, // Réduit de xl à md
+    marginBottom: Layout.spacing.md,
   },
   titleText: {
     ...TextStyles.h3,
@@ -292,24 +290,24 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    marginTop: 0, // Supprime la marge négative de -20
+    marginTop: 0,
   },
   sectionTitle: {
     ...TextStyles.bodyLarge,
     fontWeight: "600",
-    marginTop: Layout.spacing.md, // Réduit de lg à md
-    marginBottom: Layout.spacing.xs, // Réduit de sm à xs
+    marginTop: Layout.spacing.md,
+    marginBottom: Layout.spacing.xs,
   },
   genderOptions: {
-    marginBottom: Layout.spacing.sm, // Réduit de md à sm
+    marginBottom: Layout.spacing.sm,
   },
   buttonContainer: {
     marginTop: Layout.spacing.md,
-    marginBottom: Layout.spacing.md, // Réduit de lg à md
+    marginBottom: Layout.spacing.md,
   },
   errorText: {
     ...TextStyles.caption,
     color: Colors.error,
-    marginBottom: Layout.spacing.sm, // Réduit de md à sm
+    marginBottom: Layout.spacing.sm,
   },
 });

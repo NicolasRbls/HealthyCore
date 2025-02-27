@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Image,
   Alert,
 } from "react-native";
 import Colors from "../../constants/Colors";
@@ -14,7 +13,6 @@ import Layout from "../../constants/Layout";
 import { TextStyles } from "../../constants/Fonts";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import Separator from "../../components/ui/Separator";
 import { router } from "expo-router";
 import { useRegistration } from "../../context/RegistrationContext";
 import { useForm } from "../../hooks/useForm";

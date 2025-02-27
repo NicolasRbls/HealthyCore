@@ -17,8 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import SelectableOption from "../../components/registration/SelectableOption";
 import dataService from "../../services/data.service";
-import { router } from "expo-router";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function ActivitiesScreen() {
   const {
@@ -139,8 +137,6 @@ export default function ActivitiesScreen() {
             )}
           </View>
 
-          <ErrorMessage errors={[error]} style={styles.errorContainer} />
-
           <View style={styles.buttonContainer}>
             <Button
               text="Suivant"
@@ -187,9 +183,5 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: Layout.spacing.lg,
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });
