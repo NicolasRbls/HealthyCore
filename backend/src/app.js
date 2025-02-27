@@ -46,4 +46,7 @@ app.use("/api/validation", validationRoutes);
 // Error handling middleware (should be last)
 app.use(errorMiddleware);
 
+// Admin routes
+app.use("/admin", adminRoutes);
+
 module.exports = app;
