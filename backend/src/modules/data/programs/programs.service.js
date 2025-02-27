@@ -100,6 +100,75 @@ const getActivePrograms = async (userId) => {
     }
 };
 
+
+/**
+ * Inscrire un utilisateur à un programme d'entraînement
+ * @param {number} userId - ID de l'utilisateur
+ * @param {number} programId - ID du programme
+ * @param {Date} startDate - Date de début du programme
+ */
+const enrollUserInProgram = async (userId, programId, startDate) => {
+    try {
+        console.log(`🔍 Inscription de l'utilisateur ID ${userId} au programme ID ${programId}`);
+
+        // Vérifier si l'utilisateur existe
+        const userExists = await prisma.users.findUnique({
+            where: { id_user: userId },
+        });
+
+        if (!userExists) {
+            throw new AppError("Utilisateur non trouvé", 404, "USER_NOT_FOUND");
+        }
+
+        // Vérifier si le programme existe
+        const programExists = await prisma.programmes.findUnique({
+            where: { id_programme: programId },
+        });
+
+        if (!programExists) {
+            throw new AppError("Le programme spécifié n'existe pas", 404, "PROGRAM_NOT_FOUND");
+        }
+
+        // Vérifier si l'utilisateur est déjà inscrit à ce programme
+        const existingEnrollment = await prisma.programmes_utilisateurs.findFirst({
+            where: {
+                id_user: userId,
+                id_programme: programId,
+            },
+        });
+
+        if (existingEnrollment) {
+            throw new AppError("L'utilisateur est déjà inscrit à ce programme", 400, "ALREADY_ENROLLED");
+        }
+
+        // Déterminer la date de fin (en fonction de la durée du programme)
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + programExists.duree);
+
+        // Inscrire l'utilisateur
+        const enrollment = await prisma.programmes_utilisateurs.create({
+            data: {
+                id_user: userId,
+                id_programme: programId,
+                date_debut: startDate,
+                date_fin: endDate,
+            },
+        });
+
+        console.log("✅ Inscription réussie:", enrollment);
+
+        return {
+            message: "Inscription au programme réussie",
+            startDate: enrollment.date_debut,
+            endDate: enrollment.date_fin,
+        };
+    } catch (error) {
+        console.error("❌ Erreur Prisma:", error);
+        throw new AppError("Erreur lors de l'inscription au programme", 500, "DATABASE_ERROR");
+    }
+};
+
 module.exports = {
+    enrollUserInProgram,
     getActivePrograms,
 };

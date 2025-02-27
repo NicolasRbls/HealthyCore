@@ -10,4 +10,11 @@ const { checkAuth } = require("../../auth/auth.middleware");
  */
 router.get("/active", checkAuth, programsController.getActivePrograms);
 
+/**
+ * @route POST /api/data/programs/enroll
+ * @desc Inscrire un utilisateur à un programme d'entraînement
+ * @access Private (Nécessite une authentification)
+ */
+router.post("/enroll", checkAuth, programsController.enrollProgram);
+
 module.exports = router;
