@@ -94,7 +94,7 @@ export default function SessionsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Séances Hebdomadaires"
+        title="Séances hebdomadaires"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -107,10 +107,10 @@ export default function SessionsScreen() {
         <View style={styles.container}>
           <View style={styles.headerContainer}>
             <Text style={styles.titleText}>
-              Combien de séances souhaitez-vous faire par semaine ?
+              Combien de séances de sport souhaitez-vous faire par semaine ?
             </Text>
             <Text style={styles.subtitleText}>
-              Nous créerons un programme adapté à votre niveau
+              Nous adapterons vos recommandations en conséquence
             </Text>
           </View>
 
@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,

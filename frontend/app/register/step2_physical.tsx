@@ -162,7 +162,7 @@ export default function PhysicalScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Informations Physiques"
+        title="Informations physiques"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    marginTop: 0,
+    marginTop: -10,
   },
   sectionTitle: {
     ...TextStyles.bodyLarge,

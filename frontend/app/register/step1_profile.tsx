@@ -231,10 +231,10 @@ export default function ProfileScreen() {
               <Text style={styles.termsText}>
                 En continuant, vous acceptez notre{" "}
                 <Text style={styles.termsLink}>
-                  Politique de confidentialité
+                  politique de confidentialité
                 </Text>{" "}
                 et nos{" "}
-                <Text style={styles.termsLink}>Conditions d'utilisation</Text>
+                <Text style={styles.termsLink}>conditions d'utilisation</Text>
               </Text>
             </View>
 
@@ -266,6 +266,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,

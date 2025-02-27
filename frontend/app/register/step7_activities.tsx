@@ -96,7 +96,7 @@ export default function ActivitiesScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Activités Préférées"
+        title="Activités préférées"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -180,6 +181,7 @@ const styles = StyleSheet.create({
   activitiesContainer: {
     flex: 1,
     marginBottom: Layout.spacing.xl,
+    marginTop: -Layout.spacing.md,
   },
   buttonContainer: {
     marginBottom: Layout.spacing.lg,

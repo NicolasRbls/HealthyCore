@@ -106,7 +106,7 @@ export default function NutritionPlanScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Plan Nutritionnel"
+        title="Plan nutritionnel"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,

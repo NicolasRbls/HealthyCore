@@ -98,7 +98,7 @@ export default function SedentaryScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Niveau d'Activité"
+        title="Niveau d'activité"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,

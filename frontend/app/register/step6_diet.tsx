@@ -87,7 +87,7 @@ export default function DietScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Régime Alimentaire"
+        title="Régime alimentaire"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -166,6 +167,7 @@ const styles = StyleSheet.create({
   optionsContainer: {
     flex: 1,
     marginBottom: Layout.spacing.xl,
+    marginTop: -Layout.spacing.md,
   },
   buttonContainer: {
     marginBottom: Layout.spacing.lg,

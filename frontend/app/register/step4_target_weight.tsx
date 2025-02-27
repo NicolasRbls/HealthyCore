@@ -219,7 +219,7 @@ export default function TargetWeightScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Objectif de Poids"
+        title="Objectif de poids"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
