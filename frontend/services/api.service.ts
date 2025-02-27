@@ -37,16 +37,16 @@ const apiService = {
   ): Promise<T> {
     try {
       // Préparation des headers
-      const headers: HeadersInit = {
+      const headers = new Headers({
         "Content-Type": "application/json",
-        ...config.headers,
-      };
+        ...((config.headers as Record<string, string>) || {}),
+      });
 
       // Ajout du token si authentification requise
       if (requiresAuth) {
         const token = await SecureStore.getItemAsync("token");
         if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
+          headers.append("Authorization", `Bearer ${token}`);
         }
       }
 
