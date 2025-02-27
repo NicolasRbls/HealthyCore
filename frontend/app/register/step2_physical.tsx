@@ -20,7 +20,6 @@ import DatePicker from "../../components/ui/DatePicker";
 import SelectableOption from "../../components/registration/SelectableOption";
 import { useForm } from "../../hooks/useForm";
 import { router } from "expo-router";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function PhysicalScreen() {
   const {
@@ -43,8 +42,8 @@ export default function PhysicalScreen() {
     errors,
     touched,
     setFieldValues,
-    globalError, // Extrait globalError du hook useForm
-    setGlobalError, // Extrait setGlobalError pour définir des erreurs personnalisées
+    globalError,
+    setGlobalError,
   } = useForm({
     initialValues: {
       gender: data.gender || "NS",
@@ -118,10 +117,13 @@ export default function PhysicalScreen() {
 
         if (isValid) {
           goToNextStep();
+        } else if (error) {
+          Alert.alert("Erreur de validation", error);
         }
       } catch (err) {
         console.error("Erreur lors de la validation:", err);
-        setGlobalError(
+        Alert.alert(
+          "Erreur",
           "Une erreur est survenue lors de la validation des données"
         );
       }
@@ -137,15 +139,26 @@ export default function PhysicalScreen() {
     });
   }, [values]);
 
+  // Afficher les erreurs globales dans une alerte
+  React.useEffect(() => {
+    if (globalError) {
+      Alert.alert("Erreur", globalError);
+      setGlobalError(null);
+    }
+  }, [globalError]);
+
+  // Afficher les erreurs du contexte dans une alerte
+  React.useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
+
   // Déterminer la date maximale (13 ans avant aujourd'hui)
   const getMaxDate = () => {
     const today = new Date();
     today.setFullYear(today.getFullYear() - 13);
     return today;
-  };
-
-  const getAllErrors = () => {
-    return [globalError, error].filter(Boolean);
   };
 
   return (
@@ -237,8 +250,6 @@ export default function PhysicalScreen() {
             />
           </View>
 
-          <ErrorMessage errors={getAllErrors()} style={styles.errorContainer} />
-
           <View style={styles.buttonContainer}>
             <Button
               text="Suivant"
@@ -300,9 +311,5 @@ const styles = StyleSheet.create({
     ...TextStyles.caption,
     color: Colors.error,
     marginBottom: Layout.spacing.sm, // Réduit de md à sm
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });

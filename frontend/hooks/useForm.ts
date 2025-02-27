@@ -114,8 +114,9 @@ export function useForm<T extends Record<string, any>>({
         setGlobalError(
           errorMessages.length > 0
             ? "Veuillez corriger les erreurs suivantes : " +
-                errorMessages.join(", ")
-            : "Veuillez corriger les erreurs dans le formulaire"
+                errorMessages.join("; ") +
+                "."
+            : "Veuillez corriger les erreurs dans le formulaire."
         );
         return false;
       }

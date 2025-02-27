@@ -20,7 +20,6 @@ import { useRegistration } from "../../context/RegistrationContext";
 import { useForm } from "../../hooks/useForm";
 import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function ProfileScreen() {
   const {
@@ -39,8 +38,6 @@ export default function ProfileScreen() {
 
   // État pour accepter les conditions
   const [termsAccepted, setTermsAccepted] = React.useState(false);
-
-  const [termsError, setTermsError] = React.useState<string | null>(null);
 
   // Utilisation du hook useForm pour la gestion du formulaire
   const {
@@ -91,15 +88,13 @@ export default function ProfileScreen() {
         errors.password = "Le mot de passe doit contenir au moins 8 caractères";
       }
 
+      if (!termsAccepted) {
+        errors.terms = "Vous devez accepter les conditions d'utilisation";
+      }
+
       return errors;
     },
     onSubmit: async () => {
-      if (!termsAccepted) {
-        setTermsError(
-          "Vous devez accepter les conditions d'utilisation pour continuer"
-        );
-        return;
-      }
       try {
         // Mettre à jour le contexte avec les valeurs du formulaire
         setFields(values);
@@ -109,6 +104,8 @@ export default function ProfileScreen() {
 
         if (isValid) {
           goToNextStep();
+        } else if (error) {
+          Alert.alert("Erreur de validation", error);
         }
       } catch (err) {
         console.error("Erreur lors de la validation:", err);
@@ -125,6 +122,21 @@ export default function ProfileScreen() {
     setFields(values);
   }, [values]);
 
+  // Afficher les erreurs globales dans une alerte
+  React.useEffect(() => {
+    if (globalError) {
+      Alert.alert("Erreur", globalError);
+      setGlobalError(null);
+    }
+  }, [globalError]);
+
+  // Afficher les erreurs du contexte dans une alerte
+  React.useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -136,13 +148,6 @@ export default function ProfileScreen() {
 
   const toggleTermsAccepted = () => {
     setTermsAccepted(!termsAccepted);
-    if (!termsAccepted) {
-      setTermsError(null); // Effacer l'erreur lorsque la case est cochée
-    }
-  };
-
-  const getAllErrors = () => {
-    return [error, globalError, termsError].filter(Boolean);
   };
 
   return (
@@ -234,11 +239,6 @@ export default function ProfileScreen() {
                 <Text style={styles.termsLink}>Conditions d'utilisation</Text>
               </Text>
             </View>
-
-            <ErrorMessage
-              errors={getAllErrors()}
-              style={styles.errorContainer}
-            />
 
             <Button
               text="Suivant"
@@ -347,9 +347,5 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: Colors.brandBlue[0],
     fontWeight: "600",
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });

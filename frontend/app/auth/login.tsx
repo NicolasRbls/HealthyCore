@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ export default function LoginScreen() {
     touched,
     handleBlur,
     globalError,
+    setGlobalError,
   } = useForm({
     initialValues: {
       email: "",
@@ -69,12 +70,21 @@ export default function LoginScreen() {
     setShowPassword(!showPassword);
   };
 
-  // Effacer l'erreur du contexte lorsqu'on modifie le formulaire
-  React.useEffect(() => {
+  // Afficher les erreurs globales dans une alerte
+  useEffect(() => {
+    if (globalError) {
+      Alert.alert("Erreur", globalError);
+      setGlobalError(null);
+    }
+  }, [globalError]);
+
+  // Afficher les erreurs d'authentification dans une alerte
+  useEffect(() => {
     if (error) {
+      Alert.alert("Erreur de connexion", error);
       clearError();
     }
-  }, [values.email, values.password]);
+  }, [error]);
 
   const navigateToRegister = () => {
     router.push("/register/step1_profile" as any);
@@ -135,9 +145,6 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
-            {(globalError || error) && (
-              <Text style={styles.errorText}>{globalError || error}</Text>
-            )}
             <Button
               text="Se connecter"
               onPress={handleSubmit}
@@ -192,13 +199,6 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     ...TextStyles.bodySmall,
     color: Colors.brandBlue[0],
-  },
-  errorText: {
-    ...TextStyles.caption,
-    color: Colors.error,
-    marginBottom: Layout.spacing.md,
-    marginTop: -10,
-    textAlign: "center",
   },
   loginButtonContainer: {
     marginBottom: Layout.spacing.lg,

@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import Colors from "../../constants/Colors";
 import Layout from "../../constants/Layout";
@@ -17,7 +18,6 @@ import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import SelectableOption from "../../components/registration/SelectableOption";
 import dataService from "../../services/data.service";
 import { router } from "expo-router";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function SedentaryScreen() {
   const {
@@ -37,7 +37,6 @@ export default function SedentaryScreen() {
   );
   const [sedentaryLevels, setSedentaryLevels] = useState<any[]>([]);
   const [loadingLevels, setLoadingLevels] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     // Charger les niveaux de sédentarité
@@ -48,7 +47,8 @@ export default function SedentaryScreen() {
         setSedentaryLevels(levels);
       } catch (error) {
         console.error("Error fetching sedentary levels:", error);
-        setLocalError(
+        Alert.alert(
+          "Erreur",
           "Impossible de charger les niveaux d'activité quotidienne"
         );
       } finally {
@@ -63,14 +63,19 @@ export default function SedentaryScreen() {
     // Mettre à jour le niveau de sédentarité dans le contexte
     if (sedentaryLevelId !== undefined) {
       setField("sedentaryLevelId", sedentaryLevelId);
-      // Effacer l'erreur lorsqu'une option est sélectionnée
-      setLocalError(null);
     }
   }, [sedentaryLevelId]);
 
+  // Afficher les erreurs du contexte dans une alerte
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
+
   const handleContinue = async () => {
     if (sedentaryLevelId === undefined) {
-      setLocalError("Veuillez sélectionner un niveau d'activité");
+      Alert.alert("Erreur", "Veuillez sélectionner un niveau d'activité");
       return;
     }
 
@@ -80,18 +85,15 @@ export default function SedentaryScreen() {
       if (isValid) {
         goToNextStep();
       } else if (error) {
-        setLocalError(error);
+        Alert.alert("Erreur de validation", error);
       }
     } catch (err) {
       console.error("Erreur lors de la validation:", err);
-      setLocalError(
+      Alert.alert(
+        "Erreur",
         "Une erreur est survenue lors de la validation des données"
       );
     }
-  };
-
-  const getAllErrors = () => {
-    return [localError, error].filter(Boolean);
   };
 
   return (
@@ -134,8 +136,6 @@ export default function SedentaryScreen() {
               ))
             )}
           </View>
-
-          <ErrorMessage errors={getAllErrors()} style={styles.errorContainer} />
 
           <View style={styles.buttonContainer}>
             <Button
@@ -184,9 +184,5 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: Layout.spacing.xs, // Réduit de md à xs
     marginBottom: Layout.spacing.md, // Réduit de lg à md
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });
