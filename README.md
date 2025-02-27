@@ -1,115 +1,69 @@
-# Guide d'installation du projet
+# HealthyCore Frontend 🏋️‍♀️
 
-## État Actuel : 🚧 EN TRAVAUX 🚧
+## 📱 Présentation
 
-### Étapes Terminées ✅
+HealthyCore est une application mobile de suivi de santé et de fitness développée en React Native avec Expo, conçue dans le cadre d'un projet de Master 1 Développement Web et Mobile (DWM).
 
-- Création de la base de données
-- Migration vers PostgreSQL
-- Remplissage avec les données initiales
+## 🚀 Technologies Principales
 
-## Structure du Projet
+- **Framework**: React Native avec Expo
+- **Langage**: TypeScript
+- **Routing**: Expo Router (Routing basé sur les fichiers)
 
-Le projet est divisé en deux répertoires principaux :
+## 🏗️ Architecture du Projet
 
-- `frontend/` : Contient l'application front-end
-- `backend/` : Contient l'application back-end et la configuration de la base de données
+### Structure des Dossiers
 
-## Configuration Requise
-
-### Configuration du Backend (.env)
-
-Dans le dossier `backend/`, vous devez créer un fichier `.env` en suivant le modèle fourni dans `.env.example`. Ce fichier est nécessaire pour le bon fonctionnement de l'application.
-
-## Instructions d'Installation
-
-### Première Installation
-
-Pour une première installation du projet, utilisez :
-
-```bash
-make first-launch
+```
+frontend/
+├── app/                   # Routes et écrans principaux
+│   ├── _layout.tsx        # Layout global de l'application
+│   ├── welcome.tsx        # Écran d'accueil
+│   ├── auth/              # Authentification
+│   ├── register/          # Processus d'inscription
+│   ├── admin/             # Routes admin
+│   └── user/              # Routes utilisateur
+│
+├── components/            # Composants réutilisables
+│   ├── ui/                # Composants UI de base
+│   ├── layout/            # Composants de mise en page
+│   └── registration/      # Composants spécifiques à l'inscription
+│
+├── constants/             # Styles et valeurs constantes
+│   ├── Colors.ts
+│   ├── Fonts.ts
+│   └── Layout.ts
+│
+├── context/               # Contextes React
+│   ├── AuthContext.tsx
+│   └── RegistrationContext.tsx
+│
+├── hooks/                 # Hooks personnalisés
+│   ├── useForm.ts
+│   ├── useNumericInput.ts
+│   └── useDatePicker.ts
+│
+└── services/              # Services pour les appels API
+    ├── api.service.ts
+    ├── auth.service.ts
+    └── validation.service.ts
 ```
 
-Cette commande va :
+### Principes Architecturaux
 
-1. Démarrer les conteneurs Docker (PostgreSQL et pgAdmin)
-2. Installer les dépendances front-end
-3. Installer les dépendances back-end
-4. Exécuter les migrations de la base de données
-5. Remplir la base de données avec les données initiales
+1. **Routing Basé sur les Fichiers**
 
-### Installation pour le Développement
+   - Utilisation d'Expo Router
+   - Chaque fichier dans `app/` devient une route
+   - Routes dynamiques et imbriquées
 
-Pour le développement quotidien après la première installation :
+2. **Séparation des Préoccupations**
 
-```bash
-make work
-```
+   - Composants UI indépendants
+   - Services dédiés aux appels API
+   - Contextes pour la gestion d'état global
 
-Cette commande va :
-
-1. Démarrer les conteneurs Docker
-2. Lancer le serveur back-end
-
-### Lancement du Frontend
-
-Pour lancer l'application frontend, ouvrez un nouveau terminal et exécutez :
-
-```bash
-cd frontend
-npx expo start
-```
-
-⚠️ Note : Le frontend doit être lancé dans un terminal séparé pendant que le backend tourne.
-
-### Gestion de la Base de Données
-
-#### Avec Migrations
-
-Si vous devez apporter des modifications à la base de données :
-
-1. Effectuez vos modifications dans le schéma Prisma
-2. Lancez les migrations : `make migrate`
-3. Remplissez la base de données : `make seed`
-
-#### Sans Migrations
-
-Si vous démarrez simplement la base de données existante :
-
-1. Démarrez les conteneurs : `make up`
-2. Lancez le back-end : `make start-back`
-
-## Commandes Disponibles
-
-### Gestion Docker
-
-- `make up` : Démarre les conteneurs Docker
-- `make down` : Arrête et supprime les conteneurs
-- `make down-volumes` : Arrête et supprime les conteneurs et leurs volumes
-
-### Installation
-
-- `make install-front` : Installe les dépendances front-end
-- `make install-back` : Installe les dépendances back-end
-
-### Opérations sur la Base de Données
-
-- `make migrate` : Crée les tables de la base de données
-- `make seed` : Remplit la base de données avec les données initiales
-
-### Gestion de l'Application
-
-- `make start-back` : Démarre le serveur back-end
-- `make first-launch` : Configuration complète pour la première utilisation
-- `make work` : Démarrage rapide pour le développement
-
-## Détails Techniques
-
-Le projet utilise :
-
-- Docker Compose pour la gestion des conteneurs
-- PostgreSQL comme base de données
-- pgAdmin pour l'administration de la base de données
-- Prisma pour les migrations et le remplissage de la base de données
-- Expo pour le frontend React Native
+3. **Hooks Personnalisés**
+   - Logique réutilisable
+   - Séparation de la logique de la présentation
+   - Validation et gestion des formulaires centralisée
