@@ -61,7 +61,7 @@ export default function TargetWeightScreen() {
 
     // Si le poids n'est pas valide, ne pas essayer de valider
     if (!weight || weight.trim() === "" || isNaN(parseFloat(weight))) {
-      console.log("Poids non valide, pas de validation");
+      // console.log("Poids non valide, pas de validation");
       return;
     }
 
@@ -73,7 +73,7 @@ export default function TargetWeightScreen() {
       !data.birthDate ||
       !data.sedentaryLevelId
     ) {
-      console.log("Données de base manquantes, pas de validation");
+      // console.log("Données de base manquantes, pas de validation");
       return;
     }
 

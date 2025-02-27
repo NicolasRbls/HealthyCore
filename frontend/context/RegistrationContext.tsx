@@ -96,17 +96,17 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({
         )
       );
 
-      // Journaliser les champs mis à jour (pour le débogage)
-      console.log("Mise à jour des champs:", validFields);
+      // // Journaliser les champs mis à jour (pour le débogage)
+      // console.log("Mise à jour des champs:", validFields);
 
       setData((prev) => {
         const newData = { ...prev, ...validFields };
         // Journaliser le nouvel état (pour le débogage)
-        console.log("Nouvel état des données:", newData);
+        // console.log("Nouvel état des données:", newData);
         return newData;
       });
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des champs:", error);
+      // console.error("Erreur lors de la mise à jour des champs:", error);
       setError("Une erreur est survenue lors de la mise à jour des données");
     }
   };

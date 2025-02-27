@@ -35,7 +35,7 @@ export default function CompleteScreen() {
       );
     }
 
-    console.log("Données complètes pour l'inscription:", data);
+    // console.log("Données complètes pour l'inscription:", data);
   }, []);
 
   const handleCompleteRegistration = async () => {
