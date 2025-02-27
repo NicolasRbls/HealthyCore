@@ -1,43 +1,58 @@
 const axios = require("axios");
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient();
 
 const OpenFoodFactsService = {
   /**
-   * Recherche un produit par code-barres
+   * Recherche un produit par code-barres dans la base de données ou sur OpenFoodFacts
    * @param {string} barcode - Code-barres du produit
    */
   async getProductByBarcode(barcode) {
-    try {
-      const response = await axios.get(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
+    // Vérifie d'abord si le produit est en base
+    let product = await prisma.product.findUnique({
+      where: { barcode },
+    });
 
-      if (response.data.status === 0) {
-        return { error: "Produit non trouvé" };
+    if (!product) {
+      // Si non, requête OpenFoodFacts
+      const response = await axios.get(`https://world.openfoodfacts.org/api/v3/product/${barcode}.json`);
+
+      if (!response.data || !response.data.product) {
+        throw new Error("Produit introuvable");
       }
 
-      return response.data.product; // Retourne les données du produit
-    } catch (error) {
-      console.error("Erreur lors de la récupération du produit:", error);
-      throw new Error("Impossible de récupérer les informations du produit");
+      // Sauvegarde en base
+      product = await prisma.product.create({
+        data: {
+          barcode,
+          name: response.data.product.product_name || "Nom inconnu",
+          brands: response.data.product.brands || "Marque inconnue",
+          categories: response.data.product.categories || "Non catégorisé",
+          imageUrl: response.data.product.image_url || null,
+        },
+      });
     }
+
+    return product;
   },
 
   /**
-   * Recherche des produits par nom
-   * @param {string} query - Nom ou description du produit
+   * Recherche des produits par nom dans OpenFoodFacts
+   * @param {string} query - Mot-clé de recherche
    */
   async searchProducts(query) {
-    try {
-      const response = await axios.get(`https://world.openfoodfacts.org/cgi/search.pl`, {
-        params: {
-          search_terms: query,
-          json: 1,
-        },
-      });
+    const response = await axios.get("https://world.openfoodfacts.org/cgi/search.pl", {
+      params: { search_terms: query, json: 1 },
+    });
 
-      return response.data.products; // Retourne la liste des produits trouvés
-    } catch (error) {
-      console.error("Erreur lors de la recherche de produits:", error);
-      throw new Error("Impossible de récupérer les résultats de recherche");
-    }
+    return response.data.products.map((product) => ({
+      barcode: product.code,
+      name: product.product_name,
+      brands: product.brands,
+      categories: product.categories,
+      imageUrl: product.image_url,
+    }));
   },
 };
 

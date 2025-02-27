@@ -11,6 +11,9 @@ const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 
+// openfoodfacts routes
+const openFoodFactsRoutes = require("./modules/openfoodfacts/openfoodfacts.routes");
+
 // Initialize Express app
 const app = express();
 
@@ -49,5 +52,8 @@ app.use(errorMiddleware);
 
 // Admin routes
 app.use("/admin", adminRoutes);
+
+// Add OpenFoodFacts routes
+app.use("/api/openfoodfacts", openFoodFactsRoutes);
 
 module.exports = app;
