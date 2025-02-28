@@ -1,115 +1,159 @@
-# Guide d'installation du projet
+# HealthyCore 🏋️‍♀️ 
 
-## État Actuel : 🚧 EN TRAVAUX 🚧
+## 📱 Présentation
 
-### Étapes Terminées ✅
+HealthyCore est une application mobile de santé et de fitness développée avec React Native et Expo. Elle permet aux utilisateurs de suivre leurs objectifs de santé, gérer leur alimentation et leurs activités physiques, tout en fournissant des recommandations personnalisées basées sur leur profil.
 
-- Création de la base de données
-- Migration vers PostgreSQL
-- Remplissage avec les données initiales
+L'application utilise une architecture moderne avec un backend Node.js, Express et PostgreSQL, et un frontend React Native avec Expo et TypeScript.
 
-## Structure du Projet
+## ✨ Fonctionnalités disponibles
 
-Le projet est divisé en deux répertoires principaux :
+- ✅ **Authentification complète** : Inscription en plusieurs étapes et connexion
+- ✅ **Profil personnalisé** : Informations personnelles, objectifs de poids, préférences alimentaires
+- ✅ **Calculs nutritionnels** : BMR, TDEE, calories quotidiennes recommandées
+- ✅ **Plans nutritionnels** : Différents types de plans adaptés aux objectifs (perte/gain de poids, maintien)
 
-- `frontend/` : Contient l'application front-end
-- `backend/` : Contient l'application back-end et la configuration de la base de données
+## 🚀 Technologies utilisées
 
-## Configuration Requise
+### Frontend
 
-### Configuration du Backend (.env)
+- **Framework** : React Native avec Expo
+- **Langage** : TypeScript
+- **Routing** : Expo Router (routing basé sur les fichiers)
+- **Gestion d'état** : Context API
+- **UI/UX** : Composants personnalisés avec styles intégrés
 
-Dans le dossier `backend/`, vous devez créer un fichier `.env` en suivant le modèle fourni dans `.env.example`. Ce fichier est nécessaire pour le bon fonctionnement de l'application.
+### Backend
 
-## Instructions d'Installation
+- **Serveur** : Node.js
+- **Framework** : Express
+- **Base de données** : PostgreSQL
+- **ORM** : Prisma
+- **Authentification** : JWT (JSON Web Tokens)
+- **Validation** : Express-validator et validateurs personnalisés
 
-### Première Installation
+## 🔧 Prérequis
 
-Pour une première installation du projet, utilisez :
+- Node.js
+- npm
+- Docker et Docker Compose (pour la base de données)
+
+## 🛠️ Installation
+
+### Configuration rapide
 
 ```bash
+# Cloner le dépôt
+git clone https://github.com/NicolasRbls/HealthyCore.git
+cd healthycore
+
+# Configuration complète pour la première utilisation
 make first-launch
-```
 
-Cette commande va :
-
-1. Démarrer les conteneurs Docker (PostgreSQL et pgAdmin)
-2. Installer les dépendances front-end
-3. Installer les dépendances back-end
-4. Exécuter les migrations de la base de données
-5. Remplir la base de données avec les données initiales
-
-### Installation pour le Développement
-
-Pour le développement quotidien après la première installation :
-
-```bash
-make work
-```
-
-Cette commande va :
-
-1. Démarrer les conteneurs Docker
-2. Lancer le serveur back-end
-
-### Lancement du Frontend
-
-Pour lancer l'application frontend, ouvrez un nouveau terminal et exécutez :
-
-```bash
+# Dans un autre terminal, lancer le frontend
 cd frontend
 npx expo start
 ```
 
-⚠️ Note : Le frontend doit être lancé dans un terminal séparé pendant que le backend tourne.
+Cette commande `first-launch` va:
+1. Démarrer les conteneurs Docker (PostgreSQL et pgAdmin)
+2. Installer les dépendances frontend et backend
+3. Créer les tables de la base de données
+4. Remplir la base de données avec les données initiales
 
-### Gestion de la Base de Données
+## 📱 Utilisation de l'application
 
-#### Avec Migrations
+1. Ouvrez l'application sur votre émulateur ou appareil réel via Expo Go
+2. Créez un compte en suivant le processus d'inscription en 8 étapes
+3. Ou connectez-vous si vous avez déjà un compte
 
-Si vous devez apporter des modifications à la base de données :
+## 🗂️ Structure du projet
 
-1. Effectuez vos modifications dans le schéma Prisma
-2. Lancez les migrations : `make migrate`
-3. Remplissez la base de données : `make seed`
+### Frontend
 
-#### Sans Migrations
+```
+frontend/
+├── app/                   # Routes et écrans (Expo Router)
+│   ├── _layout.tsx        # Layout principal
+│   ├── welcome.tsx        # Écran d'accueil
+│   ├── auth/              # Authentification
+│   ├── register/          # Processus d'inscription en 8 étapes
+│   ├── admin/             # Interface administrateur
+│   └── user/              # Interface utilisateur
+├── components/            # Composants réutilisables
+├── constants/             # Constantes de l'application
+├── context/               # Contextes React pour la gestion d'état
+├── hooks/                 # Hooks personnalisés
+└── services/              # Services pour les appels API
+```
 
-Si vous démarrez simplement la base de données existante :
+### Backend
 
-1. Démarrez les conteneurs : `make up`
-2. Lancez le back-end : `make start-back`
+```
+backend/
+├── prisma/                # Configuration Prisma et migrations
+├── src/
+│   ├── config/            # Configuration centralisée
+│   ├── modules/           # Organisation par domaine fonctionnel
+│   │   ├── auth/          # Authentification
+│   │   ├── validation/    # Validation des données
+│   │   ├── user/          # Gestion des utilisateurs
+│   │   └── data/          # Données communes
+│   ├── services/          # Services partagés
+│   ├── utils/             # Utilitaires
+│   └── middleware/        # Middleware globaux
+└── docker-compose.yml     # Configuration Docker
+```
 
-## Commandes Disponibles
+## 📋 Commandes utiles
 
-### Gestion Docker
+### Commandes Make
 
-- `make up` : Démarre les conteneurs Docker
-- `make down` : Arrête et supprime les conteneurs
-- `make down-volumes` : Arrête et supprime les conteneurs et leurs volumes
+```bash
+# Démarrer les conteneurs Docker
+make up
 
-### Installation
+# Arrêter les conteneurs Docker
+make down
 
-- `make install-front` : Installe les dépendances front-end
-- `make install-back` : Installe les dépendances back-end
+# Supprimer les conteneurs et les volumes
+make down-volumes
 
-### Opérations sur la Base de Données
+# Installer les dépendances frontend
+make install-front
 
-- `make migrate` : Crée les tables de la base de données
-- `make seed` : Remplit la base de données avec les données initiales
+# Installer les dépendances backend
+make install-back
 
-### Gestion de l'Application
+# Créer les tables de la base de données
+make migrate
 
-- `make start-back` : Démarre le serveur back-end
-- `make first-launch` : Configuration complète pour la première utilisation
-- `make work` : Démarrage rapide pour le développement
+# Initialiser les données
+make seed
 
-## Détails Techniques
+# Démarrer le backend
+make start-back
 
-Le projet utilise :
+# Configuration complète pour la première utilisation
+make first-launch
 
-- Docker Compose pour la gestion des conteneurs
-- PostgreSQL comme base de données
-- pgAdmin pour l'administration de la base de données
-- Prisma pour les migrations et le remplissage de la base de données
-- Expo pour le frontend React Native
+# Démarrage rapide pour le développement
+make work
+```
+
+## 👨‍💻 Utilisateur administrateur par défaut
+
+Après initialisation de la base de données, un compte administrateur est créé avec les identifiants suivants:
+
+- **Email** : admin@admin.com
+- **Mot de passe** : admin
+
+## 📄 Licence
+
+Ce projet est développé dans le cadre d'un projet académique. Tous droits réservés.
+
+---
+
+<div align="center">
+  <p>Développé dans le cadre du Master 1 Développement Web et Mobile (DWM)</p>
+</div>
