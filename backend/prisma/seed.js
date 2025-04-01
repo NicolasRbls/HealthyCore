@@ -224,19 +224,19 @@ async function main() {
   // Ajout des activités
   const activites = [
     {
-      nom: "🚶‍♂️ Cardio modéré",
+      nom: "Cardio modéré",
       description: "Maintien et bien-être",
     },
     {
-      nom: "🔥 HIIT",
+      nom: "HIIT",
       description: "Performance maximale.",
     },
     {
-      nom: "🏃‍♂️ Running",
+      nom: "Running",
       description: "Endurance et cardio",
     },
     {
-      nom: "💪 Musculation",
+      nom: "Musculation",
       description: "Développement musculaire",
     },
     {
