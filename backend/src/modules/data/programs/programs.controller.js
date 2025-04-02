@@ -23,3 +23,26 @@ exports.getPrograms = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Récupérer les détails d'un programme spécifique
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.getProgramDetails = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const programId = parseInt(req.params.programId);
+
+    if (isNaN(programId)) {
+      throw new AppError("ID de programme invalide", 400, "INVALID_PROGRAM_ID");
+    }
+
+    const program = await programsService.getProgramDetails(userId, programId);
+
+    res.status(200).json(success({ program }, "Détails du programme récupérés avec succès"));
+  } catch (err) {
+    next(err);
+  }
+};
