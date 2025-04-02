@@ -141,4 +141,33 @@ exports.getSportProgress = async (req, res, next) => {
   }
 };
 
+/**
+ * Marquer une séance comme terminée
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.completeSession = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const sessionId = parseInt(req.params.sessionId);
+    const { date } = req.body;
+
+    if (isNaN(sessionId)) {
+      throw new AppError("ID de séance invalide", 400, "INVALID_SESSION_ID");
+    }
+
+    const completedSession = await programsService.completeSession(userId, sessionId, date);
+
+    res.status(200).json(
+      success(
+        { completedSession },
+        "Séance marquée comme terminée"
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
 

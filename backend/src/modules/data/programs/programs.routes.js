@@ -36,6 +36,14 @@ router.get("/sessions", checkAuth, programsController.getSessions);
 router.get("/sessions/:sessionId", checkAuth, programsController.getSessionDetails);
 
 /**
+ * Récupérer les séances de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+router.post("/sessions/:sessionId/complete", checkAuth, programsController.completeSession);
+
+/**
  * Récupérer les détails d'un programme spécifique
  * @param {Object} req - Requête HTTP
  * @param {Object} res - Réponse HTTP

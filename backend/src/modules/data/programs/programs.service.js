@@ -497,7 +497,7 @@ const startProgram = async (userId, programId, startDate = null) => {
     }
   };
   
-  
+
 /**
  * Récupérer les progrès sportifs de l'utilisateur
  * @param {number} userId - ID de l'utilisateur
@@ -684,6 +684,103 @@ const generateEmptyWeekSchedule = () => {
   return weekSchedule;
 };
 
+/**
+ * Marquer une séance comme terminée
+ * @param {number} userId - ID de l'utilisateur
+ * @param {number} sessionId - ID de la séance
+ * @param {string|null} date - Date de la séance (au format ISO 8601)
+ * @return {Promise<Object>} - Détails de la séance marquée comme terminée
+ * @throws {Error} - Si une erreur se produit lors de la mise à jour de la séance
+ */
+const completeSession = async (userId, sessionId, date = null) => {
+    try {
+      const session = await prisma.seances.findUnique({
+        where: { id_seance: sessionId }
+      });
+  
+      if (!session) {
+        throw new AppError("Séance non trouvée", 404, "SESSION_NOT_FOUND");
+      }
+  
+      const completionDate = date ? new Date(date) : new Date();
+      completionDate.setHours(0, 0, 0, 0);
+  
+      const existingCompletion = await prisma.suivis_sportifs.findFirst({
+        where: {
+          id_user: userId,
+          id_seance: sessionId,
+          date: completionDate
+        }
+      });
+  
+      if (existingCompletion) {
+        throw new AppError(
+          "Cette séance a déjà été marquée comme terminée pour cette date",
+          409,
+          "SESSION_ALREADY_COMPLETED"
+        );
+      }
+  
+      const sportFollowUp = await prisma.suivis_sportifs.create({
+        data: {
+          id_user: userId,
+          id_seance: sessionId,
+          date: completionDate
+        }
+      });
+  
+      let dailyObjectiveCompleted = false;
+      const sportObjective = await prisma.objectifs.findFirst({
+        where: {
+          titre: { contains: "séance de sport", mode: "insensitive" }
+        }
+      });
+  
+      if (sportObjective) {
+        const existingObjective = await prisma.objectifs_utilisateurs.findFirst({
+          where: {
+            id_user: userId,
+            id_objectif: sportObjective.id_objectif,
+            date: completionDate
+          }
+        });
+  
+        if (existingObjective) {
+          if (existingObjective.statut !== "done") {
+            await prisma.objectifs_utilisateurs.update({
+              where: { id_objectif_utilisateur: existingObjective.id_objectif_utilisateur },
+              data: { statut: "done" }
+            });
+            dailyObjectiveCompleted = true;
+          }
+        } else {
+          await prisma.objectifs_utilisateurs.create({
+            data: {
+              id_user: userId,
+              id_objectif: sportObjective.id_objectif,
+              date: completionDate,
+              statut: "done"
+            }
+          });
+          dailyObjectiveCompleted = true;
+        }
+      }
+  
+      return {
+        id: sportFollowUp.id_suivi_sportif,
+        sessionId: sessionId,
+        date: completionDate,
+        sessionName: session.nom,
+        dailyObjective: {
+          completed: dailyObjectiveCompleted
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
+  
+  
 
 module.exports = {
     getUserPrograms,
@@ -691,6 +788,7 @@ module.exports = {
     startProgram,
     getUserSessions,
     getSessionDetails,
-    getSportProgress
+    getSportProgress,
+    completeSession,
 };
 
