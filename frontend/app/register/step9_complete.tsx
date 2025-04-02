@@ -43,6 +43,10 @@ export default function CompleteScreen() {
     }
   };
 
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollView}>
@@ -54,7 +58,10 @@ export default function CompleteScreen() {
               resizeMode="contain"
             />
 
-            <Text style={styles.title}>Bienvenue, {data.firstName}</Text>
+            <Text style={styles.title}>
+              Bienvenue,{" "}
+              {capitalizeFirstLetter(data.firstName || "Utilisateur")}
+            </Text>
 
             <Text style={styles.description}>
               Votre profil est prêt ! Ensemble, nous allons atteindre vos
