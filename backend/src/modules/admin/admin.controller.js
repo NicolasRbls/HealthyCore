@@ -1,89 +1,42 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const adminService = require("./admin.service");
 
 const adminController = {
   /**
-   * Récupérer le nombre d'utilisateurs (hors admin)
+    * Récupérer tous les utilisateurs avec pagination et recherche
    */
-  async getUsersCount(req, res) {
-    try {
-      const count = await prisma.user.count({
-        where: {
-          role: {
-            not: "ADMIN"
-          }
-        }
-      });
-      
-      res.json({ count });
-    } catch (error) {
-      res.status(500).json({ 
-        message: "Erreur lors de la récupération du nombre d'utilisateurs", 
-        error: error.message 
+  async getUsers(req, res) {
+    const { page = 1, limit = 10, search = "" } = req.query;
+    console.log("Query params:", req.query);
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+  
+    if (isNaN(pageNumber) || isNaN(limitNumber)) {
+      return res.status(400).json({
+        message: "Les paramètres de pagination doivent être des nombres valides.",
       });
     }
-  },
-
-  /**
-   * Récupérer tous les utilisateurs avec pagination et recherche
-   */
-  async getAllUsers(req, res) {
+  
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const search = req.query.search || "";
-      const skip = (page - 1) * limit;
-
-      // Construire les conditions de recherche
-      const whereCondition = search 
-        ? {
-            OR: [
-              { firstName: { contains: search, mode: 'insensitive' } },
-              { lastName: { contains: search, mode: 'insensitive' } }
-            ]
-          }
-        : {};
-
-      // Récupérer les utilisateurs avec pagination et filtres
-      const users = await prisma.user.findMany({
-        where: whereCondition,
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          createdAt: true,
-          // Omettre le mot de passe et autres données sensibles
-        },
-        skip,
-        take: limit,
-        orderBy: {
-          createdAt: 'desc'
-        }
+      // Appel de la logique métier via le service
+      const { users, total } = await adminService.getPaginatedUsers({
+        page: pageNumber,
+        limit: limitNumber,
+        search,
       });
-
-      // Obtenir le nombre total pour la pagination
-      const total = await prisma.user.count({
-        where: whereCondition
-      });
-
-      // Calculer la pagination
-      const totalPages = Math.ceil(total / limit);
-
+  
       res.json({
         users,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages
-        }
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber),
       });
     } catch (error) {
-      res.status(500).json({ 
-        message: "Erreur lors de la récupération des utilisateurs", 
-        error: error.message 
+      res.status(500).json({
+        message: "Erreur lors de la récupération des utilisateurs paginés",
+        error,
       });
     }
   },
@@ -138,6 +91,18 @@ const adminController = {
       res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur", error });
     }
   },
+
+  // Récupérer le nombre total d'utilisateurs
+  async getTotalUserCount(req, res) {
+    try {
+      const count = await adminService.getUserCount();
+      console.log("Total users count:", count);
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur lors de la récupération du nombre d'utilisateurs", error });
+    }
+  }
+
 };
 
 module.exports = adminController;
