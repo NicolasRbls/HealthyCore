@@ -1,108 +1,244 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const adminService = require("./admin.service");
+const adminService = require('./admin.service');
+const { catchAsync } = require('../../utils/catcherror.utils');
+const { AppError } = require('../../utils/response.utils');
+const bcrypt = require('bcrypt');
 
+/**
+ * Contrôleur pour les routes d'administration
+ */
 const adminController = {
   /**
-    * Récupérer tous les utilisateurs avec pagination et recherche
+   * Récupérer la liste paginée de tous les utilisateurs
    */
-  async getUsers(req, res) {
-    const { page = 1, limit = 10, search = "" } = req.query;
-    console.log("Query params:", req.query);
-    const pageNumber = parseInt(page);
-    const limitNumber = parseInt(limit);
-  
-    if (isNaN(pageNumber) || isNaN(limitNumber)) {
-      return res.status(400).json({
-        message: "Les paramètres de pagination doivent être des nombres valides.",
-      });
-    }
-  
-    try {
-      // Appel de la logique métier via le service
-      const { users, total } = await adminService.getPaginatedUsers({
-        page: pageNumber,
-        limit: limitNumber,
-        search,
-      });
-  
-      res.json({
+  getAllUsers: catchAsync(async (req, res) => {
+    // Paramètres de pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const search = req.query.search || '';
+    const sortBy = req.query.sortBy || 'created_at';
+    const order = req.query.order?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    
+    const { users, total, totalPages } = await adminService.getAllUsers({
+      page,
+      limit,
+      search,
+      sortBy,
+      order
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
         users,
-        total,
-        page: pageNumber,
-        limit: limitNumber,
-        totalPages: Math.ceil(total / limitNumber),
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: "Erreur lors de la récupération des utilisateurs paginés",
-        error,
-      });
-    }
-  },
+        pagination: {
+          total,
+          totalPages,
+          currentPage: page,
+          perPage: limit,
+          hasMore: page < totalPages
+        }
+      },
+      message: 'Liste des utilisateurs récupérée avec succès'
+    });
+  }),
 
   /**
-   * Récupérer un utilisateur par ID
+   * Récupérer les détails complets d'un utilisateur spécifique
    */
-  async getUserById(req, res) {
-    const userId = parseInt(req.params.id);
-    if (isNaN(userId)) return res.status(400).json({ message: "ID utilisateur invalide" });
-
-    try {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
-
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ message: "Erreur lors de la récupération de l'utilisateur", error });
-    }
-  },
+  getUserDetails: catchAsync(async (req, res) => {
+    const { userId } = req.params;
+    
+    const userDetails = await adminService.getUserDetails(userId);
+    
+    res.status(200).json({
+      status: 'success',
+      data: userDetails,
+      message: 'Détails de l\'utilisateur récupérés avec succès'
+    });
+  }),
 
   /**
-   * Mettre à jour un utilisateur
+   * Supprimer un utilisateur et toutes ses données associées
    */
-  async updateUser(req, res) {
-    const userId = parseInt(req.params.id);
-    if (isNaN(userId)) return res.status(400).json({ message: "ID utilisateur invalide" });
-
-    try {
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: req.body, // Attention à bien valider les entrées
-      });
-
-      res.json(updatedUser);
-    } catch (error) {
-      res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error });
+  deleteUser: catchAsync(async (req, res) => {
+    const { userId } = req.params;
+    const { adminPassword } = req.body;
+    
+    if (!adminPassword) {
+      throw new AppError('Le mot de passe administrateur est requis', 400, 'MISSING_PASSWORD');
     }
-  },
+    
+    // Vérifier le mot de passe de l'administrateur
+    const isPasswordValid = await adminService.verifyAdminPassword(req.user.id_user, adminPassword);
+    
+    if (!isPasswordValid) {
+      throw new AppError('Mot de passe administrateur incorrect', 401, 'INVALID_PASSWORD');
+    }
+    
+    await adminService.deleteUser(userId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Utilisateur supprimé avec succès'
+    });
+  }),
 
   /**
-   * Supprimer un utilisateur
+   * Récupérer les statistiques pour le tableau de bord administrateur
    */
-  async deleteUser(req, res) {
-    const userId = parseInt(req.params.id);
-    if (isNaN(userId)) return res.status(400).json({ message: "ID utilisateur invalide" });
+  getDashboardStats: catchAsync(async (req, res) => {
+    const stats = await adminService.getDashboardStats();
+    
+    res.status(200).json({
+      status: 'success',
+      data: stats,
+      message: 'Statistiques du tableau de bord récupérées avec succès'
+    });
+  }),
 
-    try {
-      await prisma.user.delete({ where: { id: userId } });
-      res.json({ message: "Utilisateur supprimé avec succès" });
-    } catch (error) {
-      res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur", error });
+  /**
+   * Récupérer tout le contenu géré par l'administrateur
+   */
+  getAllContent: catchAsync(async (req, res) => {
+    // Paramètres de filtrage et pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const contentType = req.query.type || null;
+    
+    const { content, total, totalPages } = await adminService.getAllContent({
+      page,
+      limit,
+      contentType
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        content,
+        pagination: {
+          total,
+          totalPages,
+          currentPage: page,
+          perPage: limit,
+          hasMore: page < totalPages
+        }
+      },
+      message: 'Contenu récupéré avec succès'
+    });
+  }),
+
+  /**
+   * Créer un nouveau contenu
+   */
+  createContent: catchAsync(async (req, res) => {
+    const contentData = req.body;
+    
+    const newContent = await adminService.createContent(contentData);
+    
+    res.status(201).json({
+      status: 'success',
+      data: {
+        content: newContent
+      },
+      message: 'Contenu créé avec succès'
+    });
+  }),
+
+  /**
+   * Mettre à jour un contenu existant
+   */
+  updateContent: catchAsync(async (req, res) => {
+    const { contentId } = req.params;
+    const contentData = req.body;
+    
+    const updatedContent = await adminService.updateContent(contentId, contentData);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        content: updatedContent
+      },
+      message: 'Contenu mis à jour avec succès'
+    });
+  }),
+
+  /**
+   * Supprimer un contenu
+   */
+  deleteContent: catchAsync(async (req, res) => {
+    const { contentId } = req.params;
+    
+    await adminService.deleteContent(contentId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Contenu supprimé avec succès'
+    });
+  }),
+
+  /**
+   * Envoyer une notification aux utilisateurs
+   */
+  sendNotification: catchAsync(async (req, res) => {
+    const { title, message, targetUsers, notificationType } = req.body;
+    
+    if (!title || !message) {
+      throw new AppError('Le titre et le message sont requis', 400, 'MISSING_FIELDS');
     }
-  },
+    
+    const result = await adminService.sendNotification({
+      title,
+      message, 
+      targetUsers,
+      notificationType,
+      sentBy: req.user.id_user
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        notificationsSent: result.count
+      },
+      message: 'Notification envoyée avec succès'
+    });
+  }),
 
-  // Récupérer le nombre total d'utilisateurs
-  async getTotalUserCount(req, res) {
-    try {
-      const count = await adminService.getUserCount();
-      console.log("Total users count:", count);
-      res.json({ count });
-    } catch (error) {
-      res.status(500).json({ message: "Erreur lors de la récupération du nombre d'utilisateurs", error });
-    }
-  }
-
+  /**
+   * Récupérer les logs système
+   */
+  getSystemLogs: catchAsync(async (req, res) => {
+    // Paramètres de filtrage
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+    const logLevel = req.query.level || null; // error, warning, info, etc.
+    const logType = req.query.type || null;
+    
+    const { logs, total, totalPages } = await adminService.getSystemLogs({
+      page,
+      limit,
+      startDate,
+      endDate,
+      logLevel,
+      logType
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        logs,
+        pagination: {
+          total,
+          totalPages,
+          currentPage: page,
+          perPage: limit,
+          hasMore: page < totalPages
+        }
+      },
+      message: 'Logs système récupérés avec succès'
+    });
+  })
 };
 
 module.exports = adminController;
