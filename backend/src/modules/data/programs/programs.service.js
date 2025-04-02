@@ -335,10 +335,96 @@ const startProgram = async (userId, programId, startDate = null) => {
     }
   };
   
+/**
+ * Récupérer les séances de l'utilisateur
+ * @param {number} page - Numéro de la page
+ * @param {number} limit - Nombre d'éléments par page
+ * @param {number|null} tagId - ID du tag (optionnel)
+ * @return {Promise<Object>} - Détails des séances de l'utilisateur
+ * @throws {Error} - Si une erreur se produit lors de la récupération des séances
+ */
+  const getUserSessions = async (page = 1, limit = 10, tagId = null) => {
+    try {
+      const skip = (page - 1) * limit;
+  
+      let whereClause = {};
+      if (tagId) {
+        whereClause = {
+          seances_tags: {
+            some: {
+              id_tag: parseInt(tagId)
+            }
+          }
+        };
+      }
+  
+      const [sessions, total] = await Promise.all([
+        prisma.seances.findMany({
+          where: whereClause,
+          include: {
+            exercices_seances: {
+              include: { exercices: true }
+            },
+            seances_tags: {
+              include: { tags: true }
+            }
+          },
+          skip,
+          take: limit,
+          orderBy: { nom: "asc" }
+        }),
+        prisma.seances.count({ where: whereClause })
+      ]);
+  
+      const transformedSessions = sessions.map(session => {
+        let estimatedDuration = 0;
+        session.exercices_seances.forEach(es => {
+          if (es.duree > 0) {
+            estimatedDuration += es.duree;
+          } else {
+            estimatedDuration += (es.series || 1) * 1; // 1 min/série
+          }
+        });
+  
+        let level = "Intermédiaire";
+        const tags = session.seances_tags.map(st => st.tags.nom.toLowerCase());
+        if (tags.some(tag => tag.includes("débutant"))) level = "Débutant";
+        else if (tags.some(tag => tag.includes("avancé"))) level = "Avancé";
+  
+        return {
+          id: session.id_seance,
+          name: session.nom,
+          exerciseCount: session.exercices_seances.length,
+          estimatedDuration,
+          level,
+          tags: session.seances_tags.map(st => ({
+            id: st.tags.id_tag,
+            name: st.tags.nom
+          }))
+        };
+      });
+  
+      const totalPages = Math.ceil(total / limit);
+  
+      return {
+        sessions: transformedSessions,
+        pagination: {
+          total,
+          totalPages,
+          currentPage: page,
+          limit
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
+  
 
 module.exports = {
     getUserPrograms,
     getProgramDetails, 
     startProgram,
+    getUserSessions,
 };
 

@@ -76,3 +76,24 @@ exports.startProgram = async (req, res, next) => {
   }
 };
 
+/**
+ * Récupérer toutes les séances de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.getSessions = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const tagId = req.query.tagId || null;
+
+    const result = await programsService.getUserSessions(page, limit, tagId);
+
+    res.status(200).json(success(result, "Séances récupérées avec succès"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+

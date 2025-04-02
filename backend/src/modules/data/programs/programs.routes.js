@@ -12,6 +12,14 @@ const { checkAuth } = require("../../auth/auth.middleware");
 router.get("/", checkAuth, programsController.getPrograms);
 
 /**
+ * Récupérer les séances d'un programme spécifique
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+router.get("/sessions", checkAuth, programsController.getSessions);
+
+/**
  * Récupérer les détails d'un programme spécifique
  * @param {Object} req - Requête HTTP
  * @param {Object} res - Réponse HTTP
@@ -26,7 +34,6 @@ router.get("/:programId", checkAuth, programsController.getProgramDetails);
  * @param {Function} next - Fonction middleware pour passer au prochain middleware
  */
 router.post("/:programId/start", checkAuth, programsController.startProgram);
-
 
 
 module.exports = router;
