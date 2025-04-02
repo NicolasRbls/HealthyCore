@@ -170,4 +170,28 @@ exports.completeSession = async (req, res, next) => {
   }
 };
 
+/**
+ * Récupérer la séance du jour de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.getTodaySession = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+
+    const todaySession = await programsService.getTodaySession(userId);
+
+    res.status(200).json(
+      success(
+        { todaySession },
+        todaySession ? "Séance du jour récupérée avec succès" : "Aucune séance prévue aujourd'hui"
+      )
+    );
+  } catch (err) {
+    console.error("❌ Erreur dans getTodaySession:", err);
+    next(err);
+  }  
+};
+
 
