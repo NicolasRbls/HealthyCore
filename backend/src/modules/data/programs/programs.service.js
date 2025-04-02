@@ -260,10 +260,85 @@ const getProgramDetails = async (userId, programId) => {
       userProgress,
     };
   };
+
+/**
+ * Démarrer un programme pour l'utilisateur
+ * @param {number} userId - ID de l'utilisateur
+ * @param {number} programId - ID du programme
+ * @param {string|null} startDate - Date de début (au format ISO 8601)
+ * @return {Promise<Object>} - Détails du programme démarré
+ */
+const startProgram = async (userId, programId, startDate = null) => {
+    try {
+      const program = await prisma.programmes.findUnique({
+        where: { id_programme: programId },
+        include: {
+          seances_programmes: {
+            include: { seances: true },
+            orderBy: { ordre_seance: "asc" },
+          },
+        },
+      });
+  
+      if (!program) throw new AppError("Programme non trouvé", 404, "PROGRAM_NOT_FOUND");
+  
+      const existing = await prisma.programmes_utilisateurs.findFirst({
+        where: {
+          id_user: userId,
+          id_programme: programId,
+          date_fin: { gte: new Date() },
+        },
+      });
+  
+      if (existing)
+        throw new AppError("Vous suivez déjà ce programme", 409, "PROGRAM_ALREADY_STARTED");
+  
+      const actualStartDate = startDate ? new Date(startDate) : new Date();
+      actualStartDate.setHours(0, 0, 0, 0);
+  
+      const endDate = new Date(actualStartDate);
+      endDate.setDate(endDate.getDate() + program.duree);
+  
+      const userProgram = await prisma.programmes_utilisateurs.create({
+        data: {
+          id_user: userId,
+          id_programme: programId,
+          date_debut: actualStartDate,
+          date_fin: endDate,
+        },
+      });
+  
+      let nextSession = null;
+      if (program.seances_programmes.length > 0) {
+        const now = new Date();
+        const firstSessionDate = new Date(actualStartDate);
+        if (now.getHours() >= 18) firstSessionDate.setDate(firstSessionDate.getDate() + 1);
+  
+        nextSession = {
+          id: program.seances_programmes[0].seances.id_seance,
+          name: program.seances_programmes[0].seances.nom,
+          date: firstSessionDate,
+        };
+      }
+  
+      return {
+        id: userProgram.id_programme_utilisateur,
+        programId: program.id_programme,
+        programName: program.nom,
+        startDate: userProgram.date_debut,
+        endDate: userProgram.date_fin,
+        progressPercentage: 0,
+        nextSession,
+      };
+    } catch (err) {
+      throw err;
+    }
+  };
   
 
 module.exports = {
     getUserPrograms,
     getProgramDetails, 
+    startProgram,
 };
 

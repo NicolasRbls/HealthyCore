@@ -19,5 +19,14 @@ router.get("/", checkAuth, programsController.getPrograms);
  */
 router.get("/:programId", checkAuth, programsController.getProgramDetails);
 
+/**
+ * Démarrer un programme pour l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+router.post("/:programId/start", checkAuth, programsController.startProgram);
+
+
 
 module.exports = router;

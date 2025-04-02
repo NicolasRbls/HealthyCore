@@ -46,3 +46,33 @@ exports.getProgramDetails = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Démarrer un programme pour l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.startProgram = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const programId = parseInt(req.params.programId);
+    const { startDate } = req.body;
+
+    if (isNaN(programId)) {
+      throw new AppError("ID de programme invalide", 400, "INVALID_PROGRAM_ID");
+    }
+
+    const userProgram = await programsService.startProgram(userId, programId, startDate);
+
+    res.status(201).json(
+      success(
+        { userProgram },
+        "Programme commencé avec succès"
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
