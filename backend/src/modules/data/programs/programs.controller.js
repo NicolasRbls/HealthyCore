@@ -97,3 +97,29 @@ exports.getSessions = async (req, res, next) => {
 };
 
 
+/**
+ * Récupérer les détails d'une séance spécifique
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.getSessionDetails = async (req, res, next) => {
+  try {
+    const sessionId = parseInt(req.params.sessionId);
+    if (isNaN(sessionId)) {
+      throw new AppError("ID de séance invalide", 400, "INVALID_SESSION_ID");
+    }
+
+    const session = await programsService.getSessionDetails(sessionId);
+    res.status(200).json(
+      success(
+        { session },
+        "Détails de la séance récupérés avec succès"
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+

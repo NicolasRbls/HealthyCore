@@ -419,6 +419,83 @@ const startProgram = async (userId, programId, startDate = null) => {
       throw error;
     }
   };
+
+
+/**
+ * Récupérer les détails d'une séance spécifique
+ * @param {number} sessionId - ID de la séance
+ * @return {Promise<Object>} - Détails de la séance
+ * @throws {Error} - Si une erreur se produit lors de la récupération des détails
+ */
+  const getSessionDetails = async (sessionId) => {
+    try {
+      const session = await prisma.seances.findUnique({
+        where: { id_seance: sessionId },
+        include: {
+          seances_tags: {
+            include: {
+              tags: true
+            }
+          },
+          exercices_seances: {
+            include: {
+              exercices: true
+            },
+            orderBy: {
+              ordre_exercice: 'asc'
+            }
+          }
+        }
+      });
+  
+      if (!session) {
+        throw new AppError("Séance non trouvée", 404, "SESSION_NOT_FOUND");
+      }
+  
+      let estimatedDuration = 0;
+      session.exercices_seances.forEach(es => {
+        if (es.duree > 0) {
+          estimatedDuration += es.duree;
+        } else {
+          const setsCount = es.series || 1;
+          estimatedDuration += setsCount * 1;
+        }
+      });
+  
+      let level = "Intermédiaire";
+      const tags = session.seances_tags.map(st => st.tags.nom.toLowerCase());
+      if (tags.some(tag => tag.includes("débutant"))) {
+        level = "Débutant";
+      } else if (tags.some(tag => tag.includes("avancé"))) {
+        level = "Avancé";
+      }
+  
+      return {
+        id: session.id_seance,
+        name: session.nom,
+        description: "Une séance d'entraînement complète et efficace.",
+        level,
+        estimatedDuration,
+        tags: session.seances_tags.map(st => ({
+          id: st.tags.id_tag,
+          name: st.tags.nom
+        })),
+        exercises: session.exercices_seances.map(es => ({
+          id: es.exercices.id_exercice,
+          name: es.exercices.nom,
+          order: es.ordre_exercice,
+          sets: es.series,
+          repetitions: es.repetitions,
+          duration: es.duree,
+          description: es.exercices.description,
+          equipment: es.exercices.equipement,
+          gif: es.exercices.gif
+        }))
+      };
+    } catch (error) {
+      throw error;
+    }
+  };
   
 
 module.exports = {
@@ -426,5 +503,6 @@ module.exports = {
     getProgramDetails, 
     startProgram,
     getUserSessions,
+    getSessionDetails,
 };
 
