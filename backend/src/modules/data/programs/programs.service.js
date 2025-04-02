@@ -3,172 +3,160 @@ const prisma = new PrismaClient();
 const { AppError } = require("../../../utils/response.utils");
 
 /**
- * Récupérer les programmes actifs d'un utilisateur
- * @param {number} userId - ID de l'utilisateur
+ * 
+ * @param {*} userId 
+ * @param {*} page 
+ * @param {*} limit 
+ * @param {*} tagId 
+ * @returns 
  */
-const getActivePrograms = async (userId) => {
-    try {
-        console.log(`🔍 Recherche des programmes actifs pour l'utilisateur ID: ${userId}`);
+const getUserPrograms = async (userId, page = 1, limit = 10, tagId = null) => {
+  const skip = (page - 1) * limit;
 
-        // Vérifier si l'utilisateur existe
-        const userExists = await prisma.users.findUnique({
-            where: { id_user: userId },
-            select: { id_user: true }
+  const userPreferences = await prisma.preferences.findFirst({
+    where: { id_user: userId },
+    include: {
+      preferences_activites: {
+        include: {
+          activites: true,
+        },
+      },
+    },
+  });
+
+  const userActivePrograms = await prisma.programmes_utilisateurs.findMany({
+    where: {
+      id_user: userId,
+      date_fin: {
+        gte: new Date(),
+      },
+    },
+    select: {
+      id_programme: true,
+    },
+  });
+
+  const activeProgramIds = userActivePrograms.map(p => p.id_programme);
+
+  let whereClause = {};
+  if (tagId) {
+    whereClause = {
+      programmes_tags: {
+        some: {
+          id_tag: parseInt(tagId),
+        },
+      },
+    };
+  }
+
+  const [programs, total] = await Promise.all([
+    prisma.programmes.findMany({
+      where: whereClause,
+      include: {
+        programmes_tags: {
+          include: {
+            tags: true,
+          },
+        },
+        seances_programmes: true,
+      },
+      skip,
+      take: limit,
+      orderBy: { nom: "asc" },
+    }),
+    prisma.programmes.count({ where: whereClause }),
+  ]);
+
+  const transformedPrograms = programs.map(program => ({
+    id: program.id_programme,
+    name: program.nom,
+    image: program.image,
+    duration: program.duree,
+    sessionCount: program.seances_programmes.length,
+    tags: program.programmes_tags.map(pt => ({
+      id: pt.tags.id_tag,
+      name: pt.tags.nom,
+    })),
+    inProgress: activeProgramIds.includes(program.id_programme),
+  }));
+
+  let recommendedPrograms = [];
+
+  if (userPreferences) {
+    const userActivityIds = userPreferences.preferences_activites.map(pa => pa.id_activite);
+
+    const allPrograms = await prisma.programmes.findMany({
+      include: {
+        programmes_tags: {
+          include: {
+            tags: true,
+          },
+        },
+        seances_programmes: true,
+      },
+    });
+
+    recommendedPrograms = allPrograms
+      .map(program => {
+        let matchScore = 0;
+        const programTags = program.programmes_tags.map(pt => pt.tags.nom.toLowerCase());
+
+        userPreferences.preferences_activites.forEach(pa => {
+          const activity = pa.activites.nom.toLowerCase();
+          if (programTags.some(tag => tag.includes(activity) || activity.includes(tag))) {
+            matchScore += 30;
+          }
         });
 
-        if (!userExists) {
-            throw new AppError("Utilisateur non trouvé", 404, "USER_NOT_FOUND");
+        const userSessionsPerWeek = userPreferences.seances_par_semaines;
+        const programSessionsPerWeek = Math.ceil(program.seances_programmes.length / (program.duree / 7));
+
+        if (programSessionsPerWeek <= userSessionsPerWeek) {
+          matchScore += 20;
+        } else {
+          matchScore -= 10;
         }
 
-        // Récupérer les programmes actifs
-        const activePrograms = await prisma.programmes_utilisateurs.findMany({
-            where: {
-                id_user: userId,
-                date_fin: { gte: new Date() },
-            },
-            include: {
-                programmes: {
-                    select: {
-                        id_programme: true,  // ✅ Assure que l'ID est bien récupéré
-                        nom: true,
-                        image: true,
-                        duree: true,
-                        seances_programmes: {
-                            include: {
-                                seances: {
-                                    select: {
-                                        id_seance: true,
-                                        nom: true,
-                                        exercices_seances: {
-                                            select: {
-                                                id_exercice_seance: true,
-                                                exercices: {
-                                                    select: {
-                                                        id_exercice: true,
-                                                        nom: true,
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        });
-
-        console.log("✅ Résultat brut de Prisma:", JSON.stringify(activePrograms, null, 2));
-
-        // Vérifier si la réponse est vide
-        if (!activePrograms || activePrograms.length === 0) {
-            console.log("⚠ Aucun programme actif trouvé.");
-            return [];
+        if (!activeProgramIds.includes(program.id_programme)) {
+          matchScore += 15;
         }
 
-        // Transformation des données
-        const formattedPrograms = activePrograms.map((programEntry) => {
-            if (!programEntry.programmes) {
-                console.warn("⚠ Programme non défini pour cet utilisateur !");
-                return null;
-            }
-
-            const program = programEntry.programmes;
-            const seances = program.seances_programmes?.map((sp) => ({
-                id: sp.seances.id_seance,
-                name: sp.seances.nom,
-                exercisesCount: sp.seances.exercices_seances?.length || 0,
-            })) || [];
-
-            return {
-                id: program.id_programme, // ✅ Utilisation correcte de l'ID
-                name: program.nom,
-                startDate: programEntry.date_debut,
-                endDate: programEntry.date_fin,
-                progress: program.duree > 0
-                    ? Math.min(100, (seances.length / program.duree) * 100)
-                    : 0,
-                nextSession: seances.length > 0 ? seances[0] : null,
-            };
-        }).filter(p => p !== null);
-
-        return formattedPrograms;
-    } catch (error) {
-        console.error("❌ Erreur Prisma:", error);
-        throw new AppError("Erreur lors de la récupération des programmes actifs", 500, "DATABASE_ERROR");
-    }
-};
-
-
-/**
- * Inscrire un utilisateur à un programme d'entraînement
- * @param {number} userId - ID de l'utilisateur
- * @param {number} programId - ID du programme
- * @param {Date} startDate - Date de début du programme
- */
-const enrollUserInProgram = async (userId, programId, startDate) => {
-    try {
-        console.log(`🔍 Inscription de l'utilisateur ID ${userId} au programme ID ${programId}`);
-
-        // Vérifier si l'utilisateur existe
-        const userExists = await prisma.users.findUnique({
-            where: { id_user: userId },
-        });
-
-        if (!userExists) {
-            throw new AppError("Utilisateur non trouvé", 404, "USER_NOT_FOUND");
-        }
-
-        // Vérifier si le programme existe
-        const programExists = await prisma.programmes.findUnique({
-            where: { id_programme: programId },
-        });
-
-        if (!programExists) {
-            throw new AppError("Le programme spécifié n'existe pas", 404, "PROGRAM_NOT_FOUND");
-        }
-
-        // Vérifier si l'utilisateur est déjà inscrit à ce programme
-        const existingEnrollment = await prisma.programmes_utilisateurs.findFirst({
-            where: {
-                id_user: userId,
-                id_programme: programId,
-            },
-        });
-
-        if (existingEnrollment) {
-            throw new AppError("L'utilisateur est déjà inscrit à ce programme", 400, "ALREADY_ENROLLED");
-        }
-
-        // Déterminer la date de fin (en fonction de la durée du programme)
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + programExists.duree);
-
-        // Inscrire l'utilisateur
-        const enrollment = await prisma.programmes_utilisateurs.create({
-            data: {
-                id_user: userId,
-                id_programme: programId,
-                date_debut: startDate,
-                date_fin: endDate,
-            },
-        });
-
-        console.log("✅ Inscription réussie:", enrollment);
+        matchScore = Math.min(Math.max(matchScore, 0), 100);
 
         return {
-            message: "Inscription au programme réussie",
-            startDate: enrollment.date_debut,
-            endDate: enrollment.date_fin,
+          id: program.id_programme,
+          name: program.nom,
+          image: program.image,
+          duration: program.duree,
+          sessionCount: program.seances_programmes.length,
+          tags: program.programmes_tags.map(pt => ({
+            id: pt.tags.id_tag,
+            name: pt.tags.nom,
+          })),
+          inProgress: activeProgramIds.includes(program.id_programme),
+          matchScore,
         };
-    } catch (error) {
-        console.error("❌ Erreur Prisma:", error);
-        throw new AppError("Erreur lors de l'inscription au programme", 500, "DATABASE_ERROR");
-    }
+      })
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 3);
+  }
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    recommendedPrograms,
+    programs: transformedPrograms,
+    pagination: {
+      total,
+      totalPages,
+      currentPage: page,
+      limit,
+    },
+  };
 };
 
+
 module.exports = {
-    enrollUserInProgram,
-    getActivePrograms,
+    getUserPrograms, 
 };
+
