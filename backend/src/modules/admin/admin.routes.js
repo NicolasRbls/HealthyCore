@@ -15,14 +15,14 @@ const router = express.Router();
  * @desc Récupérer le nombre total d'utilisateurs
  * @access Private (Admin)
  */
-router.get("/users/count", adminController.getTotalUserCount);
+router.get("/users/count", isAdmin, adminController.getTotalUserCount);
 
 /**
  * @route GET /api/admin/users 
  * @desc Récupérer tous les utilisateurs avec pagination
  * @access Private (Admin)
  */
-router.get("/users", adminController.getUsers);
+router.get("/users", isAdmin, adminController.getUsers);
 
 /**
  * @route GET /api/admin/users/:id
