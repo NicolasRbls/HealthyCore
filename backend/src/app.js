@@ -43,7 +43,7 @@ app.get("/api/health", (req, res) => {
 // Configure API routes
 app.use("/api/auth", authRoutes);
 // app.use("/api/user", userRoutes);
-// app.use("/api/admin", adminRoutes);
+//app.use("/api/admin", adminRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/validation", validationRoutes);
 
@@ -51,7 +51,7 @@ app.use("/api/validation", validationRoutes);
 app.use(errorMiddleware);
 
 // Admin routes
-app.use("/admin", adminRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Add OpenFoodFacts routes
 app.use("/api/openfoodfacts", openFoodFactsRoutes);

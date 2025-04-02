@@ -10,10 +10,25 @@ const router = express.Router();
  * Routes Admin
  */
 
-// Récupérer tous les utilisateurs
+/**
+ * @route GET /api/admin/users/count
+ * @desc Récupérer le nombre total d'utilisateurs
+ * @access Private (Admin)
+ */
+router.get("/users/count", isAdmin, adminController.getUsersCount);
+
+/**
+ * @route GET /api/admin/users 
+ * @desc Récupérer tous les utilisateurs avec pagination
+ * @access Private (Admin)
+ */
 router.get("/users", isAdmin, adminController.getAllUsers);
 
-// Récupérer un utilisateur par ID
+/**
+ * @route GET /api/admin/users/:id
+ * @desc Récupérer un utilisateur par ID
+ * @access Private (Admin)
+ */
 router.get("/users/:id", isAdmin, adminController.getUserById);
 
 // Mettre à jour un utilisateur
