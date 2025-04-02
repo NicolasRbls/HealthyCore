@@ -122,4 +122,23 @@ exports.getSessionDetails = async (req, res, next) => {
   }
 };
 
+/**
+ * Récupérer le suivi sportif de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+exports.getSportProgress = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const result = await programsService.getSportProgress(userId);
+
+    res.status(200).json(
+      success(result, "Suivi sportif récupéré avec succès")
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
 

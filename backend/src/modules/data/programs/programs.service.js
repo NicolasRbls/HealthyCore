@@ -497,6 +497,193 @@ const startProgram = async (userId, programId, startDate = null) => {
     }
   };
   
+  
+/**
+ * Récupérer les progrès sportifs de l'utilisateur
+ * @param {number} userId - ID de l'utilisateur
+ * @return {Promise<Object>} - Progrès sportifs de l'utilisateur
+ * @throws {Error} - Si une erreur se produit lors de la récupération des progrès
+ */
+const getSportProgress = async (userId) => {
+  try {
+    const activeUserProgram = await prisma.programmes_utilisateurs.findFirst({
+      where: {
+        id_user: userId,
+        date_fin: {
+          gte: new Date(),
+        },
+      },
+      include: {
+        programmes: {
+          include: {
+            seances_programmes: {
+              include: {
+                seances: true,
+              },
+              orderBy: {
+                ordre_seance: 'asc',
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        date_debut: 'desc',
+      },
+    });
+
+    if (!activeUserProgram) {
+      return {
+        activeProgram: null,
+        weeklySchedule: generateEmptyWeekSchedule(),
+        recentSessions: [],
+      };
+    }
+
+    const sportFollowUps = await prisma.suivis_sportifs.findMany({
+      where: {
+        id_user: userId,
+        date: {
+          gte: activeUserProgram.date_debut,
+          lte: new Date(),
+        },
+        seances: {
+          seances_programmes: {
+            some: {
+              id_programme: activeUserProgram.id_programme,
+            },
+          },
+        },
+      },
+      include: {
+        seances: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+      take: 10,
+    });
+
+    const today = new Date();
+    const startDate = new Date(activeUserProgram.date_debut);
+    const endDate = new Date(activeUserProgram.date_fin);
+    const daysPassed = Math.floor((today - startDate) / 86400000);
+    const totalDays = Math.floor((endDate - startDate) / 86400000);
+    const totalSessions = activeUserProgram.programmes.seances_programmes.length;
+    const completedSessions = sportFollowUps.length;
+
+    const expectedSessions = Math.round((daysPassed / totalDays) * totalSessions);
+
+    const sessionProgressPercentage = expectedSessions > 0
+      ? Math.min(Math.round((completedSessions / expectedSessions) * 100), 100)
+      : 0;
+
+    const weeklySchedule = generateWeekSchedule(
+      activeUserProgram.programmes.seances_programmes,
+      sportFollowUps
+    );
+
+    const recentSessions = sportFollowUps.map(followUp => ({
+      id: followUp.id_suivi_sportif,
+      sessionId: followUp.id_seance,
+      name: followUp.seances.nom,
+      date: followUp.date,
+      completed: true,
+    }));
+
+    return {
+      activeProgram: {
+        id: activeUserProgram.id_programme,
+        name: activeUserProgram.programmes.nom,
+        startDate: activeUserProgram.date_debut,
+        endDate: activeUserProgram.date_fin,
+        progressPercentage: sessionProgressPercentage,
+        completedSessions,
+        totalSessions: Math.min(expectedSessions, totalSessions),
+      },
+      weeklySchedule,
+      recentSessions,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const generateWeekSchedule = (programSessions, sportFollowUps) => {
+  const daysOfWeek = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  const weekSchedule = [];
+
+  for (let i = 0; i < 7; i++) {
+    const currentDate = new Date(monday);
+    currentDate.setDate(monday.getDate() + i);
+    const dateString = currentDate.toISOString().split('T')[0];
+
+    let sessionForDay = null;
+
+    if (i % 2 === 0 && i < 6) {
+      const sessionIndex = Math.floor(i / 2);
+
+      if (sessionIndex < programSessions.length) {
+        const programSession = programSessions[sessionIndex];
+
+        const isCompleted = sportFollowUps.some(followUp => {
+          const followUpDate = new Date(followUp.date);
+          const followUpDateString = followUpDate.toISOString().split('T')[0];
+          return followUpDateString === dateString && followUp.id_seance === programSession.id_seance;
+        });
+
+        sessionForDay = {
+          id: programSession.seances.id_seance,
+          name: programSession.seances.nom,
+          order: programSession.ordre_seance,
+          completed: isCompleted,
+        };
+      }
+    }
+
+    weekSchedule.push({
+      day: daysOfWeek[i],
+      date: dateString,
+      session: sessionForDay,
+    });
+  }
+
+  return weekSchedule;
+};
+
+const generateEmptyWeekSchedule = () => {
+  const daysOfWeek = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  const weekSchedule = [];
+
+  for (let i = 0; i < 7; i++) {
+    const currentDate = new Date(monday);
+    currentDate.setDate(monday.getDate() + i);
+    const dateString = currentDate.toISOString().split('T')[0];
+
+    weekSchedule.push({
+      day: daysOfWeek[i],
+      date: dateString,
+      session: null,
+    });
+  }
+
+  return weekSchedule;
+};
+
 
 module.exports = {
     getUserPrograms,
@@ -504,5 +691,6 @@ module.exports = {
     startProgram,
     getUserSessions,
     getSessionDetails,
+    getSportProgress
 };
 

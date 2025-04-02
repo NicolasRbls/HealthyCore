@@ -12,6 +12,14 @@ const { checkAuth } = require("../../auth/auth.middleware");
 router.get("/", checkAuth, programsController.getPrograms);
 
 /**
+ * Récupérer le suivi sportif de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ */
+router.get("/sport-progress", checkAuth, programsController.getSportProgress);
+
+/**
  * Récupérer les séances d'un programme spécifique
  * @param {Object} req - Requête HTTP
  * @param {Object} res - Réponse HTTP
