@@ -240,7 +240,7 @@ async function main() {
       description: "Développement musculaire",
     },
     {
-      nom: "🧘‍♀️ Yoga/Pilates",
+      nom: "Yoga/Pilates",
       description: "Équilibre et détente",
     },
   ];
