@@ -13,7 +13,11 @@ import { useAuth } from "../../../context/AuthContext";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
-import Card from "../../../components/ui/Card";
+import * as SecureStore from "expo-secure-store";
+
+// Import services
+import authService from "../../../services/auth.service";
+import dataService from "../../../services/data.service";
 
 // Import temp data for now
 import tempData from "../../../assets/temp.json";
@@ -50,79 +54,136 @@ export default function Dashboard() {
     description: "",
   });
   const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [userName, setUserName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, you would fetch data from the API
-    // GET /api/data/programs/today-session
-    // GET /api/user/nutrition/summary
-
     loadData();
   }, []);
 
-  const loadData = () => {
-    // Get user data from temp.json
-    const userData = tempData.user_exemple;
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Charger le profil utilisateur
+      const profileData = await authService.getProfile();
+      console.log("Profile Data:", profileData);
+      setUserName(profileData.user.firstName);
 
-    // Calculate consumed calories from nutrition tracking
-    const nutritionalTracking = tempData.suivis_nutritionnels_exemple;
-    let totalConsumed = 0;
+      // 2. Charger les préférences utilisateur
+      const preferencesData = await dataService.getUserPreferences();
+      console.log("Preferences Data:", preferencesData);
 
-    nutritionalTracking.forEach((tracking) => {
-      const aliment = tempData.aliments.find(
-        (a) => a.id_aliment === tracking.id_aliment
+      // Récupérer l'objectif calorique quotidien pour le calcul de pourcentage
+      const totalCalorieGoal = parseFloat(
+        preferencesData.preferences.calories_quotidiennes
       );
-      if (aliment) {
-        // Assuming quantity is in grams and we need to convert to portion
-        const quantity = tracking.quantite / 100;
-        totalConsumed += aliment.calories * quantity;
-      }
-    });
 
-    // Calculate percentage of daily goal
-    const totalCalorieGoal = userData.preferences.calories_quotidiennes;
-    const percentage = Math.min(
-      Math.round((totalConsumed / totalCalorieGoal) * 100),
-      100
+      // 3. Essayer de charger la séance du jour
+      try {
+        const programsData = await fetch(
+          `${
+            process.env.EXPO_PUBLIC_API_URL || "http://192.168.56.1:5000/api"
+          }/data/programs/today-session`,
+          {
+            headers: {
+              Authorization: `Bearer ${await SecureStore.getItemAsync(
+                "token"
+              )}`,
+            },
+          }
+        ).then((res) => res.json());
+
+        console.log("Programs Data:", programsData);
+
+        if (programsData.data.todaySession) {
+          setTodaySession({
+            id: programsData.data.todaySession.id,
+            name: programsData.data.todaySession.name.split(" ")[0],
+            description: programsData.data.todaySession.exercises
+              ? `(${extractMuscleGroups(
+                  programsData.data.todaySession.exercises
+                )})`
+              : "",
+          });
+        } else {
+          // Si pas de séance, mettre une séance factice reconnaissable
+          setTodaySession({
+            id: 0,
+            name: "Repos",
+            description: "(Aucune séance prévue)",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading today's session:", error);
+        // Fallback sur les données mockées
+        mockTodaySession();
+      }
+
+      // 4. Pour les données nutritionnelles, utiliser des données mockées
+      // IMPORTANT: Dans la vraie vie, vous feriez un appel à une API
+      mockNutritionalData(totalCalorieGoal);
+
+      // 5. Pour les objectifs, utiliser des données mockées
+      mockObjectives();
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      // Fallback complet sur les données mockées
+      fallbackToMockData();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const extractMuscleGroups = (exercises) => {
+    // Fonction d'extraction de groupes musculaires
+    return "Pectoraux, Triceps, Épaules";
+  };
+
+  const mockNutritionalData = (totalCalorieGoal) => {
+    // Pour l'instant, créer des données factices de suivi nutritionnel
+    // Vous pourriez utiliser une valeur aléatoire entre 50-90% de l'objectif
+    const consumedPercentage = Math.floor(Math.random() * 40) + 50; // Entre 50 et 90%
+    const consumedCalories = Math.round(
+      (consumedPercentage / 100) * totalCalorieGoal
     );
 
     setNutritionSummary({
-      consumedCalories: Math.round(totalConsumed),
+      consumedCalories,
       totalCalories: totalCalorieGoal,
-      percentage: percentage,
+      percentage: consumedPercentage,
     });
+  };
 
-    // Set today's workout session
-    // In a real app, this would come from a different API call
-    const todaySportTracking = tempData.suivis_sportifs_exemple[0];
-    const session = tempData.seances.find(
-      (s) => s.id_seance === todaySportTracking.id_seance
-    );
+  const mockTodaySession = () => {
+    // Séance fictive facilement identifiable
+    setTodaySession({
+      id: 999,
+      name: "Push",
+      description: "(Pectoraux, Triceps, Épaules)",
+    });
+  };
 
-    if (session) {
-      // Extract tags for description
-      const tags = [];
-      if (session.tags.includes(7)) tags.push("Pectoraux");
-      if (session.tags.includes(8)) tags.push("Triceps");
-      if (session.tags.includes(9)) tags.push("Épaules");
+  const mockObjectives = () => {
+    // Créer deux objectifs simples
+    setObjectives([
+      {
+        id: 1,
+        title: "Ajouter un repas au suivi nutritionnel",
+        completed: false,
+      },
+      {
+        id: 2,
+        title: "Compléter la séance d'entraînement du jour",
+        completed: false,
+      },
+    ]);
+  };
 
-      const description = tags.join(", ");
-
-      setTodaySession({
-        id: session.id_seance,
-        name: session.nom.split(" ")[0], // Take just the first word of the session name
-        description: `(${description})`,
-      });
-    }
-
-    // Set daily objectives
-    const objectivesData = tempData.objectifs.map((obj, index) => ({
-      id: obj.id_objectif,
-      title: obj.titre,
-      // For demo purposes, set the first one as completed
-      completed: index === 0,
-    }));
-
-    setObjectives(objectivesData);
+  const fallbackToMockData = () => {
+    setUserName("Utilisateur");
+    mockNutritionalData(2500); // Valeur par défaut
+    mockTodaySession();
+    mockObjectives();
   };
 
   // Component for nutrition summary card
@@ -198,9 +259,7 @@ export default function Dashboard() {
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.greeting}>Bon retour,</Text>
-              <Text style={styles.userName}>
-                {tempData.user_exemple.prenom || "User Name"}
-              </Text>
+              <Text style={styles.userName}>{userName || "Utilisateur"}</Text>
             </View>
             <TouchableOpacity
               style={styles.starButton}
