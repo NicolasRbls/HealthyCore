@@ -111,14 +111,14 @@ const WeightInput: React.FC<WeightInputProps> = ({
         <Text style={styles.nutritionTitle}>Votre plan nutritionnel</Text>
 
         <View style={styles.nutritionRow}>
-          <Text style={styles.nutritionLabel}>Calories normales:</Text>
+          <Text style={styles.nutritionLabel}>Calories normales :</Text>
           <Text style={styles.nutritionValue}>
             {formatNumber(tdee)} kcal/jour
           </Text>
         </View>
 
         <View style={styles.nutritionRow}>
-          <Text style={styles.nutritionLabel}>Calories recommandées:</Text>
+          <Text style={styles.nutritionLabel}>Calories recommandées :</Text>
           <Text style={styles.nutritionValue}>
             {formatNumber(dailyCalories)} kcal/jour
           </Text>

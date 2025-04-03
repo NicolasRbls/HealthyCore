@@ -1,13 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Image,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import Colors from "../../constants/Colors";
@@ -15,7 +13,6 @@ import Layout from "../../constants/Layout";
 import { TextStyles } from "../../constants/Fonts";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import Separator from "../../components/ui/Separator";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { useForm } from "../../hooks/useForm";
@@ -33,6 +30,7 @@ export default function LoginScreen() {
     touched,
     handleBlur,
     globalError,
+    setGlobalError,
   } = useForm({
     initialValues: {
       email: "",
@@ -58,7 +56,7 @@ export default function LoginScreen() {
         await login(values.email, values.password);
         // La redirection est gérée dans le AuthContext
       } catch (err: any) {
-        // L'erreur est gérée par le contexte d'authentification
+        // L'erreur est gérée dans le AuthContext
       }
     },
   });
@@ -69,12 +67,21 @@ export default function LoginScreen() {
     setShowPassword(!showPassword);
   };
 
-  // Effacer l'erreur du contexte lorsqu'on modifie le formulaire
-  React.useEffect(() => {
+  // Afficher les erreurs globales dans une alerte
+  useEffect(() => {
+    if (globalError) {
+      Alert.alert("Erreur", globalError);
+      setGlobalError(null);
+    }
+  }, [globalError]);
+
+  // Afficher les erreurs d'authentification dans une alerte
+  useEffect(() => {
     if (error) {
+      Alert.alert("Erreur de connexion", error);
       clearError();
     }
-  }, [values.email, values.password]);
+  }, [error]);
 
   const navigateToRegister = () => {
     router.push("/register/step1_profile" as any);
@@ -135,9 +142,6 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
-            {(globalError || error) && (
-              <Text style={styles.errorText}>{globalError || error}</Text>
-            )}
             <Button
               text="Se connecter"
               onPress={handleSubmit}
@@ -192,13 +196,6 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     ...TextStyles.bodySmall,
     color: Colors.brandBlue[0],
-  },
-  errorText: {
-    ...TextStyles.caption,
-    color: Colors.error,
-    marginBottom: Layout.spacing.md,
-    marginTop: -10,
-    textAlign: "center",
   },
   loginButtonContainer: {
     marginBottom: Layout.spacing.lg,

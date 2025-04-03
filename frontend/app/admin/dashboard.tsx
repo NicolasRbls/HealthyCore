@@ -21,7 +21,7 @@ export default function AdminDashboard() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Administration"
+        title="Administrateur"
         rightIconName="log-out-outline"
         onRightIconPress={handleLogout}
       />
@@ -30,16 +30,13 @@ export default function AdminDashboard() {
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.welcomeText}>Bienvenue, {user?.firstName}</Text>
-            <Text style={styles.roleText}>Rôle: Administrateur</Text>
+            <Text style={styles.roleText}>Rôle : Administrateur</Text>
           </View>
 
           <View style={styles.content}>
             <Text style={styles.infoText}>
-              Vous êtes connecté en tant qu'administrateur. Cette interface vous
-              permet de gérer l'application.
+              Vous êtes connecté en tant qu'administrateur.
             </Text>
-
-            {/* Contenu supplémentaire du dashboard admin à implémenter */}
           </View>
 
           <View style={styles.buttonContainer}>

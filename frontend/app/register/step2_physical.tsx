@@ -14,13 +14,10 @@ import Button from "../../components/ui/Button";
 import { useRegistration } from "../../context/RegistrationContext";
 import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
-import Input from "../../components/ui/Input";
 import NumericInput from "../../components/ui/NumericInput";
 import DatePicker from "../../components/ui/DatePicker";
 import SelectableOption from "../../components/registration/SelectableOption";
 import { useForm } from "../../hooks/useForm";
-import { router } from "expo-router";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function PhysicalScreen() {
   const {
@@ -43,8 +40,8 @@ export default function PhysicalScreen() {
     errors,
     touched,
     setFieldValues,
-    globalError, // Extrait globalError du hook useForm
-    setGlobalError, // Extrait setGlobalError pour définir des erreurs personnalisées
+    globalError,
+    setGlobalError,
   } = useForm({
     initialValues: {
       gender: data.gender || "NS",
@@ -118,10 +115,13 @@ export default function PhysicalScreen() {
 
         if (isValid) {
           goToNextStep();
+        } else if (error) {
+          Alert.alert("Erreur de validation", error);
         }
       } catch (err) {
         console.error("Erreur lors de la validation:", err);
-        setGlobalError(
+        Alert.alert(
+          "Erreur",
           "Une erreur est survenue lors de la validation des données"
         );
       }
@@ -137,6 +137,21 @@ export default function PhysicalScreen() {
     });
   }, [values]);
 
+  // Afficher les erreurs globales dans une alerte
+  React.useEffect(() => {
+    if (globalError) {
+      Alert.alert("Erreur", globalError);
+      setGlobalError(null);
+    }
+  }, [globalError]);
+
+  // Afficher les erreurs du contexte dans une alerte
+  React.useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
+
   // Déterminer la date maximale (13 ans avant aujourd'hui)
   const getMaxDate = () => {
     const today = new Date();
@@ -144,14 +159,10 @@ export default function PhysicalScreen() {
     return today;
   };
 
-  const getAllErrors = () => {
-    return [globalError, error].filter(Boolean);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Informations Physiques"
+        title="Informations physiques"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -237,8 +248,6 @@ export default function PhysicalScreen() {
             />
           </View>
 
-          <ErrorMessage errors={getAllErrors()} style={styles.errorContainer} />
-
           <View style={styles.buttonContainer}>
             <Button
               text="Suivant"
@@ -260,6 +269,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -269,7 +279,7 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.lg,
   },
   headerContainer: {
-    marginBottom: Layout.spacing.md, // Réduit de xl à md
+    marginBottom: Layout.spacing.md,
   },
   titleText: {
     ...TextStyles.h3,
@@ -281,28 +291,24 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    marginTop: 0, // Supprime la marge négative de -20
+    marginTop: -10,
   },
   sectionTitle: {
     ...TextStyles.bodyLarge,
     fontWeight: "600",
-    marginTop: Layout.spacing.md, // Réduit de lg à md
-    marginBottom: Layout.spacing.xs, // Réduit de sm à xs
+    marginTop: Layout.spacing.md,
+    marginBottom: Layout.spacing.xs,
   },
   genderOptions: {
-    marginBottom: Layout.spacing.sm, // Réduit de md à sm
+    marginBottom: Layout.spacing.sm,
   },
   buttonContainer: {
     marginTop: Layout.spacing.md,
-    marginBottom: Layout.spacing.md, // Réduit de lg à md
+    marginBottom: Layout.spacing.md,
   },
   errorText: {
     ...TextStyles.caption,
     color: Colors.error,
-    marginBottom: Layout.spacing.sm, // Réduit de md à sm
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
+    marginBottom: Layout.spacing.sm,
   },
 });

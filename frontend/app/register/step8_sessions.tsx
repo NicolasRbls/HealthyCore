@@ -17,8 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import SelectableOption from "../../components/registration/SelectableOption";
 import dataService from "../../services/data.service";
-import ErrorMessage from "../../components/ui/ErrorMessage";
-import { router } from "expo-router";
 
 export default function SessionsScreen() {
   const {
@@ -96,7 +94,7 @@ export default function SessionsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Séances Hebdomadaires"
+        title="Séances hebdomadaires"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -109,10 +107,10 @@ export default function SessionsScreen() {
         <View style={styles.container}>
           <View style={styles.headerContainer}>
             <Text style={styles.titleText}>
-              Combien de séances souhaitez-vous faire par semaine ?
+              Combien de séances de sport souhaitez-vous faire par semaine ?
             </Text>
             <Text style={styles.subtitleText}>
-              Nous créerons un programme adapté à votre niveau
+              Nous adapterons vos recommandations en conséquence
             </Text>
           </View>
 
@@ -131,8 +129,6 @@ export default function SessionsScreen() {
               ))
             )}
           </View>
-
-          <ErrorMessage errors={[error]} style={styles.errorContainer} />
 
           <View style={styles.buttonContainer}>
             <Button
@@ -155,6 +151,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -180,9 +177,5 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: Layout.spacing.lg,
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });

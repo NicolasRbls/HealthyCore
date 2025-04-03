@@ -1,97 +1,92 @@
 import React from "react";
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from "react-native";
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
-import Layout from "../../constants/Layout";
-import { TextStyles } from "../../constants/Fonts";
-import Button from "../../components/ui/Button";
 import { useAuth } from "../../context/AuthContext";
-import Header from "../../components/layout/Header";
+import { Redirect } from "expo-router";
 
-export default function UserDashboard() {
-  const { user, logout } = useAuth();
+export default function UserLayout() {
+  const { isAuthenticated, loading, user } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
+  // If authentication is loading, don't render anything
+  if (loading) {
+    return null;
+  }
+
+  // Redirect to welcome screen if not authenticated
+  if (!isAuthenticated) {
+    return <Redirect href="/welcome" />;
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Header
-        title="Dashboard"
-        rightIconName="log-out-outline"
-        onRightIconPress={handleLogout}
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: Colors.brandBlue[0],
+        tabBarInactiveTintColor: Colors.gray.medium,
+        headerShown: false,
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: Colors.gray.ultraLight,
+          height: 60,
+          paddingBottom: 5, // Réduit l'espace sous les icônes
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: "Accueil",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.welcomeText}>Bienvenue, {user?.firstName}</Text>
-            <Text style={styles.subtitle}>Votre espace santé personnel</Text>
-          </View>
-
-          <View style={styles.content}>
-            <Text style={styles.infoText}>
-              Vous êtes connecté à votre compte. Suivez vos progrès et atteignez
-              vos objectifs!
-            </Text>
-
-            {/* Contenu supplémentaire du dashboard utilisateur à implémenter */}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <Button
-              text="Se déconnecter"
-              variant="outline"
-              onPress={handleLogout}
-              leftIcon="log-out-outline"
-              style={styles.button}
+      <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: "Nutrition",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "restaurant" : "restaurant-outline"}
+              size={size}
+              color={color}
             />
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="sport"
+        options={{
+          title: "Sport",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "barbell" : "barbell-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profil",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scrollView: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    padding: Layout.spacing.lg,
-  },
-  header: {
-    marginBottom: Layout.spacing.xl,
-  },
-  welcomeText: {
-    ...TextStyles.h3,
-    marginBottom: Layout.spacing.xs,
-  },
-  subtitle: {
-    ...TextStyles.bodyLarge,
-    color: Colors.brandBlue[0],
-  },
-  content: {
-    flex: 1,
-  },
-  infoText: {
-    ...TextStyles.body,
-    color: Colors.gray.dark,
-    marginBottom: Layout.spacing.md,
-  },
-  buttonContainer: {
-    marginTop: Layout.spacing.lg,
-  },
-  button: {
-    width: "100%",
-  },
-});

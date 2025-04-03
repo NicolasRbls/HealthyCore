@@ -17,8 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import SelectableOption from "../../components/registration/SelectableOption";
 import dataService from "../../services/data.service";
-import { router } from "expo-router";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function ActivitiesScreen() {
   const {
@@ -98,7 +96,7 @@ export default function ActivitiesScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Activités Préférées"
+        title="Activités préférées"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -139,8 +137,6 @@ export default function ActivitiesScreen() {
             )}
           </View>
 
-          <ErrorMessage errors={[error]} style={styles.errorContainer} />
-
           <View style={styles.buttonContainer}>
             <Button
               text="Suivant"
@@ -162,6 +158,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -184,12 +181,9 @@ const styles = StyleSheet.create({
   activitiesContainer: {
     flex: 1,
     marginBottom: Layout.spacing.xl,
+    marginTop: -Layout.spacing.md,
   },
   buttonContainer: {
     marginBottom: Layout.spacing.lg,
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });

@@ -7,18 +7,16 @@ import {
   ScrollView,
   Image,
   Alert,
-  ActivityIndicator,
 } from "react-native";
 import Colors from "../../constants/Colors";
 import Layout from "../../constants/Layout";
 import { TextStyles } from "../../constants/Fonts";
 import Button from "../../components/ui/Button";
 import { useRegistration } from "../../context/RegistrationContext";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 import { router } from "expo-router";
 
 export default function CompleteScreen() {
-  const { completeRegistration, data, loading, error } = useRegistration();
+  const { completeRegistration, data, loading } = useRegistration();
 
   useEffect(() => {
     // Si l'utilisateur arrive directement sur cet écran sans avoir complété les étapes précédentes
@@ -34,8 +32,6 @@ export default function CompleteScreen() {
         ]
       );
     }
-
-    console.log("Données complètes pour l'inscription:", data);
   }, []);
 
   const handleCompleteRegistration = async () => {
@@ -47,10 +43,8 @@ export default function CompleteScreen() {
     }
   };
 
-  // Formatage des nombres pour l'affichage
-  const formatNumber = (value: number | undefined): string => {
-    if (value === undefined || isNaN(value)) return "-";
-    return Math.round(value).toString();
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
   return (
@@ -64,40 +58,20 @@ export default function CompleteScreen() {
               resizeMode="contain"
             />
 
-            <Text style={styles.title}>Bienvenue, {data.firstName}</Text>
+            <Text style={styles.title}>
+              Bienvenue,{" "}
+              {capitalizeFirstLetter(data.firstName || "Utilisateur")}
+            </Text>
 
             <Text style={styles.description}>
               Votre profil est prêt ! Ensemble, nous allons atteindre vos
               objectifs de santé et de forme.
             </Text>
-
-            <View style={styles.infoContainer}>
-              <Text style={styles.infoTitle}>
-                Vos données sont sauvegardées
-              </Text>
-              <Text style={styles.infoText}>
-                • Objectif de poids : {data.targetWeight} kg{"\n"}• Calories
-                quotidiennes : {formatNumber(data.dailyCalories)} kcal{"\n"}•
-                Séances par semaine : {data.sessionsPerWeek}
-                {data.weightChangeType !== "maintain" &&
-                data.caloricDeficitSurplus
-                  ? `\n• ${
-                      data.weightChangeType === "loss" ? "Déficit" : "Surplus"
-                    } calorique : ${Math.abs(
-                      Math.round(data.caloricDeficitSurplus)
-                    )} kcal/jour`
-                  : ""}
-              </Text>
-            </View>
-
-            {error && (
-              <ErrorMessage errors={[error]} style={styles.errorContainer} />
-            )}
           </View>
 
           <View style={styles.buttonContainer}>
             <Button
-              text={loading ? "Finalisation..." : "C'est parti !"}
+              text="C'est parti !"
               onPress={handleCompleteRegistration}
               size="lg"
               fullWidth
@@ -105,12 +79,6 @@ export default function CompleteScreen() {
               loading={loading}
             />
           </View>
-
-          {loading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -152,38 +120,11 @@ const styles = StyleSheet.create({
     color: Colors.gray.dark,
     paddingHorizontal: Layout.spacing.xl,
   },
-  infoContainer: {
-    backgroundColor: Colors.gray.ultraLight,
-    padding: Layout.spacing.lg,
-    borderRadius: Layout.borderRadius.md,
-    width: "100%",
-    marginBottom: Layout.spacing.xl,
-  },
-  infoTitle: {
-    ...TextStyles.bodyLarge,
-    fontWeight: "600",
-    marginBottom: Layout.spacing.sm,
-    color: Colors.brandBlue[0],
-  },
-  infoText: {
-    ...TextStyles.body,
-    lineHeight: 24,
-  },
-  errorContainer: {
-    width: "100%",
-    marginBottom: Layout.spacing.md,
-  },
   buttonContainer: {
     width: "100%",
     marginBottom: Layout.spacing.lg,
   },
   button: {
     width: "100%",
-  },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
   },
 });

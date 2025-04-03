@@ -17,8 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import NutritionalPlanCard from "../../components/registration/NutritionalPlanCard";
 import dataService from "../../services/data.service";
-import { router } from "expo-router";
-import ErrorMessage from "../../components/ui/ErrorMessage";
 
 export default function NutritionPlanScreen() {
   const {
@@ -75,6 +73,13 @@ export default function NutritionPlanScreen() {
     }
   }, [nutritionalPlanId]);
 
+  // Afficher les erreurs du contexte dans une alerte
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
+
   const handleContinue = async () => {
     if (nutritionalPlanId === undefined) {
       Alert.alert("Erreur", "Veuillez sélectionner un plan nutritionnel");
@@ -101,7 +106,7 @@ export default function NutritionPlanScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Plan Nutritionnel"
+        title="Plan nutritionnel"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -140,8 +145,6 @@ export default function NutritionPlanScreen() {
             )}
           </View>
 
-          <ErrorMessage errors={[error]} style={styles.errorContainer} />
-
           <View style={styles.buttonContainer}>
             <Button
               text="Suivant"
@@ -163,6 +166,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -188,9 +192,5 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: Layout.spacing.lg,
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.md,
   },
 });

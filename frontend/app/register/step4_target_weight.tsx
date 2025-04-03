@@ -17,8 +17,6 @@ import Header from "../../components/layout/Header";
 import ProgressIndicator from "../../components/layout/ProgressIndicator";
 import WeightInput from "../../components/registration/WeightInput";
 import validationService from "../../services/validation.service";
-import ErrorMessage from "../../components/ui/ErrorMessage";
-import { router } from "expo-router";
 
 export default function TargetWeightScreen() {
   const {
@@ -47,10 +45,16 @@ export default function TargetWeightScreen() {
   });
   const [isValidating, setIsValidating] = useState(false);
   const [isValid, setIsValid] = useState(true);
-  const [localError, setLocalError] = useState<string | null>(null);
 
   // Référence pour la temporisation
   const validationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Afficher les erreurs du contexte dans une alerte
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Erreur", error);
+    }
+  }, [error]);
 
   // Fonction de validation avec gestion des erreurs améliorée et debounce
   const validateTargetWeight = async (weight: string) => {
@@ -61,7 +65,6 @@ export default function TargetWeightScreen() {
 
     // Si le poids n'est pas valide, ne pas essayer de valider
     if (!weight || weight.trim() === "" || isNaN(parseFloat(weight))) {
-      console.log("Poids non valide, pas de validation");
       return;
     }
 
@@ -73,7 +76,6 @@ export default function TargetWeightScreen() {
       !data.birthDate ||
       !data.sedentaryLevelId
     ) {
-      console.log("Données de base manquantes, pas de validation");
       return;
     }
 
@@ -81,7 +83,6 @@ export default function TargetWeightScreen() {
     setIsValidating(true);
 
     try {
-      setLocalError(null);
       const parsedWeight = parseFloat(weight);
 
       const result = await validationService.validateTargetWeight({
@@ -112,7 +113,10 @@ export default function TargetWeightScreen() {
     } catch (error: any) {
       console.error("Error validating target weight:", error);
       setIsValid(false);
-      setLocalError(error.message || "Erreur de validation du poids cible");
+      Alert.alert(
+        "Erreur",
+        error.message || "Erreur de validation du poids cible"
+      );
 
       // En cas d'erreur, utiliser des valeurs par défaut pour éviter un écran vide
       setEstimation({
@@ -164,37 +168,25 @@ export default function TargetWeightScreen() {
     }
   }, []);
 
-  // Fonction simplifiée pour continuer vers l'étape suivante
+  // Fonction pour continuer vers l'étape suivante
   const handleContinue = async () => {
     if (!targetWeight || targetWeight.trim() === "") {
-      setLocalError("Veuillez indiquer votre poids cible");
+      Alert.alert("Erreur", "Veuillez indiquer votre poids cible");
       return;
     }
 
-    // Effacer les erreurs précédentes
-    setLocalError(null);
-
-    // Vérifier si le BMI est en dehors des limites recommandées
+    // Bloquer complètement si le BMI est en dehors des limites recommandées
     if (!isValid) {
-      // Afficher une alerte simple pour confirmer
       Alert.alert(
-        "Confirmer votre objectif",
-        "Cet objectif de poids n'est pas dans la plage recommandée selon l'IMC. Voulez-vous continuer avec cet objectif ?",
-        [
-          {
-            text: "Annuler",
-            style: "cancel",
-          },
-          {
-            text: "Continuer",
-            onPress: () => proceedToNextStep(),
-          },
-        ]
+        "Objectif non recommandé",
+        "Pour votre santé, cet objectif de poids n'est pas recommandé. Veuillez définir un objectif plus approprié.",
+        [{ text: "Compris" }]
       );
-    } else {
-      // Si l'IMC est valide, procéder directement
-      proceedToNextStep();
+      return; // Empêche la progression
     }
+
+    // Si l'IMC est valide, procéder directement
+    proceedToNextStep();
   };
 
   // Fonction auxiliaire pour passer à l'étape suivante
@@ -204,25 +196,21 @@ export default function TargetWeightScreen() {
       if (isStepValid) {
         goToNextStep();
       } else if (error) {
-        setLocalError(error);
+        Alert.alert("Erreur de validation", error);
       }
     } catch (err) {
       console.error("Erreur lors de la validation:", err);
-      setLocalError(
+      Alert.alert(
+        "Erreur",
         "Une erreur est survenue lors de la validation des données"
       );
     }
   };
 
-  // Fonction pour récupérer toutes les erreurs
-  const getAllErrors = () => {
-    return [error, localError].filter(Boolean);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Objectif de Poids"
+        title="Objectif de poids"
         showBackButton
         onBackPress={goToPreviousStep}
       />
@@ -264,9 +252,6 @@ export default function TargetWeightScreen() {
             )}
           </View>
 
-          {/* Affichage des erreurs uniquement s'il y a des erreurs, pas pour l'alerte de BMI */}
-          <ErrorMessage errors={getAllErrors()} style={styles.errorContainer} />
-
           <View style={styles.buttonContainer}>
             <Button
               text="Suivant"
@@ -288,6 +273,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: Layout.spacing.lg,
+    marginBottom: -Layout.spacing.md,
   },
   scrollView: {
     flexGrow: 1,
@@ -309,10 +295,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginBottom: Layout.spacing.sm,
-  },
-  errorContainer: {
-    marginTop: Layout.spacing.sm,
     marginBottom: Layout.spacing.sm,
   },
   buttonContainer: {
