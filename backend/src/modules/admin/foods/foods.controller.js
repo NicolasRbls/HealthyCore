@@ -1,13 +1,13 @@
 const foodService = require('./foods.service');
-const { catchAsync } = require('../../utils/catcherror.utils');
-const { AppError } = require('../../utils/response.utils');
+const { catchAsync } = require('../../../utils/catcherror.utils');
+const { AppError } = require('../../../utils/response.utils');
 
 /**
  * Contrôleur pour les routes d'administration
  */
 const foodController = {
 
-getAllFoods: catchAsync(async (req, res) => {
+getAllTheFood: catchAsync(async (req, res) => {
     // Extraire les paramètres de requête
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;

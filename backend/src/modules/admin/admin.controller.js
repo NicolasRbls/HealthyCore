@@ -239,6 +239,7 @@ const adminController = {
       message: 'Logs système récupérés avec succès'
     });
   })
+
 };
 
 module.exports = adminController;
