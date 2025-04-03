@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const dataController = require("./data.controller");
 const { checkAuth } = require("../auth/auth.middleware");
+const programsRoutes = require("./programs/programs.routes");
+
 
 /**
  * Routes publiques pour les données utilisées pendant l'inscription
@@ -17,5 +19,7 @@ router.get("/weekly-sessions", dataController.getWeeklySessions);
  */
 router.get("/user-preferences", checkAuth, dataController.getUserPreferences);
 router.get("/user-evolution", checkAuth, dataController.getUserEvolution);
+router.use("/programs", programsRoutes);
+
 
 module.exports = router;
