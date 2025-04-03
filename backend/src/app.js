@@ -5,8 +5,7 @@ const errorMiddleware = require("./middleware/error.middleware");
 
 // Import routes from modules
 const authRoutes = require("./modules/auth/auth.routes");
-// const userRoutes = require("./modules/user/user.routes");
-// const adminRoutes = require("./modules/admin/admin.routes");
+const userRoutes = require("./modules/user/user.routes");
 const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
@@ -44,8 +43,7 @@ app.get("/api/health", (req, res) => {
 
 // Configure API routes
 app.use("/api/auth", authRoutes);
-// app.use("/api/user", userRoutes);
-//app.use("/api/admin", adminRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/validation", validationRoutes);
 
