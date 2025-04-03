@@ -28,7 +28,7 @@ router.get("/users", adminController.getAllUsers);
  * @route GET /api/admin/users/:id
 
  */
-router.get("/users/:id", adminController.getUserDetails);
+//router.get("/users/:id", adminController.getUserDetails);
 
 // Mettre à jour un utilisateur
 router.put("/users/:id", adminController.updateContent);

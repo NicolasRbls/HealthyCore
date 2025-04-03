@@ -43,21 +43,6 @@ const adminController = {
   }),
 
   /**
-   * Récupérer les détails complets d'un utilisateur spécifique
-   */
-  getUserDetails: catchAsync(async (req, res) => {
-    const { userId } = req.params;
-    
-    const userDetails = await adminService.getUserDetails(userId);
-    
-    res.status(200).json({
-      status: 'success',
-      data: userDetails,
-      message: 'Détails de l\'utilisateur récupérés avec succès'
-    });
-  }),
-
-  /**
    * Supprimer un utilisateur et toutes ses données associées
    */
   deleteUser: catchAsync(async (req, res) => {

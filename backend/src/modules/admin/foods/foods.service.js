@@ -88,8 +88,8 @@ const getAllFoods = async ({
   let apiResults = [];
   
   if (search && foods.length === 0 && (!type || type === 'produit')) {
-    apiResults = await this.searchFoodInOpenFoodFactsAndSave(search);
-    total += apiResults.length; // Ajouter le nombre de résultats API au total
+    apiResults = await searchFoodInOpenFoodFactsAndSave(search);
+    fullTotal = apiResults.length+total; // Ajouter le nombre de résultats API au total
   }
   
   // Formatage des résultats
@@ -119,7 +119,7 @@ const getAllFoods = async ({
   
   return {
     foods: formattedFoods,
-    total,
+    fullTotal,
     totalPages
   };
 }
@@ -128,6 +128,7 @@ const getAllFoods = async ({
  * Recherche un aliment dans OpenFoodFacts, l'ajoute en base si trouvé
  */
 const searchFoodInOpenFoodFactsAndSave = async (searchTerm) => {
+  console.log(searchTerm);
   try {
     // Recherche par nom dans OpenFoodFacts
     const response = await axios.get(`https://world.openfoodfacts.org/cgi/search.pl`, {
@@ -202,7 +203,7 @@ const searchFoodInOpenFoodFactsAndSave = async (searchTerm) => {
           image: savedFood.image,
           type: savedFood.type,
           source: savedFood.source,
-          calories: savedFood.calories,
+          calories: Number(savedFood.calories),
           proteins: Number(savedFood.proteines),
           carbs: Number(savedFood.glucides),
           fats: Number(savedFood.lipides),
