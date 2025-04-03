@@ -18,6 +18,9 @@ import Button from "../../../components/ui/Button";
 import Card from "../../../components/ui/Card";
 import { useAuth } from "../../../context/AuthContext";
 import Header from "../../../components/layout/Header";
+import authService from "../../../services/auth.service";
+import dataService from "../../../services/data.service";
+import userService from "../../../services/user.service";
 
 // Import données d'exemple pour le développement
 import tempData from "../../../assets/temp.json";
@@ -27,43 +30,74 @@ export default function ProfileScreen() {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Formater les données pour l'affichage
+  // Charger les données du profil
   useEffect(() => {
-    // Simuler le chargement des données depuis l'API
-    // En production, nous remplacerions ceci par un appel API
-    // GET /api/user/profile
-    setTimeout(() => {
-      const exampleUser = tempData.user_exemple;
-      const exampleEvolutions = tempData.evolutions_exemple;
+    const loadProfileData = async () => {
+      try {
+        // Cette route devrait fournir toutes les informations nécessaires en un seul appel
+        const profileData = await userService.getUserProfile();
 
-      // Calculer l'âge
-      const birthDate = new Date(exampleUser.date_de_naissance);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+        setUserData({
+          prenom: profileData.user.firstName,
+          nom: profileData.user.lastName,
+          email: profileData.user.email,
+          sexe: profileData.user.gender,
+          date_de_naissance: profileData.user.birthDate,
+          age: profileData.user.age,
+          currentWeight: profileData.metrics?.currentWeight || 0,
+          currentHeight: profileData.metrics?.currentHeight || 0,
+          bmi: profileData.metrics?.bmi || 0,
+          preferences: {
+            objectif_poids: profileData.metrics?.targetWeight || 0,
+            calories_quotidiennes: profileData.metrics?.dailyCalories || 0,
+            seances_par_semaines: profileData.metrics?.sessionsPerWeek || 0,
+          },
+        });
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Erreur lors du chargement du profil:", error);
+        // Fallback sur les données mockées
+        fallbackToMockData();
       }
+    };
 
-      // Obtenir les dernières données d'évolution
-      const latestEvolution = exampleEvolutions.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      )[0];
-
-      setUserData({
-        ...exampleUser,
-        age: age,
-        currentWeight: latestEvolution.poids,
-        currentHeight: latestEvolution.taille,
-        bmi: (
-          latestEvolution.poids /
-          ((latestEvolution.taille / 100) * (latestEvolution.taille / 100))
-        ).toFixed(1),
-      });
-
-      setLoading(false);
-    }, 500);
+    loadProfileData();
   }, []);
+
+  // Fonction de fallback vers les données mockées
+  const fallbackToMockData = () => {
+    // Votre code existant avec tempData
+    const exampleUser = tempData.user_exemple;
+    const exampleEvolutions = tempData.evolutions_exemple;
+
+    // Calculer l'âge
+    const birthDate = new Date(exampleUser.date_de_naissance);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    // Obtenir les dernières données d'évolution
+    const latestEvolution = exampleEvolutions.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    )[0];
+
+    setUserData({
+      ...exampleUser,
+      age: age,
+      currentWeight: latestEvolution.poids,
+      currentHeight: latestEvolution.taille,
+      bmi: (
+        latestEvolution.poids /
+        ((latestEvolution.taille / 100) * (latestEvolution.taille / 100))
+      ).toFixed(1),
+    });
+
+    setLoading(false);
+  };
 
   const handleLogout = async () => {
     try {
@@ -189,7 +223,14 @@ export default function ProfileScreen() {
                 color={Colors.gray.dark}
               />
               <Text style={styles.accountValue}>
-                {new Date(userData.date_de_naissance).toLocaleDateString()}
+                {new Date(userData.date_de_naissance).toLocaleDateString(
+                  "fr-FR",
+                  {
+                    day: "numeric",
+                    month: "numeric",
+                    year: "numeric",
+                  }
+                )}
               </Text>
             </View>
           </Card>

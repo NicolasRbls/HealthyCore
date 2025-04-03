@@ -7,6 +7,7 @@ import {
   ScrollView,
   Switch,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,9 +15,7 @@ import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
-
-// Import temp data
-import tempData from "../../../assets/temp.json";
+import apiService from "../../../services/api.service";
 
 // Types
 interface Session {
@@ -27,126 +26,99 @@ interface Session {
   icon?: string;
 }
 
+interface WeekDay {
+  day: string;
+  date: string;
+  session: {
+    id: number;
+    name: string;
+    order: number;
+    completed: boolean;
+  } | null;
+}
+
 export default function SportMonitoring() {
   const [currentProgram, setCurrentProgram] = useState<string>("");
+  const [programDescription, setProgramDescription] = useState<string>("");
   const [todaySession, setTodaySession] = useState<Session | null>(null);
   const [weekSessions, setWeekSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // In a real app, you would fetch this data with:
-    // GET /api/data/programs/sport-progress
     fetchSportData();
   }, []);
 
-  const fetchSportData = () => {
+  const fetchSportData = async () => {
     setIsLoading(true);
-
     try {
-      // Get program data from temp.json
-      const userData = tempData.user_exemple;
+      // Récupérer le suivi sportif de l'utilisateur
+      const sportProgressData = await apiService.get(
+        "/data/programs/sport-progress"
+      );
 
-      // Assuming the user is enrolled in the first program
-      const program = tempData.programmes[0]; // PPL débutant
-
-      if (program) {
-        // Set program name - using the part before | as the short name
-        const programName = program.nom.split("|")[0];
-        setCurrentProgram(programName);
-
-        // Get today's date and format it to YYYY-MM-DD for comparison
-        const today = new Date();
-        const todayFormatted = today.toISOString().split("T")[0];
-
-        // Find sessions in the program
-        const programSessions = program.seances;
-        const allSessions: Session[] = [];
-
-        // Get all seances data
-        const seancesData = tempData.seances;
-
-        // Get sport tracking data
-        const sportTrackings = tempData.suivis_sportifs_exemple;
-
-        // Find today's tracking if any
-        const todayTracking = sportTrackings.find((tracking) => {
-          const trackingDate = new Date(tracking.date)
-            .toISOString()
-            .split("T")[0];
-          return trackingDate === todayFormatted;
-        });
-
-        // Process sessions from the program
-        programSessions.forEach((programSession, index) => {
-          const seance = seancesData.find(
-            (s) => s.id_seance === programSession.id_seance
-          );
-
-          if (seance) {
-            // Check if this session is done based on tracking data
-            const isDone = sportTrackings.some(
-              (tracking) => tracking.id_seance === seance.id_seance
-            );
-
-            // For demo purposes, assign different dates
-            const dateOptions = [
-              "Aujourd'hui",
-              "Hier",
-              "8 avril",
-              "10 avril",
-              "12 avril",
-            ];
-            // If it's in sportTrackings, use the actual date
-            let sessionDate = dateOptions[index % dateOptions.length];
-            const tracking = sportTrackings.find(
-              (t) => t.id_seance === seance.id_seance
-            );
-            if (tracking) {
-              const date = new Date(tracking.date);
-              if (date.toISOString().split("T")[0] === todayFormatted) {
-                sessionDate = "Aujourd'hui";
-              } else {
-                sessionDate = date.toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                });
-              }
-            }
-
-            // Create session object
-            const session: Session = {
-              id: seance.id_seance,
-              name: seance.nom,
-              date: sessionDate,
-              done: isDone,
-              icon: getSessionIconType(seance.nom),
-            };
-
-            // If this is today's session (based on tracking), set it separately
-            if (todayTracking && todayTracking.id_seance === seance.id_seance) {
-              setTodaySession(session);
-            }
-
-            allSessions.push(session);
-          }
-        });
-
-        // If no session was marked for today but we have sessions, show the first undone session as today's
-        if (!todaySession && allSessions.length > 0) {
-          const nextSession = allSessions.find((s) => !s.done);
-          if (nextSession) {
-            setTodaySession({ ...nextSession, date: "Aujourd'hui" });
-          } else {
-            // If all sessions are done, use the first one
-            setTodaySession({ ...allSessions[0], date: "Aujourd'hui" });
-          }
+      // Si l'utilisateur a un programme actif
+      if (sportProgressData.activeProgram) {
+        // Extraire le nom et la description du programme
+        const fullName = sportProgressData.activeProgram.name;
+        if (fullName.includes("|")) {
+          const parts = fullName.split("|");
+          setCurrentProgram(parts[0].trim());
+          setProgramDescription(parts[1] ? parts[1].trim() : "");
+        } else {
+          setCurrentProgram(fullName);
         }
 
-        // Set all sessions for the week
-        setWeekSessions(allSessions);
+        // Extraire les données de suivi hebdomadaire
+        if (
+          sportProgressData.weeklySchedule &&
+          sportProgressData.weeklySchedule.length > 0
+        ) {
+          const sessionList = sportProgressData.weeklySchedule
+            .filter((day: WeekDay) => day.session !== null)
+            .map((day: WeekDay) => {
+              // Formater la date en format lisible
+              const date = new Date(day.date);
+              const formattedDate = date.toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "numeric",
+              });
+
+              return {
+                id: day.session.id,
+                name: day.session.name,
+                date: formattedDate,
+                done: day.session.completed,
+                icon: getSessionIconType(day.session.name),
+              };
+            });
+          setWeekSessions(sessionList);
+        }
+      }
+
+      // Récupérer la séance du jour
+      const todaySessionData = await apiService.get(
+        "/data/programs/today-session"
+      );
+      if (todaySessionData.todaySession) {
+        const todayDate = new Date();
+        const formattedDate = todayDate.toLocaleDateString("fr-FR", {
+          day: "numeric",
+          month: "numeric",
+        });
+
+        setTodaySession({
+          id: todaySessionData.todaySession.id,
+          name: todaySessionData.todaySession.name,
+          date: formattedDate,
+          done: todaySessionData.todaySession.completed || false,
+          icon: getSessionIconType(todaySessionData.todaySession.name),
+        });
       }
     } catch (error) {
       console.error("Error fetching sport data:", error);
+      // En cas d'erreur, charger des données par défaut (vides)
+      setWeekSessions([]);
+      setTodaySession(null);
     } finally {
       setIsLoading(false);
     }
@@ -157,38 +129,85 @@ export default function SportMonitoring() {
     const name = sessionName.toLowerCase();
     if (name.includes("push") || name.includes("pectoraux")) return "barbell";
     if (name.includes("pull") || name.includes("dos")) return "body";
-    if (name.includes("legs") || name.includes("jambes")) return "run";
+    if (
+      name.includes("legs") ||
+      name.includes("jambes") ||
+      name.includes("cuisses")
+    )
+      return "run";
     return "fitness";
   };
 
   const toggleSessionDone = async (sessionId: number, event: any) => {
     // Stop event propagation to prevent navigation when clicking the switch
-    event.stopPropagation();
+    if (event && event.stopPropagation) {
+      event.stopPropagation();
+    }
 
-    // In a real app, you would make an API call:
-    // POST /api/data/programs/sessions/:sessionId/complete
+    // Stocker l'état actuel
+    const currentSessionDone =
+      todaySession?.id === sessionId
+        ? todaySession.done
+        : weekSessions.find((s) => s.id === sessionId)?.done || false;
+
+    // Mettre à jour l'UI immédiatement pour un retour utilisateur rapide
+    if (todaySession && todaySession.id === sessionId) {
+      setTodaySession({
+        ...todaySession,
+        done: !todaySession.done,
+      });
+    }
+
+    setWeekSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === sessionId ? { ...session, done: !session.done } : session
+      )
+    );
 
     try {
-      // Update session state
-      if (todaySession && todaySession.id === sessionId) {
-        setTodaySession({
-          ...todaySession,
-          done: !todaySession.done,
-        });
+      // Si la session n'est pas marquée comme terminée, envoyez la requête pour la compléter
+      if (!currentSessionDone) {
+        await apiService.post(`/data/programs/sessions/${sessionId}/complete`);
+      } else {
+        // Si elle est déjà terminée, on accepte simplement le changement d'état dans l'UI
+        // sans faire d'appel API, car on sait que l'API renverra une erreur
+        console.log("Session déjà terminée, pas d'appel API nécessaire");
       }
 
-      setWeekSessions((prevSessions) =>
-        prevSessions.map((session) =>
-          session.id === sessionId
-            ? { ...session, done: !session.done }
-            : session
-        )
-      );
-
-      // When toggling session done status, we'd also update objectives
-      // This would be handled by the backend in a real app
+      // Rafraîchir les données après un court délai
+      setTimeout(() => {
+        fetchSportData();
+      }, 500);
     } catch (error) {
       console.error("Error toggling session status:", error);
+
+      // Si l'erreur est que la session est déjà complétée, on laisse l'UI comme on l'a mise
+      if (error.code === "SESSION_ALREADY_COMPLETED") {
+        console.log(
+          "La séance était déjà marquée comme terminée, état UI maintenu"
+        );
+      } else {
+        // Pour les autres erreurs, on revient à l'état précédent
+        if (todaySession && todaySession.id === sessionId) {
+          setTodaySession({
+            ...todaySession,
+            done: currentSessionDone,
+          });
+        }
+
+        setWeekSessions((prevSessions) =>
+          prevSessions.map((session) =>
+            session.id === sessionId
+              ? { ...session, done: currentSessionDone }
+              : session
+          )
+        );
+
+        Alert.alert(
+          "Erreur",
+          "Impossible de mettre à jour le statut de la séance"
+        );
+      }
     }
   };
 
@@ -233,13 +252,16 @@ export default function SportMonitoring() {
         <View style={styles.actionColumn}>
           <Switch
             value={session.done}
-            onValueChange={(value) =>
-              toggleSessionDone(session.id, { stopPropagation: () => {} })
+            onValueChange={() =>
+              session.done
+                ? null
+                : toggleSessionDone(session.id, { stopPropagation: () => {} })
             }
             trackColor={{ false: Colors.gray.light, true: Colors.secondary[0] }}
-            thumbColor={session.done ? Colors.white : Colors.white}
+            thumbColor={Colors.white}
             ios_backgroundColor={Colors.gray.light}
             style={styles.sessionSwitch}
+            disabled={session.done} // Désactiver le switch si la session est déjà terminée
           />
           <Ionicons
             name="chevron-forward"
@@ -284,6 +306,9 @@ export default function SportMonitoring() {
       {currentProgram && (
         <View style={styles.programBanner}>
           <Text style={styles.programName}>{currentProgram}</Text>
+          {programDescription && (
+            <Text style={styles.programDescription}>{programDescription}</Text>
+          )}
         </View>
       )}
 
@@ -330,10 +355,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: Layout.spacing.lg,
+    marginBottom: Layout.spacing.md,
   },
   programBanner: {
-    backgroundColor: Colors.brandBlue[1],
-    paddingVertical: Layout.spacing.sm,
+    backgroundColor: "#6A0DAD", // Fond violet
+    paddingVertical: Layout.spacing.md,
     paddingHorizontal: Layout.spacing.lg,
     marginBottom: Layout.spacing.sm,
   },
@@ -341,6 +367,12 @@ const styles = StyleSheet.create({
     ...TextStyles.bodyLarge,
     color: Colors.white,
     fontWeight: "600",
+    marginBottom: 4,
+  },
+  programDescription: {
+    ...TextStyles.caption,
+    color: Colors.white,
+    opacity: 0.9,
   },
   sectionTitle: {
     ...TextStyles.h4,
