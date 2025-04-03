@@ -22,18 +22,18 @@ const router = express.Router();
  * @desc Récupérer tous les utilisateurs avec pagination
  * @access Private (Admin)
  */
-router.get("/users", isAdmin, adminController.getAllUsers);
+router.get("/users", adminController.getAllUsers);
 
 /**
  * @route GET /api/admin/users/:id
 
  */
-router.get("/users/:id", isAdmin, adminController.getUserDetails);
+router.get("/users/:id", adminController.getUserDetails);
 
 // Mettre à jour un utilisateur
-router.put("/users/:id", isAdmin, adminController.updateContent);
+router.put("/users/:id", adminController.updateContent);
 
 // Supprimer un utilisateur
-router.delete("/users/:id", isAdmin, adminController.deleteUser);
+router.delete("/users/:id", adminController.deleteUser);
 
 module.exports = router;

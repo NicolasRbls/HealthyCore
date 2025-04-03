@@ -18,7 +18,7 @@ const adminController = {
     const sortBy = req.query.sortBy || 'created_at';
     const order = req.query.order?.toLowerCase() === 'asc' ? 'asc' : 'desc';
     
-    const { users, total, totalPages } = await adminService.getAllUsers({
+    const { users, total, totalPages } = await adminService.getPaginatedUsers({
       page,
       limit,
       search,
