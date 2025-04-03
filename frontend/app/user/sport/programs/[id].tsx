@@ -16,55 +16,54 @@ import Layout from "../../../../constants/Layout";
 import { TextStyles } from "../../../../constants/Fonts";
 import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
-import Card from "../../../../components/ui/Card";
 import imageMapping from "../../../../constants/imageMapping";
+import programsService from "../../../../services/programs.service";
 
-// Import temp data
+// Import temp data for fallback
 import tempData from "../../../../assets/temp.json";
 
-// Type definitions
+// Types adaptés à l'API
 interface Tag {
-  id_tag: number;
-  nom: string;
-  type: string;
+  id: number;
+  name: string;
 }
 
 interface ProgramSession {
-  id_seance: number;
-  ordre_seance: number;
-}
-
-interface Program {
-  id_programme: number;
-  nom: string;
-  image: string;
-  duree: number;
-  tags: number[];
-  seances: ProgramSession[];
-}
-
-interface SessionExercise {
-  id_exercice: number;
-  ordre_exercice: number;
-  duree: number;
-  repetitions: number | null;
-  series: number | null;
-}
-
-interface Session {
-  id_seance: number;
-  nom: string;
-  tags: number[];
-  exercices: SessionExercise[];
+  id: number;
+  name: string;
+  order: number;
+  exerciseCount: number;
+  exercises: Exercise[];
 }
 
 interface Exercise {
-  id_exercice: number;
-  nom: string;
+  id: number;
+  name: string;
+  order: number;
+  sets: number | null;
+  repetitions: number | null;
+  duration: number;
+  description?: string;
+  equipment?: string;
+  gif?: string | null;
+}
+
+interface Program {
+  id: number;
+  name: string;
+  image: string;
+  duration: number;
   description: string;
-  gif: string | null;
-  equipement: string | null;
-  tags: number[];
+  tags: Tag[];
+  sessions: ProgramSession[];
+  inProgress: boolean;
+  userProgress?: {
+    startDate: string;
+    endDate: string;
+    completedSessions: number;
+    totalSessions: number;
+    progressPercentage: number;
+  };
 }
 
 export default function ProgramDetailsScreen() {
@@ -72,113 +71,163 @@ export default function ProgramDetailsScreen() {
   const programId = Number(params.id);
 
   const [program, setProgram] = useState<Program | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProgramActive, setIsProgramActive] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [activeProgram, setActiveProgram] = useState<any>(null);
 
   useEffect(() => {
-    // In a real app, you would fetch program details with:
-    // GET /api/data/programs/:programId
     fetchProgramDetails();
+    checkActiveProgram();
   }, [programId]);
 
-  const fetchProgramDetails = () => {
+  const checkActiveProgram = async () => {
+    try {
+      const active = await programsService.getActiveUserProgram();
+      setActiveProgram(active);
+    } catch (error) {
+      console.error("Error checking active program:", error);
+    }
+  };
+
+  const fetchProgramDetails = async () => {
     setIsLoading(true);
     try {
-      // Get data from temp.json
-      const programsData = tempData.programmes as Program[];
-      const sessionsData = tempData.seances as Session[];
-      const tagsData = tempData.tags as Tag[];
-      const exercisesData = tempData.exercices as Exercise[];
+      console.log(`Fetching program details for ID: ${programId}`);
+      const response = await programsService.getProgramDetails(programId);
+      console.log("Program details response:", JSON.stringify(response));
 
-      // Find the program by ID
-      const foundProgram = programsData.find(
-        (p) => p.id_programme === programId
-      );
-
-      if (foundProgram) {
-        setProgram(foundProgram);
-
-        // Find sessions for this program
-        const programSessions = foundProgram.seances
-          .map((ps) => {
-            return sessionsData.find((s) => s.id_seance === ps.id_seance);
-          })
-          .filter(Boolean) as Session[];
-
-        // Sort sessions by ordre_seance
-        programSessions.sort((a, b) => {
-          const orderA =
-            foundProgram.seances.find((s) => s.id_seance === a.id_seance)
-              ?.ordre_seance || 0;
-          const orderB =
-            foundProgram.seances.find((s) => s.id_seance === b.id_seance)
-              ?.ordre_seance || 0;
-          return orderA - orderB;
-        });
-
-        setSessions(programSessions);
+      // Si nous avons une réponse valide de l'API
+      if (response && response.id) {
+        setProgram(response);
+      } else {
+        // Fallback aux données statiques si la réponse API n'est pas valide
+        fallbackToStaticData();
       }
-
-      setAllTags(tagsData);
-      setExercises(exercisesData);
-
-      // Check if program is active for the user
-      // In a real app, this would be checked server-side
-      const userPrograms = tempData.aliments || [];
-      const isActive = userPrograms.some((up) => up.id_programme === programId);
-      setIsProgramActive(isActive);
     } catch (error) {
       console.error("Error fetching program details:", error);
+      fallbackToStaticData();
     } finally {
       setIsLoading(false);
     }
   };
 
+  const fallbackToStaticData = () => {
+    // Utiliser les données statiques comme fallback
+    console.log("Using static data as fallback");
+    try {
+      const programsData = tempData.programmes || [];
+      const sessionsData = tempData.seances || [];
+
+      // Trouver le programme par ID
+      const foundProgram = programsData.find(
+        (p) => p.id_programme === programId
+      );
+
+      if (foundProgram) {
+        // Adapter le format aux types attendus
+        const adaptedProgram: Program = {
+          id: foundProgram.id_programme,
+          name: foundProgram.nom,
+          image: foundProgram.image,
+          duration: foundProgram.duree,
+          description:
+            foundProgram.nom.split("|")[1] || "Description non disponible",
+          tags: (foundProgram.tags || []).map((tagId) => {
+            const tag = (tempData.tags || []).find((t) => t.id_tag === tagId);
+            return {
+              id: tagId,
+              name: tag?.nom || "Tag inconnu",
+            };
+          }),
+          sessions: [],
+          inProgress: false,
+        };
+
+        // Trouver les sessions associées et les adapter
+        if (foundProgram.seances) {
+          adaptedProgram.sessions = foundProgram.seances
+            .map((ps) => {
+              const session = sessionsData.find(
+                (s) => s.id_seance === ps.id_seance
+              );
+              if (!session) return null;
+
+              return {
+                id: session.id_seance,
+                name: session.nom,
+                order: ps.ordre_seance,
+                exerciseCount: (session.exercices || []).length,
+                exercises: [], // On ne charge pas tous les exercices par souci de performance
+              };
+            })
+            .filter(Boolean) as ProgramSession[];
+
+          // Trier les sessions par ordre
+          adaptedProgram.sessions.sort((a, b) => a.order - b.order);
+        }
+
+        setProgram(adaptedProgram);
+      } else {
+        console.error("Program not found in static data");
+        setProgram(null);
+      }
+    } catch (error) {
+      console.error("Error processing static data:", error);
+      setProgram(null);
+    }
+  };
+
   // Get program title and description
   const getProgramTitle = (fullName: string) => {
+    if (!fullName) return "Programme";
     return fullName.split("|")[0];
   };
 
   const getProgramDescription = (fullName: string) => {
+    if (!fullName) return "";
     const parts = fullName.split("|");
     return parts.length > 1 ? parts[1] : "";
   };
 
-  // Get tags for a program or session
-  const getTagsString = (tagIds: number[]) => {
-    return tagIds
-      .map((id) => allTags.find((tag) => tag.id_tag === id))
-      .filter((tag) => tag && tag.type === "sport")
-      .map((tag) => tag?.nom)
-      .join(", ");
-  };
-
   // Navigate to session details
   const navigateToSession = (sessionId: number) => {
-    router.push(`/user/sport/sessions/${sessionId}` as any);
+    router.push(`/user/sport/sessions/${sessionId}`);
   };
 
   // Start program
   const startProgram = async () => {
-    // In a real app, you would make an API call:
-    // POST /api/data/programs/:programId/start
+    if (!program) return;
 
+    setIsStarting(true);
     try {
-      setIsLoading(true);
+      console.log(`Starting program ID: ${programId}`);
+      // Appel API pour démarrer le programme
+      const startDate = new Date().toISOString();
+      const response = await programsService.startProgram(programId, startDate);
+      console.log("Program start response:", JSON.stringify(response));
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      setIsProgramActive(true);
+      // Mettre à jour l'état local pour refléter que le programme a démarré
+      setProgram({
+        ...program,
+        inProgress: true,
+        userProgress: {
+          startDate: response?.startDate || startDate,
+          endDate:
+            response?.endDate ||
+            new Date(
+              Date.now() + program.duration * 7 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+          completedSessions: 0,
+          totalSessions: 0,
+          progressPercentage: 0,
+        },
+      });
 
       Alert.alert(
         "Programme démarré",
-        `Vous avez commencé le programme "${
-          program ? getProgramTitle(program.nom) : ""
-        }". Vous pouvez maintenant suivre votre progression.`,
+        `Vous avez commencé le programme "${getProgramTitle(
+          program.name
+        )}". Vous pouvez maintenant suivre votre progression.`,
         [
           {
             text: "Voir mes séances",
@@ -197,7 +246,7 @@ export default function ProgramDetailsScreen() {
         "Impossible de démarrer le programme pour le moment."
       );
     } finally {
-      setIsLoading(false);
+      setIsStarting(false);
     }
   };
 
@@ -255,9 +304,9 @@ export default function ProgramDetailsScreen() {
         <View style={styles.imageContainer}>
           <Image
             source={
-              imageMapping[program.id_programme + 100] || {
-                uri: `ttps://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-                  program.nom
+              imageMapping[program.id + 100] || {
+                uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+                  program.name
                 )}`,
               }
             }
@@ -268,13 +317,15 @@ export default function ProgramDetailsScreen() {
 
         <View style={styles.programInfo}>
           <Text style={styles.programTitle}>
-            {getProgramTitle(program.nom)}
+            {getProgramTitle(program.name)}
           </Text>
           <Text style={styles.programDuration}>
-            {program.duree} semaines • {sessions.length} séances
+            {program.duration} semaines • {program.sessions.length} séances
           </Text>
           <Text style={styles.programTags}>
-            {getTagsString(program.tags)
+            {program.tags
+              .map((tag) => tag.name)
+              .join(", ")
               .split(", ")
               .map((tag) => tag.charAt(0).toUpperCase() + tag.slice(1))
               .join(", ")}
@@ -284,18 +335,18 @@ export default function ProgramDetailsScreen() {
         <View style={styles.descriptionContainer}>
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>
-            {getProgramDescription(program.nom)}
+            {program.description || getProgramDescription(program.name)}
           </Text>
         </View>
 
         <View style={styles.sessionsContainer}>
           <Text style={styles.sectionTitle}>Séances</Text>
 
-          {sessions.map((session, index) => (
+          {program.sessions.map((session, index) => (
             <TouchableOpacity
-              key={`session-${session.id_seance}`}
+              key={`session-${session.id}`}
               style={styles.sessionCard}
-              onPress={() => navigateToSession(session.id_seance)}
+              onPress={() => navigateToSession(session.id)}
               activeOpacity={0.8}
             >
               <View style={styles.sessionHeader}>
@@ -303,9 +354,9 @@ export default function ProgramDetailsScreen() {
                   <Text style={styles.sessionNumber}>{index + 1}</Text>
                 </View>
                 <View style={styles.sessionInfo}>
-                  <Text style={styles.sessionTitle}>{session.nom}</Text>
+                  <Text style={styles.sessionTitle}>{session.name}</Text>
                   <Text style={styles.sessionDetails}>
-                    {session.exercices.length} exercices
+                    {session.exerciseCount} exercices
                   </Text>
                 </View>
                 <Ionicons
@@ -321,19 +372,34 @@ export default function ProgramDetailsScreen() {
         <View style={styles.actionContainer}>
           <Button
             text={
-              isProgramActive ? "Programme en cours" : "Choisir ce programme"
+              program.inProgress
+                ? "Programme en cours"
+                : activeProgram && activeProgram.id !== program.id
+                ? "Vous suivez déjà un programme"
+                : "Choisir ce programme"
             }
             onPress={startProgram}
-            disabled={isProgramActive || isLoading}
-            loading={isLoading}
+            disabled={
+              program.inProgress ||
+              isStarting ||
+              (activeProgram && activeProgram.id !== program.id)
+            }
+            loading={isStarting}
             fullWidth
             size="lg"
           />
 
-          {isProgramActive && (
+          {program.inProgress && (
             <Text style={styles.activeNote}>
               Ce programme est déjà en cours. Vous pouvez suivre votre
               progression dans la section "Suivi sportif".
+            </Text>
+          )}
+
+          {activeProgram && activeProgram.id !== program.id && (
+            <Text style={styles.activeNote}>
+              Vous suivez déjà le programme "{activeProgram.name}". Vous devez
+              terminer ce programme avant d'en commencer un nouveau.
             </Text>
           )}
         </View>

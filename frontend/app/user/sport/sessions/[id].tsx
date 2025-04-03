@@ -5,9 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  // Image,
   TouchableOpacity,
-  Linking,
 } from "react-native";
 import { Image } from "expo-image";
 import imageMapping from "../../../../constants/imageMapping";
@@ -18,39 +16,337 @@ import Layout from "../../../../constants/Layout";
 import { TextStyles } from "../../../../constants/Fonts";
 import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
+import programsService from "../../../../services/programs.service";
 
-// Import temp data
+// Import temp data pour fallback
 import tempData from "../../../../assets/temp.json";
 
-// Type definitions
+// Types adaptés à l'API
 interface Tag {
-  id_tag: number;
-  nom: string;
-  type: string;
-}
-
-interface SessionExercise {
-  id_exercice: number;
-  ordre_exercice: number;
-  duree: number;
-  repetitions: number | null;
-  series: number | null;
-}
-
-interface Session {
-  id_seance: number;
-  nom: string;
-  tags: number[];
-  exercices: SessionExercise[];
+  id: number;
+  name: string;
 }
 
 interface Exercise {
-  id_exercice: number;
-  nom: string;
+  id: number;
+  name: string;
+  order: number;
+  sets: number | null;
+  repetitions: number | null;
+  duration: number;
   description: string;
+  equipment: string | null;
   gif: string | null;
-  equipement: string | null;
-  tags: number[];
+}
+
+interface Session {
+  id: number;
+  name: string;
+  description: string;
+  level: string;
+  estimatedDuration: number;
+  tags: Tag[];
+  exercises: Exercise[];
+}
+
+export default function SessionDetailsScreen() {
+  const params = useLocalSearchParams();
+  const sessionId = Number(params.id);
+
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [expandedExercises, setExpandedExercises] = useState<number[]>([]);
+
+  useEffect(() => {
+    fetchSessionDetails();
+  }, [sessionId]);
+
+  const fetchSessionDetails = async () => {
+    setIsLoading(true);
+    try {
+      console.log(`Fetching session details for ID: ${sessionId}`);
+      const response = await programsService.getSessionDetails(sessionId);
+      console.log("Session details response:", JSON.stringify(response));
+
+      // Si nous avons une réponse valide de l'API
+      if (response && response.id) {
+        setSession(response);
+      } else {
+        // Fallback aux données statiques en cas d'échec
+        fallbackToStaticData();
+      }
+    } catch (error) {
+      console.error("Error fetching session details:", error);
+      fallbackToStaticData();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fallbackToStaticData = () => {
+    // Utiliser les données statiques comme fallback
+    console.log("Using static data as fallback for session details");
+    try {
+      const sessionsData = tempData.seances || [];
+      const exercisesData = tempData.exercices || [];
+      const tagsData = tempData.tags || [];
+
+      // Trouver la séance par ID
+      const foundSession = sessionsData.find((s) => s.id_seance === sessionId);
+
+      if (foundSession) {
+        // Adapter au format attendu
+        const adaptedSession: Session = {
+          id: foundSession.id_seance,
+          name: foundSession.nom,
+          description:
+            "Une séance complète et efficace pour développer force et endurance.",
+          level: "Intermédiaire",
+          estimatedDuration: foundSession.exercices.reduce(
+            (total, ex) => total + ex.duree,
+            30
+          ),
+          tags: (foundSession.tags || []).map((tagId) => {
+            const tag = (tagsData || []).find((t) => t.id_tag === tagId);
+            return {
+              id: tagId,
+              name: tag?.nom || "Tag inconnu",
+            };
+          }),
+          exercises: [],
+        };
+
+        // Ajouter les exercices détaillés
+        if (foundSession.exercices) {
+          adaptedSession.exercises = foundSession.exercices
+            .map((sessionExercise) => {
+              const exerciseDetails = exercisesData.find(
+                (e) => e.id_exercice === sessionExercise.id_exercice
+              );
+              if (!exerciseDetails) return null;
+
+              return {
+                id: exerciseDetails.id_exercice,
+                name: exerciseDetails.nom,
+                order: sessionExercise.ordre_exercice,
+                sets: sessionExercise.series,
+                repetitions: sessionExercise.repetitions,
+                duration: sessionExercise.duree,
+                description:
+                  exerciseDetails.description || "Description non disponible",
+                equipment: exerciseDetails.equipement,
+                gif: exerciseDetails.gif,
+              };
+            })
+            .filter(Boolean) as Exercise[];
+
+          // Trier les exercices par ordre
+          adaptedSession.exercises.sort((a, b) => a.order - b.order);
+        }
+
+        setSession(adaptedSession);
+      } else {
+        console.error("Session not found in static data");
+        setSession(null);
+      }
+    } catch (error) {
+      console.error("Error processing static data for session:", error);
+      setSession(null);
+    }
+  };
+
+  // Toggle exercise expansion
+  const toggleExerciseExpansion = (exerciseId: number) => {
+    setExpandedExercises((prev) => {
+      if (prev.includes(exerciseId)) {
+        return prev.filter((id) => id !== exerciseId);
+      } else {
+        return [...prev, exerciseId];
+      }
+    });
+  };
+
+  // Format exercise sets and reps
+  const formatExerciseDetails = (exercise: Exercise) => {
+    if (exercise.duration > 0 && !exercise.sets && !exercise.repetitions) {
+      return `${exercise.duration} minutes`;
+    } else if (exercise.sets && exercise.repetitions) {
+      return `${exercise.sets} séries × ${exercise.repetitions} répétitions`;
+    } else if (exercise.sets && !exercise.repetitions) {
+      return `${exercise.sets} séries`;
+    } else if (!exercise.sets && exercise.repetitions) {
+      return `${exercise.repetitions} répétitions`;
+    } else {
+      return "Non spécifié";
+    }
+  };
+
+  // Handle session completion
+  const markSessionAsComplete = async () => {
+    if (!session) return;
+
+    try {
+      console.log(`Marking session ID: ${sessionId} as complete`);
+      const today = new Date().toISOString().split("T")[0];
+      const response = await programsService.completeSession(sessionId, today);
+      console.log("Session completion response:", JSON.stringify(response));
+
+      router.push("/user/dashboard/sport-monitoring");
+    } catch (error) {
+      console.error("Error completing session:", error);
+      alert("Impossible de marquer la séance comme terminée pour le moment.");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Header
+          title="Détails de la séance"
+          showBackButton
+          onBackPress={() => router.back()}
+          style={{ marginTop: Layout.spacing.md }}
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Header
+          title="Détails de la séance"
+          showBackButton
+          onBackPress={() => router.back()}
+          style={{ marginTop: Layout.spacing.md }}
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Séance non trouvée</Text>
+          <Button
+            text="Retour"
+            onPress={() => router.back()}
+            style={styles.returnButton}
+            variant="outline"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <Header
+        title="Détails de la séance"
+        showBackButton
+        onBackPress={() => router.back()}
+        style={{ marginTop: Layout.spacing.md }}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.sessionHeader}>
+          <View style={styles.sessionTitleContainer}>
+            <Text style={styles.sessionTitle}>{session.name}</Text>
+            <Text style={styles.sessionDetails}>
+              {session.exercises.length} exercices
+            </Text>
+            <Text style={styles.sessionTags}>
+              {session.tags
+                .map((tag) => tag.name)
+                .join(", ")
+                .split(", ")
+                .map((tag) =>
+                  tag
+                    .split(" ")
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(" ")
+                )
+                .join(", ")}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.exercisesContainer}>
+          <Text style={styles.sectionTitle}>Exercices</Text>
+
+          {session.exercises.map((exercise, index) => (
+            <View
+              key={`exercise-${exercise.id}-${index}`}
+              style={styles.exerciseCard}
+            >
+              <TouchableOpacity
+                style={styles.exerciseHeader}
+                onPress={() => toggleExerciseExpansion(exercise.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.exerciseNumberContainer}>
+                  <Text style={styles.exerciseNumber}>{index + 1}</Text>
+                </View>
+
+                <View style={styles.exerciseInfo}>
+                  <Text style={styles.exerciseName}>
+                    {exercise.name || "Exercice inconnu"}
+                  </Text>
+                  <Text style={styles.exerciseSpecs}>
+                    {formatExerciseDetails(exercise)}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name={
+                    expandedExercises.includes(exercise.id)
+                      ? "chevron-up"
+                      : "chevron-down"
+                  }
+                  size={24}
+                  color={Colors.gray.medium}
+                />
+              </TouchableOpacity>
+
+              {expandedExercises.includes(exercise.id) && (
+                <View style={styles.exerciseDetails}>
+                  {exercise.gif && (
+                    <View style={styles.gifContainer}>
+                      <Image
+                        source={
+                          imageMapping[exercise.id] || {
+                            uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
+                          }
+                        }
+                        style={styles.exerciseGif}
+                        resizeMode="contain"
+                        autoplay
+                      />
+                    </View>
+                  )}
+
+                  <Text style={styles.exerciseDescription}>
+                    {exercise.description}
+                  </Text>
+
+                  {exercise.equipment && (
+                    <View style={styles.equipmentContainer}>
+                      <Text style={styles.equipmentTitle}>
+                        Équipement nécessaire :
+                      </Text>
+                      <Text style={styles.equipmentText}>
+                        {exercise.equipment}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -104,7 +400,6 @@ const styles = StyleSheet.create({
   },
   exercisesContainer: {
     padding: Layout.spacing.lg,
-    marginBottom: -Layout.spacing.xxl,
   },
   sectionTitle: {
     ...TextStyles.h4,
@@ -199,265 +494,9 @@ const styles = StyleSheet.create({
     ...TextStyles.bodySmall,
     color: Colors.brandBlue[0],
   },
+  actionContainer: {
+    padding: Layout.spacing.lg,
+    marginTop: Layout.spacing.md,
+    marginBottom: Layout.spacing.md,
+  },
 });
-
-export default function SessionDetailsScreen() {
-  const params = useLocalSearchParams();
-  const sessionId = Number(params.id);
-
-  const [session, setSession] = useState<Session | null>(null);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [sessionExercises, setSessionExercises] = useState<
-    Array<SessionExercise & { exerciseDetails: Exercise | null }>
-  >([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [expandedExercises, setExpandedExercises] = useState<number[]>([]);
-
-  useEffect(() => {
-    // In a real app, you would fetch session details with:
-    // GET /api/data/programs/sessions/:sessionId
-    fetchSessionDetails();
-  }, [sessionId]);
-
-  const fetchSessionDetails = () => {
-    setIsLoading(true);
-    try {
-      // Get data from temp.json
-      const sessionsData = tempData.seances as Session[];
-      const exercisesData = tempData.exercices as Exercise[];
-      const tagsData = tempData.tags as Tag[];
-
-      // Find the session by ID
-      const foundSession = sessionsData.find((s) => s.id_seance === sessionId);
-
-      if (foundSession) {
-        setSession(foundSession);
-
-        // Get exercise details for session
-        const detailedExercises = foundSession.exercices.map(
-          (sessionExercise) => {
-            const exerciseDetails =
-              exercisesData.find(
-                (e) => e.id_exercice === sessionExercise.id_exercice
-              ) || null;
-            return {
-              ...sessionExercise,
-              exerciseDetails,
-            };
-          }
-        );
-
-        // Sort by ordre_exercice
-        detailedExercises.sort((a, b) => a.ordre_exercice - b.ordre_exercice);
-
-        setSessionExercises(detailedExercises);
-        setExercises(exercisesData);
-      }
-
-      setAllTags(tagsData);
-    } catch (error) {
-      console.error("Error fetching session details:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Toggle exercise expansion
-  const toggleExerciseExpansion = (exerciseId: number) => {
-    setExpandedExercises((prev) => {
-      if (prev.includes(exerciseId)) {
-        return prev.filter((id) => id !== exerciseId);
-      } else {
-        return [...prev, exerciseId];
-      }
-    });
-  };
-
-  // Get tags for a program or session
-  const getTagsString = (tagIds: number[]) => {
-    return tagIds
-      .map((id) => allTags.find((tag) => tag.id_tag === id))
-      .filter((tag) => tag && tag.type === "sport")
-      .map((tag) => tag?.nom)
-      .join(", ");
-  };
-
-  // Format exercise sets and reps
-  const formatExerciseDetails = (exercise: SessionExercise) => {
-    if (exercise.duree > 0 && !exercise.series && !exercise.repetitions) {
-      return `${exercise.duree} minutes`;
-    } else if (exercise.series && exercise.repetitions) {
-      return `${exercise.series} séries × ${exercise.repetitions} répétitions`;
-    } else if (exercise.series && !exercise.repetitions) {
-      return `${exercise.series} séries`;
-    } else if (!exercise.series && exercise.repetitions) {
-      return `${exercise.repetitions} répétitions`;
-    } else {
-      return "Non spécifié";
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header
-          title="Détails de la séance"
-          showBackButton
-          onBackPress={() => router.back()}
-          style={{ marginTop: Layout.spacing.md }}
-        />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!session) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header
-          title="Détails de la séance"
-          showBackButton
-          onBackPress={() => router.back()}
-          style={{ marginTop: Layout.spacing.md }}
-        />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Séance non trouvée</Text>
-          <Button
-            text="Retour"
-            onPress={() => router.back()}
-            style={styles.returnButton}
-            variant="outline"
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <Header
-        title="Détails de la séance"
-        showBackButton
-        onBackPress={() => router.back()}
-        style={{ marginTop: Layout.spacing.md }}
-      />
-
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.sessionHeader}>
-          <View style={styles.sessionTitleContainer}>
-            <Text style={styles.sessionTitle}>{session.nom}</Text>
-            <Text style={styles.sessionDetails}>
-              {session.exercices.length} exercices
-            </Text>
-            <Text style={styles.sessionTags}>
-              {getTagsString(session.tags)
-                .split(", ")
-                .map((tag) =>
-                  tag
-                    .split(" ")
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(" ")
-                )
-                .join(", ")}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.exercisesContainer}>
-          <Text style={styles.sectionTitle}>Exercices</Text>
-
-          {sessionExercises.map((exercise, index) => (
-            <View
-              key={`exercise-${exercise.id_exercice}-${index}`}
-              style={styles.exerciseCard}
-            >
-              <TouchableOpacity
-                style={styles.exerciseHeader}
-                onPress={() => toggleExerciseExpansion(exercise.id_exercice)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.exerciseNumberContainer}>
-                  <Text style={styles.exerciseNumber}>{index + 1}</Text>
-                </View>
-
-                <View style={styles.exerciseInfo}>
-                  <Text style={styles.exerciseName}>
-                    {exercise.exerciseDetails?.nom || "Exercice inconnu"}
-                  </Text>
-                  <Text style={styles.exerciseSpecs}>
-                    {formatExerciseDetails(exercise)}
-                  </Text>
-                </View>
-
-                <Ionicons
-                  name={
-                    expandedExercises.includes(exercise.id_exercice)
-                      ? "chevron-up"
-                      : "chevron-down"
-                  }
-                  size={24}
-                  color={Colors.gray.medium}
-                />
-              </TouchableOpacity>
-
-              {expandedExercises.includes(exercise.id_exercice) &&
-                exercise.exerciseDetails && (
-                  <View style={styles.exerciseDetails}>
-                    {exercise.exerciseDetails.gif && (
-                      <View style={styles.gifContainer}>
-                        <Image
-                          source={
-                            imageMapping[
-                              exercise.exerciseDetails.id_exercice
-                            ] || {
-                              uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.exerciseDetails.nom}`,
-                            }
-                          }
-                          style={styles.exerciseGif}
-                          resizeMode="contain"
-                          autoplay
-                        />
-                      </View>
-                    )}
-
-                    <Text style={styles.exerciseDescription}>
-                      {exercise.exerciseDetails.description}
-                    </Text>
-
-                    {exercise.exerciseDetails.equipement && (
-                      <View style={styles.equipmentContainer}>
-                        <Text style={styles.equipmentTitle}>
-                          Équipement nécessaire :
-                        </Text>
-                        <Text style={styles.equipmentText}>
-                          {exercise.exerciseDetails.equipement}
-                        </Text>
-                      </View>
-                    )}
-
-                    <View style={styles.exerciseTags}>
-                      <Text style={styles.exerciseTagsTitle}>Catégories :</Text>
-                      <Text style={styles.exerciseTagsText}>
-                        {getTagsString(exercise.exerciseDetails.tags)
-                          .split(", ")
-                          .map(
-                            (tag) => tag.charAt(0).toUpperCase() + tag.slice(1)
-                          )
-                          .join(", ")}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}

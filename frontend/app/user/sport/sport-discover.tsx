@@ -11,36 +11,26 @@ import {
   Dimensions,
 } from "react-native";
 import imageMapping from "../../../constants/imageMapping";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
-import Card from "../../../components/ui/Card";
+import programsService from "../../../services/programs.service";
 
-// Import temp data
-import tempData from "../../../assets/temp.json";
-
-// Type definitions
 interface Tag {
-  id_tag: number;
-  nom: string;
-  type: string;
-}
-
-interface ProgramSession {
-  id_seance: number;
-  ordre_seance: number;
+  id: number;
+  name: string;
 }
 
 interface Program {
-  id_programme: number;
-  nom: string;
+  id: number;
+  name: string;
   image: string;
-  duree: number;
-  tags: number[];
-  seances: ProgramSession[];
+  duration: number;
+  sessionCount: number;
+  tags: Tag[];
+  inProgress: boolean;
 }
 
 const { width } = Dimensions.get("window");
@@ -52,80 +42,75 @@ export default function SportDiscoverScreen() {
   const [intermediatePrograms, setIntermediatePrograms] = useState<Program[]>(
     []
   );
-  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [recommendedPrograms, setRecommendedPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, you would fetch this data with:
-    // GET /api/data/programs
     fetchPrograms();
   }, []);
 
-  const fetchPrograms = () => {
+  const fetchPrograms = async () => {
     setIsLoading(true);
     try {
-      // Get data from temp.json
-      const programsData = tempData.programmes as Program[];
-      const tagsData = tempData.tags as Tag[];
+      console.log("Fetching programs...");
+      const response = await programsService.getPrograms();
+      console.log("API response:", JSON.stringify(response));
 
-      setPrograms(programsData);
-      setAllTags(tagsData);
+      setPrograms(response.programs);
 
-      // Filter programs by beginner tag (id_tag: 1)
-      const beginner = programsData.filter((program) =>
-        program.tags.includes(1)
+      // Programmes recommandés
+      setRecommendedPrograms(response.recommendedPrograms);
+
+      // Filtre pour les programmes débutants
+      const beginner = response.programs.filter((program) =>
+        program.tags.some((tag) => tag.name.toLowerCase().includes("débutant"))
       );
       setBeginnerPrograms(beginner);
 
-      // Filter programs by intermediate tag (id_tag: 5)
-      const intermediate = programsData.filter((program) =>
-        program.tags.includes(5)
+      // Filtre pour les programmes intermédiaires
+      const intermediate = response.programs.filter((program) =>
+        program.tags.some((tag) =>
+          tag.name.toLowerCase().includes("intermédiaire")
+        )
       );
       setIntermediatePrograms(intermediate);
     } catch (error) {
       console.error("Error fetching programs:", error);
+      setPrograms([]);
+      setBeginnerPrograms([]);
+      setIntermediatePrograms([]);
+      setRecommendedPrograms([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get program title (text before | character)
-  const getProgramTitle = (fullName: string) => {
+  const getProgramTitle = (fullName: string | undefined) => {
+    if (!fullName) return "Programme";
     return fullName.split("|")[0];
   };
 
-  // Get program description (text after | character)
-  const getProgramDescription = (fullName: string) => {
+  const getProgramDescription = (fullName: string | undefined) => {
+    if (!fullName) return "";
     const parts = fullName.split("|");
     return parts.length > 1 ? parts[1] : "";
   };
 
-  // Get tags for a program
-  const getProgramTags = (tagIds: number[]) => {
-    return tagIds
-      .map((id) => allTags.find((tag) => tag.id_tag === id))
-      .filter((tag) => tag && tag.type === "sport")
-      .map((tag) => tag?.nom)
-      .join(", ");
-  };
-
-  // Navigate to program details
   const navigateToProgram = (programId: number) => {
     router.push(`/user/sport/programs/${programId}`);
   };
 
-  // Program card component
   const ProgramCard = ({ program }: { program: Program }) => (
     <TouchableOpacity
       style={styles.programCard}
-      onPress={() => navigateToProgram(program.id_programme)}
+      onPress={() => navigateToProgram(program.id)}
       activeOpacity={0.8}
     >
       <Image
         source={
-          imageMapping[program.id_programme + 100] || {
-            uri: `ttps://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-              program.nom
+          imageMapping[program.id + 100] || {
+            uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+              program.name
             )}`,
           }
         }
@@ -134,12 +119,14 @@ export default function SportDiscoverScreen() {
       />
 
       <View style={styles.programContent}>
-        <Text style={styles.programTitle}>{getProgramTitle(program.nom)}</Text>
+        <Text style={styles.programTitle}>{getProgramTitle(program.name)}</Text>
         <Text style={styles.programDuration}>
-          {program.duree} semaines • {program.seances.length} séances
+          {program.duration} semaines • {program.sessionCount} séances
         </Text>
         <Text style={styles.programTags}>
-          {getProgramTags(program.tags)
+          {program.tags
+            .map((tag) => tag.name)
+            .join(", ")
             .split(", ")
             .map((tag) => tag.charAt(0).toUpperCase() + tag.slice(1))
             .join(", ")}
@@ -148,7 +135,6 @@ export default function SportDiscoverScreen() {
     </TouchableOpacity>
   );
 
-  // Loading placeholder
   const ProgramCardPlaceholder = () => (
     <View style={[styles.programCard, styles.placeholderCard]}>
       <View style={styles.placeholderImage} />
@@ -183,7 +169,6 @@ export default function SportDiscoverScreen() {
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pour vous</Text>
-
           {isLoading ? (
             <FlatList
               horizontal
@@ -200,13 +185,13 @@ export default function SportDiscoverScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.programList}
-              data={programs}
+              data={recommendedPrograms}
               renderItem={({ item }) => <ProgramCard program={item} />}
-              keyExtractor={(item) => `program-${item.id_programme}`}
+              keyExtractor={(item) => `recommended-${item.id}`}
               snapToInterval={CARD_WIDTH + Layout.spacing.md}
               decelerationRate="fast"
               ListEmptyComponent={
-                <Text style={styles.emptyText}>Aucun programme disponible</Text>
+                <Text style={styles.emptyText}>Aucun programme recommandé</Text>
               }
             />
           )}
@@ -214,7 +199,6 @@ export default function SportDiscoverScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Programmes débutants</Text>
-
           {isLoading ? (
             <FlatList
               horizontal
@@ -233,7 +217,7 @@ export default function SportDiscoverScreen() {
               contentContainerStyle={styles.programList}
               data={beginnerPrograms}
               renderItem={({ item }) => <ProgramCard program={item} />}
-              keyExtractor={(item) => `beginner-${item.id_programme}`}
+              keyExtractor={(item) => `beginner-${item.id}`}
               snapToInterval={CARD_WIDTH + Layout.spacing.md}
               decelerationRate="fast"
               ListEmptyComponent={
@@ -247,7 +231,6 @@ export default function SportDiscoverScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Programmes intermédiaires</Text>
-
           {isLoading ? (
             <FlatList
               horizontal
@@ -266,7 +249,7 @@ export default function SportDiscoverScreen() {
               contentContainerStyle={styles.programList}
               data={intermediatePrograms}
               renderItem={({ item }) => <ProgramCard program={item} />}
-              keyExtractor={(item) => `intermediate-${item.id_programme}`}
+              keyExtractor={(item) => `intermediate-${item.id}`}
               snapToInterval={CARD_WIDTH + Layout.spacing.md}
               decelerationRate="fast"
               ListEmptyComponent={
@@ -282,6 +265,7 @@ export default function SportDiscoverScreen() {
   );
 }
 
+// Les styles restent identiques
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -306,13 +290,12 @@ const styles = StyleSheet.create({
     marginRight: Layout.spacing.md,
     borderRadius: Layout.borderRadius.md,
     backgroundColor: Colors.white,
-    // Ajout d'une bordure avec ombre simulée
     borderWidth: 0.5,
-    borderColor: "rgba(0, 0, 0, 0.1)", // Couleur de la bordure avec ombre légère
-    shadowColor: "rgba(0, 0, 0, 0.2)", // Couleur de l'ombre
-    shadowOffset: { width: 0, height: 2 }, // Décalage de l'ombre vers le bas
-    shadowOpacity: 1, // Opacité de l'ombre
-    shadowRadius: 2, // Rayon de l'ombre
+    borderColor: "rgba(0, 0, 0, 0.1)",
+    shadowColor: "rgba(0, 0, 0, 0.2)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 2,
     overflow: "hidden",
   },
   programImage: {
