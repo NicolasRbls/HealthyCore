@@ -54,6 +54,4 @@ getAllTheFood: catchAsync(async (req, res) => {
   })
 }
 
-module.exports = {
-    foodController
-};
+module.exports = foodController;
