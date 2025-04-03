@@ -175,27 +175,18 @@ export default function TargetWeightScreen() {
       return;
     }
 
-    // Vérifier si le BMI est en dehors des limites recommandées
+    // Bloquer complètement si le BMI est en dehors des limites recommandées
     if (!isValid) {
-      // Afficher une alerte simple pour confirmer
       Alert.alert(
-        "Confirmer votre objectif",
-        "Cet objectif de poids n'est pas dans la plage recommandée selon l'IMC. Voulez-vous continuer avec cet objectif ?",
-        [
-          {
-            text: "Annuler",
-            style: "cancel",
-          },
-          {
-            text: "Continuer",
-            onPress: () => proceedToNextStep(),
-          },
-        ]
+        "Objectif non recommandé",
+        "Pour votre santé, cet objectif de poids n'est pas recommandé. Veuillez définir un objectif plus approprié.",
+        [{ text: "Compris" }]
       );
-    } else {
-      // Si l'IMC est valide, procéder directement
-      proceedToNextStep();
+      return; // Empêche la progression
     }
+
+    // Si l'IMC est valide, procéder directement
+    proceedToNextStep();
   };
 
   // Fonction auxiliaire pour passer à l'étape suivante

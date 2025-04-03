@@ -1,50 +1,69 @@
-# Welcome to your Expo app 👋 (cette fois ça va marcher test 1er commit dans la branche frontend)
+# HealthyCore Frontend 🏋️‍♀️
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 📱 Présentation
 
-## Get started
+HealthyCore est une application mobile de suivi de santé et de fitness développée en React Native avec Expo, conçue dans le cadre d'un projet de Master 1 Développement Web et Mobile (DWM).
 
-1. Install dependencies
+## 🚀 Technologies Principales
 
-   ```bash
-   npm install
-   ```
+- **Framework**: React Native avec Expo
+- **Langage**: TypeScript
+- **Routing**: Expo Router (Routing basé sur les fichiers)
 
-2. Start the app
+## 🏗️ Architecture du Projet
 
-   ```bash
-    npx expo start
-   ```
+### Structure des Dossiers
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+frontend/
+├── app/                   # Routes et écrans principaux
+│   ├── _layout.tsx        # Layout global de l'application
+│   ├── welcome.tsx        # Écran d'accueil
+│   ├── auth/              # Authentification
+│   ├── register/          # Processus d'inscription
+│   ├── admin/             # Routes admin
+│   └── user/              # Routes utilisateur
+│
+├── components/            # Composants réutilisables
+│   ├── ui/                # Composants UI de base
+│   ├── layout/            # Composants de mise en page
+│   └── registration/      # Composants spécifiques à l'inscription
+│
+├── constants/             # Styles et valeurs constantes
+│   ├── Colors.ts
+│   ├── Fonts.ts
+│   └── Layout.ts
+│
+├── context/               # Contextes React
+│   ├── AuthContext.tsx
+│   └── RegistrationContext.tsx
+│
+├── hooks/                 # Hooks personnalisés
+│   ├── useForm.ts
+│   ├── useNumericInput.ts
+│   └── useDatePicker.ts
+│
+└── services/              # Services pour les appels API
+    ├── api.service.ts
+    ├── auth.service.ts
+    └── validation.service.ts
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Principes Architecturaux
 
-## Learn more
+1. **Routing Basé sur les Fichiers**
 
-To learn more about developing your project with Expo, look at the following resources:
+   - Utilisation d'Expo Router
+   - Chaque fichier dans `app/` devient une route
+   - Routes dynamiques et imbriquées
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+2. **Séparation des Préoccupations**
 
-## Join the community
+   - Composants UI indépendants
+   - Services dédiés aux appels API
+   - Contextes pour la gestion d'état global
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+3. **Hooks Personnalisés**
+   - Logique réutilisable
+   - Séparation de la logique de la présentation
+   - Validation et gestion des formulaires centralisée
