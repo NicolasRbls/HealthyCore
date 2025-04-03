@@ -10,4 +10,6 @@ const router = express.Router();
  * @desc Récupérer tous les aliments avec pagination    
  *  @access Private (Admin)
  */
-router.get("/", isAdmin, foodController.getAllTheFood);
+router.get("/", isAdmin, foodController.getAllTheFood)
+
+module.exports = router;
