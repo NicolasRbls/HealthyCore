@@ -5,7 +5,6 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Image,
   TouchableOpacity,
   Alert,
 } from "react-native";
@@ -19,7 +18,6 @@ import Card from "../../../components/ui/Card";
 import { useAuth } from "../../../context/AuthContext";
 import Header from "../../../components/layout/Header";
 import authService from "../../../services/auth.service";
-import dataService from "../../../services/data.service";
 import userService from "../../../services/user.service";
 
 // Import données d'exemple pour le développement
@@ -71,7 +69,7 @@ export default function ProfileScreen() {
     const exampleUser = tempData.user_exemple;
     const exampleEvolutions = tempData.evolutions_exemple;
 
-    // Calculer l'âge
+    // Calculer l'âge exactement
     const birthDate = new Date(exampleUser.date_de_naissance);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -87,7 +85,7 @@ export default function ProfileScreen() {
 
     setUserData({
       ...exampleUser,
-      age: age,
+      age: age, // Âge exact calculé
       currentWeight: latestEvolution.poids,
       currentHeight: latestEvolution.taille,
       bmi: (
@@ -101,9 +99,16 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
+      // Appeler le service d'authentification pour se déconnecter
+      await authService.logout();
+      // Puis utiliser la fonction de déconnexion du contexte pour nettoyer l'état local
       await logout();
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
+      Alert.alert(
+        "Erreur",
+        "Une erreur est survenue lors de la déconnexion. Veuillez réessayer."
+      );
     }
   };
 
@@ -186,7 +191,7 @@ export default function ProfileScreen() {
               <Text style={styles.metricLabel}>Poids</Text>
             </View>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{userData.age}ans</Text>
+              <Text style={styles.metricValue}>{userData.age} ans</Text>
               <Text style={styles.metricLabel}>Âge</Text>
             </View>
           </View>

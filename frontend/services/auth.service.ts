@@ -44,6 +44,20 @@ const authService = {
   },
 
   /**
+   * Déconnexion de l'utilisateur
+   */
+  async logout(): Promise<void> {
+    try {
+      // Appel à l'API pour informer le serveur de la déconnexion
+      await apiService.post<{ message: string }>("/auth/logout", {});
+      // Le token sera supprimé par le contexte d'authentification
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      // On continue malgré l'erreur pour assurer que l'utilisateur est déconnecté localement
+    }
+  },
+
+  /**
    * Vérification de la validité du token
    */
   async verifyToken(): Promise<{ valid: boolean; user: User }> {
