@@ -152,3 +152,22 @@ exports.getMe = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Contrôleur pour gérer la déconnexion d'un utilisateur
+ * Note : La déconnexion est gérée côté client en supprimant le token
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @returns {Object} - Réponse JSON indiquant le succès de la déconnexion
+ */
+exports.logout = async (req, res, next) => {
+  try {
+    res.status(200).json({
+      status: "success",
+      message: "Déconnexion réussie. Le token a été invalidé côté client."
+    });
+  } catch (err) {
+    next(err);
+  }
+};
