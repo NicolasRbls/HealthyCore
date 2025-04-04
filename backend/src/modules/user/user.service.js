@@ -27,8 +27,13 @@ const getUserProfile = async (userId) => {
     if (!user) throw new AppError("Utilisateur introuvable", 404, "USER_NOT_FOUND");
 
     const birthDate = new Date(user.date_de_naissance);
-    const age = new Date().getFullYear() - birthDate.getFullYear();
-
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+    
     // 2. Dernière évolution
     const lastEvolution = await prisma.evolutions.findFirst({
       where: { id_user: userId },
