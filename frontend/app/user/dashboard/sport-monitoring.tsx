@@ -24,6 +24,7 @@ interface Session {
   date: string;
   done: boolean;
   icon?: string;
+  isDaySession?: boolean; // Nouvel attribut pour marquer les séances du jour
 }
 
 interface WeekDay {
@@ -73,12 +74,21 @@ export default function SportMonitoring() {
           sportProgressData.weeklySchedule &&
           sportProgressData.weeklySchedule.length > 0
         ) {
+          // Obtenir la date du jour pour comparer
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+
           const sessionList = sportProgressData.weeklySchedule
             .filter((day: WeekDay) => day.session !== null)
             .map((day: WeekDay) => {
+              // Vérifier si c'est la séance du jour
+              const dayDate = new Date(day.date);
+              dayDate.setHours(0, 0, 0, 0);
+              const isToday = day.date === todayStr;
+
               // Formater la date en format lisible
-              const date = new Date(day.date);
-              const formattedDate = date.toLocaleDateString("fr-FR", {
+              const formattedDate = dayDate.toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "numeric",
               });
@@ -89,6 +99,7 @@ export default function SportMonitoring() {
                 date: formattedDate,
                 done: day.session.completed,
                 icon: getSessionIconType(day.session.name),
+                isDaySession: isToday,
               };
             });
           setWeekSessions(sessionList);
@@ -112,7 +123,37 @@ export default function SportMonitoring() {
           date: formattedDate,
           done: todaySessionData.todaySession.completed || false,
           icon: getSessionIconType(todaySessionData.todaySession.name),
+          isDaySession: true,
         });
+      }
+
+      // Vérifier si des séances du jour existent dans weekSessions
+      // mais ne sont pas encore complétées
+      if (
+        todaySessionData.todaySession &&
+        !todaySessionData.todaySession.completed
+      ) {
+        const todaySessionInWeek = weekSessions.find(
+          (s) => s.isDaySession && s.id === todaySessionData.todaySession.id
+        );
+
+        if (todaySessionInWeek && !todaySessionInWeek.done) {
+          // On pourrait proposer de compléter automatiquement via une alerte
+          setTimeout(() => {
+            Alert.alert(
+              "Séance du jour",
+              `Voulez-vous marquer "${todaySessionData.todaySession.name}" comme terminée?`,
+              [
+                { text: "Non", style: "cancel" },
+                {
+                  text: "Oui",
+                  onPress: () =>
+                    toggleSessionDone(todaySessionData.todaySession.id, null),
+                },
+              ]
+            );
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error("Error fetching sport data:", error);
@@ -150,64 +191,54 @@ export default function SportMonitoring() {
         ? todaySession.done
         : weekSessions.find((s) => s.id === sessionId)?.done || false;
 
+    // Pas besoin de mettre à jour l'UI si la session est déjà terminée
+    if (currentSessionDone) {
+      return; // On ne peut pas "décompléter" une session, donc on sort ici
+    }
+
     // Mettre à jour l'UI immédiatement pour un retour utilisateur rapide
     if (todaySession && todaySession.id === sessionId) {
       setTodaySession({
         ...todaySession,
-        done: !todaySession.done,
+        done: true,
       });
     }
 
     setWeekSessions((prevSessions) =>
       prevSessions.map((session) =>
-        session.id === sessionId ? { ...session, done: !session.done } : session
+        session.id === sessionId ? { ...session, done: true } : session
       )
     );
 
     try {
-      // Si la session n'est pas marquée comme terminée, envoyez la requête pour la compléter
-      if (!currentSessionDone) {
-        await apiService.post(`/data/programs/sessions/${sessionId}/complete`);
-      } else {
-        // Si elle est déjà terminée, on accepte simplement le changement d'état dans l'UI
-        // sans faire d'appel API, car on sait que l'API renverra une erreur
-        console.log("Session déjà terminée, pas d'appel API nécessaire");
-      }
+      // Appel API pour marquer la séance comme complétée
+      await apiService.post(`/data/programs/sessions/${sessionId}/complete`);
 
-      // Rafraîchir les données après un court délai
-      setTimeout(() => {
-        fetchSportData();
-      }, 500);
+      // Rafraîchir les données pour confirmer que tout est à jour
+      fetchSportData();
     } catch (error) {
       console.error("Error toggling session status:", error);
 
-      // Si l'erreur est que la session est déjà complétée, on laisse l'UI comme on l'a mise
-      if (error.code === "SESSION_ALREADY_COMPLETED") {
-        console.log(
-          "La séance était déjà marquée comme terminée, état UI maintenu"
-        );
-      } else {
-        // Pour les autres erreurs, on revient à l'état précédent
-        if (todaySession && todaySession.id === sessionId) {
-          setTodaySession({
-            ...todaySession,
-            done: currentSessionDone,
-          });
-        }
-
-        setWeekSessions((prevSessions) =>
-          prevSessions.map((session) =>
-            session.id === sessionId
-              ? { ...session, done: currentSessionDone }
-              : session
-          )
-        );
-
-        Alert.alert(
-          "Erreur",
-          "Impossible de mettre à jour le statut de la séance"
-        );
+      // Revenir à l'état précédent en cas d'erreur
+      if (todaySession && todaySession.id === sessionId) {
+        setTodaySession({
+          ...todaySession,
+          done: currentSessionDone,
+        });
       }
+
+      setWeekSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === sessionId
+            ? { ...session, done: currentSessionDone }
+            : session
+        )
+      );
+
+      Alert.alert(
+        "Erreur",
+        "Impossible de mettre à jour le statut de la séance"
+      );
     }
   };
 
@@ -233,30 +264,46 @@ export default function SportMonitoring() {
   // Session card component
   const SessionCard = ({ session }: { session: Session }) => (
     <TouchableOpacity
-      style={styles.sessionCard}
+      style={[
+        styles.sessionCard,
+        session.isDaySession && !session.done ? styles.todaySessionCard : null,
+      ]}
       onPress={() => navigateToSessionDetails(session.id)}
       activeOpacity={0.8}
     >
       <View style={styles.sessionRow}>
         <View
-          style={[styles.sessionIcon, { backgroundColor: Colors.brandBlue[0] }]}
+          style={[
+            styles.sessionIcon,
+            {
+              backgroundColor: session.isDaySession
+                ? Colors.secondary[0]
+                : Colors.brandBlue[0],
+            },
+          ]}
         >
           {getSessionIcon(session.icon || "fitness")}
         </View>
 
         <View style={styles.sessionInfo}>
-          <Text style={styles.sessionName}>{session.name}</Text>
+          <Text style={styles.sessionName}>
+            {session.name}
+            {session.isDaySession && !session.done && (
+              <Text style={styles.todayBadge}> (Aujourd'hui)</Text>
+            )}
+          </Text>
           <Text style={styles.sessionDate}>{session.date}</Text>
         </View>
 
         <View style={styles.actionColumn}>
           <Switch
             value={session.done}
-            onValueChange={() =>
-              session.done
-                ? null
-                : toggleSessionDone(session.id, { stopPropagation: () => {} })
-            }
+            onValueChange={(value) => {
+              if (!session.done) {
+                // Seulement si pas déjà complété
+                toggleSessionDone(session.id, { stopPropagation: () => {} });
+              }
+            }}
             trackColor={{ false: Colors.gray.light, true: Colors.secondary[0] }}
             thumbColor={Colors.white}
             ios_backgroundColor={Colors.gray.light}
@@ -386,6 +433,10 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.md,
     ...Layout.elevation.sm,
   },
+  todaySessionCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.secondary[0],
+  },
   sessionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -405,6 +456,10 @@ const styles = StyleSheet.create({
   sessionName: {
     ...TextStyles.body,
     fontWeight: "600",
+  },
+  todayBadge: {
+    color: Colors.secondary[0],
+    fontWeight: "700",
   },
   sessionDate: {
     ...TextStyles.caption,
