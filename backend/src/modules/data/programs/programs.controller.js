@@ -179,7 +179,6 @@ exports.completeSession = async (req, res, next) => {
 exports.getTodaySession = async (req, res, next) => {
   try {
     const userId = req.user.id_user;
-
     const todaySession = await programsService.getTodaySession(userId);
 
     res.status(200).json(
@@ -193,5 +192,4 @@ exports.getTodaySession = async (req, res, next) => {
     next(err);
   }  
 };
-
 

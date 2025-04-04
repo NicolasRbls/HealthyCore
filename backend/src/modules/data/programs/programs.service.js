@@ -787,70 +787,119 @@ const completeSession = async (userId, sessionId, date = null) => {
  * @throws {Error} - Si une erreur se produit lors de la récupération de la séance
  */
 const getTodaySession = async (userId) => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      // 1. Récupérer le programme actif
-      const activeUserProgram = await prisma.programmes_utilisateurs.findFirst({
-        where: {
-          id_user: userId,
-          date_debut: { lte: today },
-          date_fin: { gte: today }
-        },
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 1. Chercher une séance déjà complétée aujourd’hui
+  const completedToday = await prisma.suivis_sportifs.findFirst({
+    where: {
+      id_user: userId,
+      date: today
+    },
+    include: {
+      seances: {
         include: {
-          programmes: {
-            include: {
-              seances_programmes: {
-                include: {
-                  seances: {
-                    include: {
-                      exercices_seances: {
-                        include: { exercices: true },
-                        orderBy: { ordre_exercice: "asc" }
-                      }
-                    }
-                  }
-                },
-                orderBy: { ordre_seance: "asc" }
-              }
-            }
+          exercices_seances: {
+            include: { exercices: true },
+            orderBy: { ordre_exercice: "asc" }
           }
         }
-      });
-  
-      if (!activeUserProgram || activeUserProgram.programmes.seances_programmes.length === 0) {
-        return null;
       }
-  
-      // 2. Toujours renvoyer la première séance (pas de mapping jour complexe)
-      const todaySession = activeUserProgram.programmes.seances_programmes[0];
-  
-      return {
-        id: todaySession.seances.id_seance,
-        name: todaySession.seances.nom,
-        program: {
-          id: activeUserProgram.id_programme,
-          name: activeUserProgram.programmes.nom
-        },
-        completed: false,
-        exercises: todaySession.seances.exercices_seances.map(es => ({
-          id: es.exercices.id_exercice,
-          name: es.exercices.nom,
-          order: es.ordre_exercice,
-          sets: es.series,
-          repetitions: es.repetitions,
-          duration: es.duree,
-          description: es.exercices.description,
-          equipment: es.exercices.equipement,
-          gif: es.exercices.gif
-        }))
-      };
-    } catch (error) {
-      console.error("❌ Erreur dans getTodaySession:", error);
-      throw error;
     }
+  });
+
+  if (completedToday) {
+    return {
+      id: completedToday.seances.id_seance,
+      name: completedToday.seances.nom,
+      program: {
+        id: null,
+        name: null
+      },
+      completed: true,
+      exercises: completedToday.seances.exercices_seances.map(es => ({
+        id: es.exercices.id_exercice,
+        name: es.exercices.nom,
+        order: es.ordre_exercice,
+        sets: es.series,
+        repetitions: es.repetitions,
+        duration: es.duree,
+        description: es.exercices.description,
+        equipment: es.exercices.equipement,
+        gif: es.exercices.gif
+      }))
+    };
+  }
+
+  // 2. Si rien de complété aujourd’hui → on cherche le programme actif
+  const activeUserProgram = await prisma.programmes_utilisateurs.findFirst({
+    where: {
+      id_user: userId,
+      date_debut: { lte: today },
+      date_fin: { gte: today }
+    },
+    include: {
+      programmes: {
+        include: {
+          seances_programmes: {
+            include: {
+              seances: {
+                include: {
+                  exercices_seances: {
+                    include: { exercices: true },
+                    orderBy: { ordre_exercice: "asc" }
+                  }
+                }
+              }
+            },
+            orderBy: { ordre_seance: "asc" }
+          }
+        }
+      }
+    }
+  });
+
+  if (!activeUserProgram || activeUserProgram.programmes.seances_programmes.length === 0) {
+    return null;
+  }
+
+  // 3. Identifier les séances déjà complétées
+  const completedSessions = await prisma.suivis_sportifs.findMany({
+    where: { id_user: userId },
+    select: { id_seance: true }
+  });
+
+  const completedSessionIds = completedSessions.map(s => s.id_seance);
+
+  // 4. Chercher la première séance non encore faite
+  const nextSession = activeUserProgram.programmes.seances_programmes.find(sp =>
+    !completedSessionIds.includes(sp.id_seance)
+  );
+
+  if (!nextSession) return null;
+
+  return {
+    id: nextSession.seances.id_seance,
+    name: nextSession.seances.nom,
+    program: {
+      id: activeUserProgram.id_programme,
+      name: activeUserProgram.programmes.nom
+    },
+    completed: false,
+    exercises: nextSession.seances.exercices_seances.map(es => ({
+      id: es.exercices.id_exercice,
+      name: es.exercices.nom,
+      order: es.ordre_exercice,
+      sets: es.series,
+      repetitions: es.repetitions,
+      duration: es.duree,
+      description: es.exercices.description,
+      equipment: es.exercices.equipement,
+      gif: es.exercices.gif
+    }))
   };
+};
+
   
 module.exports = {
     getUserPrograms,
