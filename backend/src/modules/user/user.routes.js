@@ -13,5 +13,13 @@ const { checkAuth } = require("../auth/auth.middleware");
  */
 router.get("/profile", checkAuth, userController.getUserProfile);
 
+/**
+* Route to get the user's badges.
+* 
+* @route GET /badges
+* @middleware checkAuth - Middleware to verify user authentication.
+* @controller userController.getBadgesController - Controller to handle fetching the user's badges data.
+*/
+router.get("/badges", checkAuth, userController.getBadgesController);
 
 module.exports = router;

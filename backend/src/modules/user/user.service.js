@@ -88,8 +88,50 @@ const getUserProfile = async (userId) => {
     throw error;
   }
 };
+
+
+/**
+ * Récupère tous les badges de l'utilisateur, débloqués et verrouillés
+ * @param {number} userId - ID de l'utilisateur
+ * @returns {Object} - unlockedBadges et lockedBadges
+ */
+const getUserBadges = async (userId) => {
+  try {
+    const allBadges = await prisma.badges.findMany();
+
+    const unlocked = await prisma.badges_utilisateurs.findMany({
+      where: { id_user: userId },
+      include: { badges: true }
+    });
+
+    const unlockedBadges = unlocked.map((ub) => ({
+      id: ub.badges.id_badge,
+      name: ub.badges.nom,
+      image: ub.badges.image,
+      description: ub.badges.description,
+      dateObtained: ub.date_obtention
+    }));
+
+    const unlockedIds = new Set(unlocked.map((ub) => ub.id_badge));
+
+    const lockedBadges = allBadges
+      .filter((b) => !unlockedIds.has(b.id_badge))
+      .map((b) => ({
+        id: b.id_badge,
+        name: b.nom,
+        image: b.image,
+        description: b.description,
+        condition: b.condition_obtention
+      }));
+
+    return { unlockedBadges, lockedBadges };
+  } catch (error) {
+    throw error;
+  }
+};
   
 module.exports = {
-    getUserProfile
+    getUserProfile,
+    getUserBadges,
   };
   
