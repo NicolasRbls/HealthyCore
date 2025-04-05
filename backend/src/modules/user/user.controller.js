@@ -107,3 +107,27 @@ exports.addEvolutionController = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Récupérer les statistiques de progression de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware
+ */
+exports.getProgressStatsController = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const period = req.query.period || "month";
+
+    const stats = await userService.getProgressStats(userId, period);
+
+    res.status(200).json({
+      status: "success",
+      data: stats,
+      message: "Statistiques de progression récupérées avec succès",
+    });
+  } catch (err) {
+    console.error("❌ Erreur dans getProgressStatsController :", err);
+    next(err);
+  }
+};

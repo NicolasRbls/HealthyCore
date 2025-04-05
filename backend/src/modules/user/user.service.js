@@ -1,6 +1,8 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { AppError } = require("../../utils/response.utils");
+const _ = require("lodash");
+
 
 
 /* 
@@ -306,6 +308,136 @@ const addEvolution = async (userId, { weight, height, date }) => {
   };
 };
 
+/**
+ * Récupère les statistiques de progression de l'utilisateur
+ * @param {number} userId - ID de l'utilisateur
+ * @param {string} period - Période pour les statistiques (week, month, year)
+ * @returns {Object} - Statistiques de progression
+ */
+const getProgressStats = async (userId, period) => {
+  const today = new Date();
+  let startDate;
+
+  switch (period) {
+    case "week":
+      startDate = new Date(today.setDate(today.getDate() - 7));
+      break;
+    case "year":
+      startDate = new Date(today.setFullYear(today.getFullYear() - 1));
+      break;
+    case "month":
+    default:
+      startDate = new Date(today.setMonth(today.getMonth() - 1));
+      break;
+  }
+
+  // 1. Évolution du poids
+  const evolutions = await prisma.evolutions.findMany({
+    where: {
+      id_user: userId,
+      date: { gte: startDate },
+    },
+    orderBy: { date: 'asc' },
+  });
+
+  let weightStats = null;
+  if (evolutions.length > 1) {
+    const start = evolutions[0];
+    const current = evolutions[evolutions.length - 1];
+    const weightChange = parseFloat((current.poids - start.poids).toFixed(1));
+    const weightChangePercentage = parseFloat(((weightChange / start.poids) * 100).toFixed(2));
+
+    weightStats = {
+      start: parseFloat(start.poids),
+      current: parseFloat(current.poids),
+      change: weightChange,
+      changePercentage: weightChangePercentage,
+      trend: weightChange > 0 ? "ascending" : weightChange < 0 ? "descending" : "stable"
+    };
+  }
+
+  // 2. Nutrition
+  const nutrition = await prisma.suivis_nutritionnels.findMany({
+    where: {
+      id_user: userId,
+      date: { gte: startDate }
+    },
+    include: { aliments: true }
+  });
+
+  const nutritionGrouped = {};
+  for (const n of nutrition) {
+    const date = n.date.toISOString().split("T")[0];
+    if (!nutritionGrouped[date]) nutritionGrouped[date] = [];
+    nutritionGrouped[date].push(n);
+  }
+
+  const days = Object.values(nutritionGrouped);
+  const avgCalories = Math.round(_.mean(days.map(day => _.sumBy(day, n => n.aliments.calories * n.quantite / 100))));
+  const avgProteins = Math.round(_.mean(days.map(day => _.sumBy(day, n => parseFloat(n.aliments.proteines) * n.quantite / 100))));
+  const avgCarbs = Math.round(_.mean(days.map(day => _.sumBy(day, n => parseFloat(n.aliments.glucides) * n.quantite / 100))));
+  const avgFats = Math.round(_.mean(days.map(day => _.sumBy(day, n => parseFloat(n.aliments.lipides) * n.quantite / 100))));
+
+  const preferences = await prisma.preferences.findFirst({ where: { id_user: userId } });
+  const goalCompletionRate = preferences?.calories_quotidiennes
+    ? Math.round((days.filter(day =>
+        Math.abs(_.sumBy(day, n => n.aliments.calories * n.quantite / 100) - preferences.calories_quotidiennes) < 300).length / days.length) * 100)
+    : null;
+
+  // 3. Activité sportive
+  const sessions = await prisma.suivis_sportifs.findMany({
+    where: {
+      id_user: userId,
+      date: { gte: startDate }
+    },
+    include: { seances: { include: { seances_tags: { include: { tags: true } } } } }
+  });
+
+  const completedSessions = sessions.length;
+  const totalWeeks = Math.max(1, Math.round((new Date() - startDate) / (7 * 24 * 60 * 60 * 1000)));
+  const sessionsPerWeek = parseFloat((completedSessions / totalWeeks).toFixed(1));
+
+  const userPrefs = preferences?.seances_par_semaines || 0;
+  const activityGoalRate = userPrefs
+    ? Math.min(100, Math.round((sessionsPerWeek / userPrefs) * 100))
+    : null;
+
+  const activityCount = {};
+  for (const s of sessions) {
+    for (const t of s.seances.seances_tags) {
+      const name = t.tags.nom;
+      activityCount[name] = (activityCount[name] || 0) + 1;
+    }
+  }
+  const mostFrequentActivity = Object.keys(activityCount).reduce((a, b) => activityCount[a] > activityCount[b] ? a : b, null);
+
+  // 4. Streak et score
+  const streakDays = _.uniq(sessions.map(s => s.date.toISOString().slice(0, 10))).length;
+  const overallProgress = Math.round(((goalCompletionRate || 0) + (activityGoalRate || 0)) / 2);
+
+  return {
+    period,
+    weight: weightStats,
+    nutrition: {
+      averageCalories: avgCalories || 0,
+      averageProteins: avgProteins || 0,
+      averageCarbs: avgCarbs || 0,
+      averageFats: avgFats || 0,
+      goalCompletionRate: goalCompletionRate || 0
+    },
+    activity: {
+      completedSessions,
+      sessionsPerWeek,
+      goalCompletionRate: activityGoalRate || 0,
+      mostFrequentActivity
+    },
+    overview: {
+      overallProgress,
+      streakDays
+    }
+  };
+};
+
 
 module.exports = {
     getUserProfile,
@@ -313,5 +445,6 @@ module.exports = {
     checkNewBadges,
     getUserEvolution,
     addEvolution,
+    getProgressStats,
   };
   

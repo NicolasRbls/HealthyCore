@@ -49,4 +49,14 @@ router.get("/evolution", checkAuth, userController.getUserEvolutionController);
  */
 router.post("/evolution", checkAuth, userController.addEvolutionController);
 
+/**
+ * Route to get the user's progress statistics.
+ * 
+ * @route GET /progress/stats
+ * @middleware checkAuth - Middleware to verify user authentication.
+ * @controller userController.getProgressStatsController - Controller to handle fetching the user's progress statistics.
+ */
+router.get("/progress/stats", checkAuth, userController.getProgressStatsController);
+
+
 module.exports = router;
