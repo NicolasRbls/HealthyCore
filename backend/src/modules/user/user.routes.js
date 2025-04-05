@@ -31,5 +31,14 @@ router.get("/badges", checkAuth, userController.getBadgesController);
  */
 router.post("/badges/check", checkAuth, userController.checkBadgesController);
 
+/**
+ * Route to get the user's evolution data.
+ * 
+ * @route GET /evolution
+ * @middleware checkAuth - Middleware to verify user authentication.
+ * @controller userController.getUserEvolutionController - Controller to handle fetching the user's evolution data.
+ */
+router.get("/evolution", checkAuth, userController.getUserEvolutionController);
+
 
 module.exports = router;

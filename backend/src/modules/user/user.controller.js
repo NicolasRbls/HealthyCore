@@ -58,3 +58,27 @@ exports.checkBadgesController = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Récupérer l'évolution de l'utilisateur entre deux dates
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware
+ */
+exports.getUserEvolutionController = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const { startDate, endDate } = req.query;
+
+    const result = await userService.getUserEvolution(userId, startDate, endDate);
+
+    res.status(200).json({
+      status: "success",
+      data: result,
+      message: "Évolution récupérée avec succès"
+    });
+  } catch (err) {
+    console.error("❌ Erreur dans getUserEvolutionController :", err);
+    next(err);
+  }
+};

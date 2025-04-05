@@ -143,7 +143,7 @@ const conditionHandlers = {
 
   FIRST_DAY_COMPLETED: async (userId) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // ✅ force à 00:00:00 pour matcher les dates
+    today.setHours(0, 0, 0, 0); // force à 00:00:00 pour matcher les dates
     const goals = await prisma.objectifs_utilisateurs.findMany({
       where: {
         id_user: userId,
@@ -224,10 +224,62 @@ const checkNewBadges = async (userId) => {
 };
 
 
+/**
+ * Récupère l'évolution de l'utilisateur entre deux dates
+ * @param {number} userId - ID de l'utilisateur
+ * @param {string} startDate - Date de début (format YYYY-MM-DD)
+ * @param {string} endDate - Date de fin (format YYYY-MM-DD)
+ * @returns {Object} - Evolution et statistiques
+ */
+const getUserEvolution = async (userId, startDate, endDate) => {
+  const start = startDate ? new Date(startDate) : new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 mois avant
+  const end = endDate ? new Date(endDate) : new Date(); // aujourd'hui
+
+  const evolution = await prisma.evolutions.findMany({
+    where: {
+      id_user: userId,
+      date: {
+        gte: start,
+        lte: end,
+      },
+    },
+    orderBy: {
+      date: 'asc',
+    },
+  });
+
+  const formatted = evolution.map((e) => ({
+    date: e.date.toISOString().slice(0, 10),
+    weight: parseFloat(e.poids),
+    height: parseFloat(e.taille),
+    bmi: Number((e.poids / ((e.taille / 100) ** 2)).toFixed(1)),
+  }));
+
+  let statistics = null;
+  if (formatted.length >= 2) {
+    const first = formatted[0];
+    const last = formatted[formatted.length - 1];
+    const weightChange = last.weight - first.weight;
+    const weightChangePercentage = Number(((weightChange / first.weight) * 100).toFixed(2));
+    statistics = {
+      initialWeight: first.weight,
+      currentWeight: last.weight,
+      weightChange,
+      weightChangePercentage,
+      initialBmi: first.bmi,
+      currentBmi: last.bmi,
+    };
+  }
+
+  return { evolution: formatted, statistics };
+};
+
+
 
 module.exports = {
     getUserProfile,
     getUserBadges,
     checkNewBadges,
+    getUserEvolution,
   };
   
