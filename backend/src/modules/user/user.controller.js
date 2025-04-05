@@ -131,3 +131,20 @@ exports.getProgressStatsController = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Mettre à jour le profil utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware
+ */
+exports.updateUserProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const updated = await userService.updateUserProfile(userId, req.body);
+
+    res.status(200).json(success({ user: updated }, "Profil mis à jour avec succès"));
+  } catch (err) {
+    next(err);
+  }
+};

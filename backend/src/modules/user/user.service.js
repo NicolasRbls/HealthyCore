@@ -438,6 +438,59 @@ const getProgressStats = async (userId, period) => {
   };
 };
 
+/**
+ * Met à jour le profil utilisateur
+ * @param {number} userId - ID de l'utilisateur
+ * @param {Object} data - Données à mettre à jour
+ * @returns {Object} - Profil mis à jour
+ * @throws {AppError} - Erreur si l'email est déjà utilisé ou si une autre erreur se produit
+ */
+const updateUserProfile = async (userId, data) => {
+  const { firstName, lastName, email, gender, birthDate } = data;
+
+  // Vérifie que l'email est unique (sauf pour le user actuel)
+  const existingEmail = await prisma.users.findFirst({
+    where: {
+      email,
+      NOT: { id_user: userId }
+    }
+  });
+
+  if (existingEmail) {
+    throw new AppError("Cet email est déjà utilisé", 400, "EMAIL_TAKEN");
+  }
+
+  const updatedUser = await prisma.users.update({
+    where: { id_user: userId },
+    data: {
+      prenom: firstName,
+      nom: lastName,
+      email,
+      sexe: gender,
+      date_de_naissance: new Date(birthDate)
+    }
+  });
+
+  // Calcul de l'âge
+  const birth = new Date(updatedUser.date_de_naissance);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return {
+    id: updatedUser.id_user,
+    firstName: updatedUser.prenom,
+    lastName: updatedUser.nom,
+    email: updatedUser.email,
+    gender: updatedUser.sexe,
+    birthDate: updatedUser.date_de_naissance.toISOString().split("T")[0],
+    age
+  };
+};
+
 
 module.exports = {
     getUserProfile,
@@ -446,5 +499,6 @@ module.exports = {
     getUserEvolution,
     addEvolution,
     getProgressStats,
+    updateUserProfile,
   };
   
