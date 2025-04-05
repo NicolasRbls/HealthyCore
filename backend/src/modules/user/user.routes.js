@@ -40,5 +40,13 @@ router.post("/badges/check", checkAuth, userController.checkBadgesController);
  */
 router.get("/evolution", checkAuth, userController.getUserEvolutionController);
 
+/**
+ * Route to add a new evolution entry for the user.
+ * 
+ * @route POST /evolution
+ * @middleware checkAuth - Middleware to verify user authentication.
+ * @controller userController.addEvolutionController - Controller to handle adding a new evolution entry for the user.
+ */
+router.post("/evolution", checkAuth, userController.addEvolutionController);
 
 module.exports = router;

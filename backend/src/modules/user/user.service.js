@@ -274,6 +274,37 @@ const getUserEvolution = async (userId, startDate, endDate) => {
   return { evolution: formatted, statistics };
 };
 
+/**
+ * Ajoute une nouvelle entrée d'évolution pour l'utilisateur
+ * @param {number} userId
+ * @param {Object} data - { weight, height, date (optional) }
+ * @returns {Object} - L'évolution enregistrée avec le BMI
+ */
+const addEvolution = async (userId, { weight, height, date }) => {
+  if (!weight || !height) {
+    throw new AppError("Poids et taille requis", 400, "MISSING_PARAMETERS");
+  }
+
+  const evolutionDate = date ? new Date(date) : new Date();
+  const bmi = Number((weight / ((height / 100) ** 2)).toFixed(1));
+
+  const evolution = await prisma.evolutions.create({
+    data: {
+      id_user: userId,
+      poids: weight,
+      taille: height,
+      date: evolutionDate,
+    },
+  });
+
+  return {
+    id: evolution.id_evolution,
+    date: evolution.date.toISOString().split("T")[0],
+    weight,
+    height,
+    bmi,
+  };
+};
 
 
 module.exports = {
@@ -281,5 +312,6 @@ module.exports = {
     getUserBadges,
     checkNewBadges,
     getUserEvolution,
+    addEvolution,
   };
   

@@ -82,3 +82,28 @@ exports.getUserEvolutionController = async (req, res, next) => {
     next(err);
   }
 };
+
+
+/**
+ * Ajouter une évolution pour l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware
+ */
+exports.addEvolutionController = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const { weight, height, date } = req.body;
+
+    const evolution = await userService.addEvolution(userId, { weight, height, date });
+
+    res.status(200).json({
+      status: "success",
+      data: { evolution },
+      message: "Évolution enregistrée avec succès"
+    });
+  } catch (err) {
+    console.error("❌ Erreur dans addEvolutionController :", err);
+    next(err);
+  }
+};
