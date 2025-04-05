@@ -22,4 +22,14 @@ router.get("/profile", checkAuth, userController.getUserProfile);
 */
 router.get("/badges", checkAuth, userController.getBadgesController);
 
+/**
+ * Route to check the user's badges.
+ * 
+ * @route POST /badges/check
+ * @middleware checkAuth - Middleware to verify user authentication.
+ * @controller userController.checkBadgesController - Controller to handle checking the user's badges.
+ */
+router.post("/badges/check", checkAuth, userController.checkBadgesController);
+
+
 module.exports = router;

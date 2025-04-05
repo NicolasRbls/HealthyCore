@@ -130,8 +130,104 @@ const getUserBadges = async (userId) => {
   }
 };
   
+
+/**
+ * Handlers pour les conditions de badge
+ * @type {Object}
+ */
+const conditionHandlers = {
+  DO_FIRST_SESSION: async (userId) => {
+    const session = await prisma.suivis_sportifs.findFirst({ where: { id_user: userId } });
+    return !!session;
+  },
+
+  FIRST_DAY_COMPLETED: async (userId) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // ✅ force à 00:00:00 pour matcher les dates
+    const goals = await prisma.objectifs_utilisateurs.findMany({
+      where: {
+        id_user: userId,
+        date: today,
+        statut: "done"
+      }
+    });
+    return goals.length >= 1;
+  },
+
+  SEVEN_DAYS_COMPLETED: async (userId) => {
+    const past7 = await prisma.objectifs_utilisateurs.findMany({
+      where: {
+        id_user: userId,
+        date: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        },
+        statut: "done"
+      }
+    });
+    const days = new Set(past7.map(o => o.date.toISOString().slice(0, 10)));
+    return days.size >= 7;
+  },
+
+  ADD_FIRST_FOOD: async (userId) => {
+    const food = await prisma.suivis_nutritionnels.findFirst({
+      where: { id_user: userId },
+    });
+    return !!food;
+  },
+
+
+  // Ajouter les autres badges ici a la suite !!
+};
+
+/**
+ * Vérifie si l'utilisateur a débloqué de nouveaux badges
+ * @param {number} userId - ID de l'utilisateur
+ * @returns {Array} - Liste des nouveaux badges débloqués
+ */
+const checkNewBadges = async (userId) => {
+  const newBadges = [];
+
+  const existing = await prisma.badges_utilisateurs.findMany({
+    where: { id_user: userId },
+    select: { id_badge: true },
+  });
+  const obtainedIds = new Set(existing.map(b => b.id_badge));
+
+  const allBadges = await prisma.badges.findMany();
+
+  for (const badge of allBadges) {
+    if (obtainedIds.has(badge.id_badge)) continue;
+
+    const handler = conditionHandlers[badge.condition_obtention];
+    if (!handler) continue;
+
+    const unlocked = await handler(userId);
+
+    if (unlocked) {
+      await prisma.badges_utilisateurs.create({
+        data: {
+          id_user: userId,
+          id_badge: badge.id_badge,
+        }
+      });
+
+      newBadges.push({
+        id: badge.id_badge,
+        name: badge.nom,
+        image: badge.image,
+        description: badge.description
+      });
+    }
+  }
+
+  return newBadges;
+};
+
+
+
 module.exports = {
     getUserProfile,
     getUserBadges,
+    checkNewBadges,
   };
   
