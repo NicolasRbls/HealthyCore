@@ -148,3 +148,21 @@ exports.updateUserProfile = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Mettre à jour les préférences utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ * @param {Function} next - Fonction middleware
+ */
+exports.updatePreferencesController = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const updated = await userService.updatePreferences(userId, req.body);
+
+    res.status(200).json(success({ preferences: updated }, "Préférences mises à jour avec succès"));
+  } catch (err) {
+    next(err);
+  }
+};
+

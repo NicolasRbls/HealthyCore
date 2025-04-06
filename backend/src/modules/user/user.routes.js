@@ -59,12 +59,21 @@ router.post("/evolution", checkAuth, userController.addEvolutionController);
 router.get("/progress/stats", checkAuth, userController.getProgressStatsController);
 
 /**
- * Route to get the user's progress data.
+ * Route to edit the user's data.
  * 
  * @route GET /progress
  * @middleware checkAuth - Middleware to verify user authentication.
  * @controller userController.getProgressController - Controller to handle fetching the user's progress data.
  */
 router.put("/edit-profile", checkAuth, userController.updateUserProfile);
+
+/**
+ * Route to edit the user's preferences.
+ * 
+ * @route GET /preferences
+ * @middleware checkAuth - Middleware to verify user authentication.
+ * @controller userController.getPreferencesController - Controller to handle fetching the user's preferences data.
+ */
+router.put("/edit-preferences", checkAuth, userController.updatePreferencesController);
 
 module.exports = router;

@@ -491,6 +491,116 @@ const updateUserProfile = async (userId, data) => {
   };
 };
 
+/**
+ * Met à jour les préférences de l'utilisateur 
+ * @param {number} userId - ID de l'utilisateur
+ * @param {Object} body - Données des préférences
+ * @returns {Object} - Préférences mises à jour
+ * @throws {AppError} - Erreur si une autre erreur se produit
+ */
+const updatePreferences = async (userId, body) => {
+  const {
+    targetWeight,
+    sedentaryLevelId,
+    nutritionalPlanId,
+    dietId,
+    sessionsPerWeek,
+    activities = []
+  } = body;
+
+  // 🔍 Vérifier si les préférences existent déjà
+  let preferences = await prisma.preferences.findFirst({ where: { id_user: userId } });
+
+  if (preferences) {
+    preferences = await prisma.preferences.update({
+      where: { id_preference: preferences.id_preference },
+      data: {
+        objectif_poids: targetWeight,
+        id_niveau_sedentarite: sedentaryLevelId,
+        id_repartition_nutritionnelle: nutritionalPlanId,
+        id_regime_alimentaire: dietId,
+        seances_par_semaines: sessionsPerWeek,
+      }
+    });
+  } else {
+    preferences = await prisma.preferences.create({
+      data: {
+        id_user: userId,
+        objectif_poids: targetWeight,
+        id_niveau_sedentarite: sedentaryLevelId,
+        id_repartition_nutritionnelle: nutritionalPlanId,
+        id_regime_alimentaire: dietId,
+        seances_par_semaines: sessionsPerWeek,
+      }
+    });
+  }
+
+  // 🔄 Supprimer les anciennes activités liées à la préférence
+  await prisma.preferences_activites.deleteMany({
+    where: { id_preference: preferences.id_preference }
+  });
+
+  // ✅ Ajouter les nouvelles activités
+  if (activities.length > 0) {
+    const newActivities = activities.map((id_activite) => ({
+      id_preference: preferences.id_preference,
+      id_activite
+    }));
+    await prisma.preferences_activites.createMany({ data: newActivities });
+  }
+
+  // 🔢 Recalcul des calories et macros
+  const user = await prisma.users.findUnique({ where: { id_user: userId } });
+  const nutrition = await prisma.repartitions_nutritionnelles.findUnique({ where: { id_repartition_nutritionnelle: nutritionalPlanId } });
+  const sedentarite = await prisma.niveaux_sedentarites.findUnique({ where: { id_niveau_sedentarite: sedentaryLevelId } });
+
+  const age = new Date().getFullYear() - new Date(user.date_de_naissance).getFullYear();
+
+  const lastEvolution = await prisma.evolutions.findFirst({
+    where: { id_user: userId },
+    orderBy: { date: "desc" }
+  });
+
+  const weight = lastEvolution?.poids || 70;
+  const height = lastEvolution?.taille || 170;
+  const genderRatio = user.sexe === "H" ? 5 : -161;
+
+  const bmr = 10 * weight + 6.25 * height - 5 * age + genderRatio;
+  const dailyCalories = Math.round(bmr * Number(sedentarite.valeur));
+
+  const proteins = Math.round((Number(nutrition.pourcentage_proteines) / 100) * dailyCalories / 4);
+  const carbs = Math.round((Number(nutrition.pourcentage_glucides) / 100) * dailyCalories / 4);
+  const fats = Math.round((Number(nutrition.pourcentage_lipides) / 100) * dailyCalories / 9);
+
+  return {
+    targetWeight,
+    sedentaryLevel: {
+      id: sedentarite.id_niveau_sedentarite,
+      name: sedentarite.nom,
+      value: sedentarite.valeur
+    },
+    nutritionalPlan: {
+      id: nutrition.id_repartition_nutritionnelle,
+      name: nutrition.nom,
+      type: nutrition.type
+    },
+    diet: await prisma.regimes_alimentaires.findUnique({
+      where: { id_regime_alimentaire: dietId },
+      select: { id_regime_alimentaire: true, nom: true }
+    }),
+    sessionsPerWeek,
+    activities: await prisma.activites.findMany({
+      where: { id_activite: { in: activities } },
+      select: { id_activite: true, nom: true }
+    }),
+    dailyCalories,
+    macros: {
+      proteins,
+      carbs,
+      fats
+    }
+  };
+};
 
 module.exports = {
     getUserProfile,
@@ -500,5 +610,6 @@ module.exports = {
     addEvolution,
     getProgressStats,
     updateUserProfile,
+    updatePreferences,
   };
   
