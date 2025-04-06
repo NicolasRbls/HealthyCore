@@ -602,6 +602,36 @@ const updatePreferences = async (userId, body) => {
   };
 };
 
+/**
+ * Vérifie si l'utilisateur a besoin de mettre à jour son poids
+ * @param {number} userId - ID de l'utilisateur
+ * @returns {Object} - Statut de mise à jour du poids
+ */
+const getWeightUpdateStatus = async (userId) => {
+  const user = await prisma.users.findUnique({
+    where: { id_user: userId },
+    select: { cree_a: true }
+  });
+
+  const lastEvolution = await prisma.evolutions.findFirst({
+    where: { id_user: userId },
+    orderBy: { date: "desc" },
+    select: { date: true }
+  });
+
+  const today = new Date();
+  const lastDate = lastEvolution?.date ?? user.cree_a;
+  const diffInMs = today - lastDate;
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  return {
+    needsUpdate: diffInDays >= 20,
+    lastUpdated: lastDate,
+    daysSinceLastUpdate: diffInDays
+  };
+};
+
+
 module.exports = {
     getUserProfile,
     getUserBadges,
@@ -611,5 +641,6 @@ module.exports = {
     getProgressStats,
     updateUserProfile,
     updatePreferences,
+    getWeightUpdateStatus,
   };
   

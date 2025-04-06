@@ -76,4 +76,13 @@ router.put("/edit-profile", checkAuth, userController.updateUserProfile);
  */
 router.put("/edit-preferences", checkAuth, userController.updatePreferencesController);
 
+/**
+ * Route to get the user's weight update status.
+ * 
+ * @route GET /weight-update-status
+ * @middleware checkAuth - Middleware to verify user authentication.
+ * @controller userController.getWeightUpdateStatusController - Controller to handle fetching the user's weight update status.
+ */
+router.get("/weight-update-status", checkAuth, userController.getWeightUpdateStatusController);
+
 module.exports = router;

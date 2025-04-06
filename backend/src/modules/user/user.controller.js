@@ -166,3 +166,23 @@ exports.updatePreferencesController = async (req, res, next) => {
   }
 };
 
+/**
+ * Récupérer le statut de mise à jour du poids de l'utilisateur
+ * @param {Object} req - Requête HTTP
+ * @param {Object} res - Réponse HTTP
+ */
+exports.getWeightUpdateStatusController = async (req, res, next) => {
+  try {
+    const userId = req.user.id_user;
+    const result = await userService.getWeightUpdateStatus(userId);
+      res.status(200).json({
+      status: "success",
+      data: result,
+      message: "Statut de mise à jour du poids récupéré avec succès"
+    });
+  } catch (error) {
+    console.error("Erreur dans getWeightUpdateStatusController :", error);
+    next(error);
+  }
+};
+
