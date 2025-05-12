@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -69,8 +69,9 @@ export default function ProgressScreen() {
       }
 
       const response = await userService.getUserEvolution(startDate);
-      setEvolutionData(response.evolution);
-      setStatistics(response.statistics);
+      // Ensure we have arrays even if the API returns null/undefined
+      setEvolutionData(response.evolution || []);
+      setStatistics(response.statistics || null);
     } catch (error) {
       console.error("Error fetching evolution data:", error);
       Alert.alert("Erreur", "Impossible de charger les données d'évolution.");
@@ -84,9 +85,11 @@ export default function ProgressScreen() {
       const stats = await userService.getProgressStats(
         period === "all" ? "year" : period
       );
-      setProgressStats(stats);
+      setProgressStats(stats || null);
     } catch (error) {
       console.error("Error fetching progress stats:", error);
+      // Set default values for progress stats if there's an error
+      setProgressStats(null);
     }
   };
 
@@ -153,18 +156,19 @@ export default function ProgressScreen() {
 
     // Trouver les valeurs min et max pour les axes
     const weights = data.map((d) => d.weight);
-    const minWeight = Math.min(...weights) - 1;
-    const maxWeight = Math.max(...weights) + 1;
+    const minWeight = Math.floor(Math.min(...weights)) - 1;
+    const maxWeight = Math.ceil(Math.max(...weights)) + 1;
 
     // Fonction de mise à l'échelle pour les positions X et Y
     const scaleX = (index: number) =>
       padding.left +
-      (index / (data.length - 1)) * (width - padding.left - padding.right);
+      (index / Math.max(data.length - 1, 1)) *
+        (width - padding.left - padding.right);
 
     const scaleY = (value: number) =>
       height -
       padding.bottom -
-      ((value - minWeight) / (maxWeight - minWeight)) *
+      ((value - minWeight) / Math.max(maxWeight - minWeight, 1)) *
         (height - padding.top - padding.bottom);
 
     // Générer le chemin de la ligne
@@ -218,9 +222,13 @@ export default function ProgressScreen() {
         ))}
 
         {/* Étiquettes des axes X (dates) */}
-        {data.map(
-          (d, i) =>
-            i % Math.ceil(data.length / 5) === 0 && ( // Afficher seulement quelques dates
+        {data.length > 0 &&
+          data.map((d, i) =>
+            // Only show labels for first, middle and last point if too many points
+            data.length <= 5 ||
+            i === 0 ||
+            i === Math.floor(data.length / 2) ||
+            i === data.length - 1 ? (
               <SvgText
                 key={`label-${i}`}
                 x={scaleX(i)}
@@ -234,8 +242,8 @@ export default function ProgressScreen() {
                   month: "2-digit",
                 })}
               </SvgText>
-            )
-        )}
+            ) : null
+          )}
 
         {/* Étiquettes des axes Y (poids) */}
         {[minWeight, (minWeight + maxWeight) / 2, maxWeight].map((value, i) => (
@@ -268,6 +276,14 @@ export default function ProgressScreen() {
         </SvgText>
       </Svg>
     );
+  };
+
+  // Safe number formatting function
+  const formatNumber = (value: any, decimals: number = 1): string => {
+    if (value === null || value === undefined || isNaN(Number(value))) {
+      return "0";
+    }
+    return Number(value).toFixed(decimals);
   };
 
   return (
@@ -367,82 +383,154 @@ export default function ProgressScreen() {
           </Card>
 
           {/* Statistiques */}
-          {statistics && (
-            <Card style={styles.statsCard}>
-              <Text style={styles.sectionTitle}>
-                Statistiques sur{" "}
-                {period === "all"
-                  ? "toute la période"
-                  : period === "month"
-                  ? "le mois"
-                  : "l'année"}
+          <Card style={styles.statsCard}>
+            <Text style={styles.sectionTitle}>
+              Statistiques sur{" "}
+              {period === "all"
+                ? "toute la période"
+                : period === "month"
+                ? "le mois"
+                : "l'année"}
+            </Text>
+
+            {statistics &&
+            statistics.initialWeight &&
+            statistics.currentWeight ? (
+              <>
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Poids initial</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(statistics.initialWeight)} kg
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Poids actuel</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(statistics.currentWeight)} kg
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Différence</Text>
+                    <Text style={[styles.statValue]}>
+                      {formatNumber(statistics.weightChange)} kg
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Pourcentage</Text>
+                    <Text style={[styles.statValue]}>
+                      {formatNumber(statistics.weightChangePercentage)}%
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>IMC initial</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(statistics.initialBmi)}
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>IMC actuel</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(statistics.currentBmi)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Différence IMC</Text>
+                    {statistics.initialBmi && statistics.currentBmi ? (
+                      <Text style={[styles.statValue]}>
+                        {formatNumber(
+                          Number(statistics.currentBmi) -
+                            Number(statistics.initialBmi)
+                        )}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.statValue]}>0</Text>
+                    )}
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Catégorie</Text>
+                    <Text style={styles.statValue}>
+                      {statistics.currentBmi
+                        ? Number(statistics.currentBmi) < 18.5
+                          ? "Maigreur"
+                          : Number(statistics.currentBmi) < 25
+                          ? "Normal"
+                          : Number(statistics.currentBmi) < 30
+                          ? "Surpoids"
+                          : "Obésité"
+                        : "Non disponible"}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : evolutionData.length > 0 ? (
+              // Fallback to single entry stats if we have at least one entry
+              <>
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Poids actuel</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(
+                        evolutionData[evolutionData.length - 1].weight
+                      )}{" "}
+                      kg
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Taille</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(
+                        evolutionData[evolutionData.length - 1].height
+                      )}{" "}
+                      cm
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>IMC actuel</Text>
+                    <Text style={styles.statValue}>
+                      {formatNumber(
+                        evolutionData[evolutionData.length - 1].bmi
+                      )}
+                    </Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Catégorie</Text>
+                    <Text style={styles.statValue}>
+                      {Number(evolutionData[evolutionData.length - 1].bmi) <
+                      18.5
+                        ? "Maigreur"
+                        : Number(evolutionData[evolutionData.length - 1].bmi) <
+                          25
+                        ? "Normal"
+                        : Number(evolutionData[evolutionData.length - 1].bmi) <
+                          30
+                        ? "Surpoids"
+                        : "Obésité"}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.noDataText}>
+                Pas assez de données pour calculer les statistiques sur cette
+                période.
               </Text>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Poids initial</Text>
-                  <Text style={styles.statValue}>
-                    {statistics.initialWeight} kg
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Poids actuel</Text>
-                  <Text style={styles.statValue}>
-                    {statistics.currentWeight} kg
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Différence</Text>
-                  <Text style={[styles.statValue]}>
-                    {statistics.weightChange} kg
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Pourcentage</Text>
-                  <Text style={[styles.statValue]}>
-                    {statistics.weightChangePercentage}%
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>IMC initial</Text>
-                  <Text style={styles.statValue}>{statistics.initialBmi}</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>IMC actuel</Text>
-                  <Text style={styles.statValue}>{statistics.currentBmi}</Text>
-                </View>
-              </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Différence IMC</Text>
-                  <Text style={[styles.statValue]}>
-                    {statistics.currentBmi - statistics.initialBmi}
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Catégorie</Text>
-                  <Text style={styles.statValue}>
-                    {parseFloat(statistics.currentBmi.toString()) < 18.5
-                      ? "Maigreur"
-                      : parseFloat(statistics.currentBmi.toString()) < 25
-                      ? "Normal"
-                      : parseFloat(statistics.currentBmi.toString()) < 30
-                      ? "Surpoids"
-                      : "Obésité"}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          )}
+            )}
+          </Card>
 
           {/* Statistiques supplémentaires */}
           {progressStats && (
@@ -454,19 +542,19 @@ export default function ProgressScreen() {
                 <View style={styles.progressRow}>
                   <Text style={styles.progressLabel}>Calories moyennes :</Text>
                   <Text style={styles.progressValue}>
-                    {progressStats.nutrition.averageCalories} kcal
+                    {progressStats.nutrition?.averageCalories || 0} kcal
                   </Text>
                 </View>
                 <View style={styles.progressRow}>
                   <Text style={styles.progressLabel}>Protéines moyennes :</Text>
                   <Text style={styles.progressValue}>
-                    {progressStats.nutrition.averageProteins} g
+                    {progressStats.nutrition?.averageProteins || 0} g
                   </Text>
                 </View>
                 <View style={styles.progressRow}>
                   <Text style={styles.progressLabel}>Taux de suivi :</Text>
                   <Text style={styles.progressValue}>
-                    {progressStats.nutrition.goalCompletionRate}%
+                    {progressStats.nutrition?.goalCompletionRate || 0}%
                   </Text>
                 </View>
               </View>
@@ -476,7 +564,7 @@ export default function ProgressScreen() {
                 <View style={styles.progressRow}>
                   <Text style={styles.progressLabel}>Séances complétées :</Text>
                   <Text style={styles.progressValue}>
-                    {progressStats.activity.completedSessions}
+                    {progressStats.activity?.completedSessions || 0}
                   </Text>
                 </View>
                 <View style={styles.progressRow}>
@@ -484,31 +572,20 @@ export default function ProgressScreen() {
                     Séances par semaine :
                   </Text>
                   <Text style={styles.progressValue}>
-                    {progressStats.activity.sessionsPerWeek}
+                    {progressStats.activity?.sessionsPerWeek || 0}
                   </Text>
                 </View>
-                <View style={styles.progressRow}>
-                  <Text style={styles.progressLabel}>Activité favorite :</Text>
-                  <Text style={styles.progressValue}>
-                    {progressStats.activity.mostFrequentActivity}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.progressSection}>
-                <Text style={styles.progressSectionTitle}>Vue d'ensemble</Text>
                 <View style={styles.progressRow}>
                   <Text style={styles.progressLabel}>
-                    Progression globale :
+                    Type d'activité favorite :
                   </Text>
                   <Text style={styles.progressValue}>
-                    {progressStats.overview.overallProgress}%
-                  </Text>
-                </View>
-                <View style={styles.progressRow}>
-                  <Text style={styles.progressLabel}>Jours consécutifs :</Text>
-                  <Text style={styles.progressValue}>
-                    {progressStats.overview.streakDays} jours
+                    {progressStats.activity?.mostFrequentActivity
+                      ? progressStats.activity.mostFrequentActivity
+                          .charAt(0)
+                          .toUpperCase() +
+                        progressStats.activity.mostFrequentActivity.slice(1)
+                      : "Aucune"}
                   </Text>
                 </View>
               </View>
@@ -544,23 +621,20 @@ export default function ProgressScreen() {
                 </View>
 
                 {evolutionData.length > 0 ? (
-                  evolutionData
-                    .slice()
-                    .reverse()
-                    .map((item, index) => (
-                      <View key={index} style={styles.recordItem}>
-                        <Text style={styles.recordText}>
-                          {new Date(item.date).toLocaleDateString("fr-FR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "2-digit",
-                          })}
-                        </Text>
-                        <Text style={styles.recordText}>{item.weight} kg</Text>
-                        <Text style={styles.recordText}>{item.height} cm</Text>
-                        <Text style={styles.recordText}>{item.bmi}</Text>
-                      </View>
-                    ))
+                  [...evolutionData].reverse().map((item, index) => (
+                    <View key={index} style={styles.recordItem}>
+                      <Text style={styles.recordText}>
+                        {new Date(item.date).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })}
+                      </Text>
+                      <Text style={styles.recordText}>{item.weight} kg</Text>
+                      <Text style={styles.recordText}>{item.height} cm</Text>
+                      <Text style={styles.recordText}>{item.bmi}</Text>
+                    </View>
+                  ))
                 ) : (
                   <Text style={styles.noDataText}>
                     Aucune donnée d'évolution disponible
