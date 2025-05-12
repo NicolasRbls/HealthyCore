@@ -94,10 +94,10 @@ export default function SportMonitoring() {
               });
 
               return {
-                id: day.session.id,
-                name: day.session.name,
+                id: day.session?.id,
+                name: day.session?.name,
                 date: formattedDate,
-                done: day.session.completed,
+                done: day.session?.completed,
                 icon: getSessionIconType(day.session.name),
                 isDaySession: isToday,
               };
@@ -209,10 +209,12 @@ export default function SportMonitoring() {
         session.id === sessionId ? { ...session, done: true } : session
       )
     );
-
     try {
       // Appel API pour marquer la séance comme complétée
-      await apiService.post(`/data/programs/sessions/${sessionId}/complete`);
+      await apiService.post(
+        `/data/programs/sessions/${sessionId}/complete`,
+        {}
+      );
 
       // Rafraîchir les données pour confirmer que tout est à jour
       fetchSportData();
@@ -284,7 +286,6 @@ export default function SportMonitoring() {
         >
           {getSessionIcon(session.icon || "fitness")}
         </View>
-
         <View style={styles.sessionInfo}>
           <Text style={styles.sessionName}>
             {session.name}
@@ -294,13 +295,12 @@ export default function SportMonitoring() {
           </Text>
           <Text style={styles.sessionDate}>{session.date}</Text>
         </View>
-
         <View style={styles.actionColumn}>
           <Switch
             value={session.done}
             onValueChange={(value) => {
-              if (!session.done) {
-                // Seulement si pas déjà complété
+              if (!session.done && session.isDaySession) {
+                // Seulement si pas déjà complété et si c'est la séance du jour
                 toggleSessionDone(session.id, { stopPropagation: () => {} });
               }
             }}
@@ -308,7 +308,7 @@ export default function SportMonitoring() {
             thumbColor={Colors.white}
             ios_backgroundColor={Colors.gray.light}
             style={styles.sessionSwitch}
-            disabled={session.done} // Désactiver le switch si la session est déjà terminée
+            disabled={session.done || !session.isDaySession} // Désactiver le switch si la session est déjà terminée ou si ce n'est pas la séance du jour
           />
           <Ionicons
             name="chevron-forward"
@@ -361,7 +361,6 @@ export default function SportMonitoring() {
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionTitle}>Ma séance du jour</Text>
-
         {isLoading ? (
           <PlaceholderCard />
         ) : todaySession ? (
@@ -371,9 +370,7 @@ export default function SportMonitoring() {
             Aucune séance prévue aujourd'hui
           </Text>
         )}
-
         <Text style={styles.sectionTitle}>Ma semaine</Text>
-
         {isLoading ? (
           <>
             <PlaceholderCard />
@@ -381,9 +378,13 @@ export default function SportMonitoring() {
             <PlaceholderCard />
           </>
         ) : weekSessions.length > 0 ? (
-          weekSessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
-          ))
+          weekSessions
+            .filter((session) =>
+              todaySession ? session.name !== todaySession.name : true
+            ) // Filtrer pour exclure les séances avec le même nom que la séance du jour
+            .map((session) => (
+              <SessionCard key={session.id} session={session} />
+            ))
         ) : (
           <Text style={styles.noSessionText}>
             Aucune séance programmée cette semaine
