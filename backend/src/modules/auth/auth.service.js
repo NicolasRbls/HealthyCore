@@ -56,9 +56,7 @@ const registerUser = async (userData) => {
           : null,
         duree_objectif_semaines: userData.targetDurationWeeks,
       },
-    });
-
-    // Ajout des activités préférées
+    }); // Ajout des activités préférées
     if (userData.activities && userData.activities.length > 0) {
       for (const activityId of userData.activities) {
         await prisma.preferences_activites.create({
@@ -69,15 +67,6 @@ const registerUser = async (userData) => {
         });
       }
     }
-
-    // Ajout du badge "Premier pas"
-    await prisma.badges_utilisateurs.create({
-      data: {
-        id_user: user.id_user,
-        id_badge: 1, // ID du badge "Premier pas"
-        date_obtention: new Date(),
-      },
-    });
 
     // Génération du token JWT
     const token = generateToken({

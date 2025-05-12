@@ -3,16 +3,14 @@ const prisma = new PrismaClient();
 const { AppError } = require("../../utils/response.utils");
 const _ = require("lodash");
 
-
-
-/* 
+/*
  * Récupérer le profil utilisateur
  * @param {number} userId - ID de l'utilisateur
  * @returns {Object} - Profil utilisateur avec informations personnelles, métriques et préférences
  * @throws {AppError} - Erreur si l'utilisateur n'est pas trouvé ou si une autre erreur se produit
  */
 const getUserProfile = async (userId) => {
-    try {
+  try {
     // 1. Infos utilisateur
     const user = await prisma.users.findUnique({
       where: { id_user: userId },
@@ -22,34 +20,38 @@ const getUserProfile = async (userId) => {
         nom: true,
         email: true,
         sexe: true,
-        date_de_naissance: true
-      }
+        date_de_naissance: true,
+      },
     });
 
-    if (!user) throw new AppError("Utilisateur introuvable", 404, "USER_NOT_FOUND");
+    if (!user)
+      throw new AppError("Utilisateur introuvable", 404, "USER_NOT_FOUND");
 
     const birthDate = new Date(user.date_de_naissance);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-    
+      age--;
+    }
+
     // 2. Dernière évolution
     const lastEvolution = await prisma.evolutions.findFirst({
       where: { id_user: userId },
-      orderBy: { date: 'desc' }
-    });
-
-    // 3. Préférences
+      orderBy: { date: "desc" },
+    }); // 3. Préférences
     const preferences = await prisma.preferences.findFirst({
       where: { id_user: userId },
       include: {
         repartitions_nutritionnelles: true,
         regimes_alimentaires: true,
-        niveaux_sedentarites: true
-      }
+        niveaux_sedentarites: true,
+        preferences_activites: {
+          include: {
+            activites: true,
+          },
+        },
+      },
     });
 
     return {
@@ -60,37 +62,51 @@ const getUserProfile = async (userId) => {
         email: user.email,
         gender: user.sexe,
         birthDate: user.date_de_naissance,
-        age
+        age,
       },
-      metrics: lastEvolution ? {
-        currentWeight: parseFloat(lastEvolution.poids),
-        currentHeight: parseFloat(lastEvolution.taille),
-        bmi: Number((lastEvolution.poids / ((lastEvolution.taille / 100) ** 2)).toFixed(1)),
-        targetWeight: parseFloat(preferences?.objectif_poids || 0),
-        dailyCalories: parseInt(preferences?.calories_quotidiennes || 0),
-        sessionsPerWeek: preferences?.seances_par_semaines || 0
-      } : null,
-      preferences: preferences ? {
-        nutritionalPlan: {
-          id: preferences.repartitions_nutritionnelles.id_repartition_nutritionnelle,
-          name: preferences.repartitions_nutritionnelles.nom,
-          type: preferences.repartitions_nutritionnelles.type
-        },
-        diet: {
-          id: preferences.regimes_alimentaires.id_regime_alimentaire,
-          name: preferences.regimes_alimentaires.nom
-        },
-        sedentaryLevel: {
-          id: preferences.niveaux_sedentarites.id_niveau_sedentarite,
-          name: preferences.niveaux_sedentarites.nom
-        }
-      } : null
+      metrics: lastEvolution
+        ? {
+            currentWeight: parseFloat(lastEvolution.poids),
+            currentHeight: parseFloat(lastEvolution.taille),
+            bmi: Number(
+              (lastEvolution.poids / (lastEvolution.taille / 100) ** 2).toFixed(
+                1
+              )
+            ),
+            targetWeight: parseFloat(preferences?.objectif_poids || 0),
+            dailyCalories: parseInt(preferences?.calories_quotidiennes || 0),
+            sessionsPerWeek: preferences?.seances_par_semaines || 0,
+          }
+        : null,
+      preferences: preferences
+        ? {
+            nutritionalPlan: {
+              id: preferences.repartitions_nutritionnelles
+                .id_repartition_nutritionnelle,
+              name: preferences.repartitions_nutritionnelles.nom,
+              type: preferences.repartitions_nutritionnelles.type,
+            },
+            diet: {
+              id: preferences.regimes_alimentaires.id_regime_alimentaire,
+              name: preferences.regimes_alimentaires.nom,
+            },
+            sedentaryLevel: {
+              id: preferences.niveaux_sedentarites.id_niveau_sedentarite,
+              name: preferences.niveaux_sedentarites.nom,
+            },
+            activities:
+              preferences.preferences_activites?.map((pa) => ({
+                id_activite: pa.activites.id_activite,
+                nom: pa.activites.nom,
+                description: pa.activites.description,
+              })) || [],
+          }
+        : null,
     };
   } catch (error) {
     throw error;
   }
 };
-
 
 /**
  * Récupère tous les badges de l'utilisateur, débloqués et verrouillés
@@ -103,7 +119,7 @@ const getUserBadges = async (userId) => {
 
     const unlocked = await prisma.badges_utilisateurs.findMany({
       where: { id_user: userId },
-      include: { badges: true }
+      include: { badges: true },
     });
 
     const unlockedBadges = unlocked.map((ub) => ({
@@ -111,7 +127,7 @@ const getUserBadges = async (userId) => {
       name: ub.badges.nom,
       image: ub.badges.image,
       description: ub.badges.description,
-      dateObtained: ub.date_obtention
+      dateObtained: ub.date_obtention,
     }));
 
     const unlockedIds = new Set(unlocked.map((ub) => ub.id_badge));
@@ -123,7 +139,7 @@ const getUserBadges = async (userId) => {
         name: b.nom,
         image: b.image,
         description: b.description,
-        condition: b.condition_obtention
+        condition: b.condition_obtention,
       }));
 
     return { unlockedBadges, lockedBadges };
@@ -131,7 +147,6 @@ const getUserBadges = async (userId) => {
     throw error;
   }
 };
-  
 
 /**
  * Handlers pour les conditions de badge
@@ -139,7 +154,9 @@ const getUserBadges = async (userId) => {
  */
 const conditionHandlers = {
   DO_FIRST_SESSION: async (userId) => {
-    const session = await prisma.suivis_sportifs.findFirst({ where: { id_user: userId } });
+    const session = await prisma.suivis_sportifs.findFirst({
+      where: { id_user: userId },
+    });
     return !!session;
   },
 
@@ -150,8 +167,8 @@ const conditionHandlers = {
       where: {
         id_user: userId,
         date: today,
-        statut: "done"
-      }
+        statut: "done",
+      },
     });
     return goals.length >= 1;
   },
@@ -161,22 +178,20 @@ const conditionHandlers = {
       where: {
         id_user: userId,
         date: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         },
-        statut: "done"
-      }
+        statut: "done",
+      },
     });
-    const days = new Set(past7.map(o => o.date.toISOString().slice(0, 10)));
+    const days = new Set(past7.map((o) => o.date.toISOString().slice(0, 10)));
     return days.size >= 7;
   },
-
   ADD_FIRST_FOOD: async (userId) => {
     const food = await prisma.suivis_nutritionnels.findFirst({
       where: { id_user: userId },
     });
     return !!food;
   },
-
 
   // Ajouter les autres badges ici a la suite !!
 };
@@ -193,7 +208,7 @@ const checkNewBadges = async (userId) => {
     where: { id_user: userId },
     select: { id_badge: true },
   });
-  const obtainedIds = new Set(existing.map(b => b.id_badge));
+  const obtainedIds = new Set(existing.map((b) => b.id_badge));
 
   const allBadges = await prisma.badges.findMany();
 
@@ -210,21 +225,20 @@ const checkNewBadges = async (userId) => {
         data: {
           id_user: userId,
           id_badge: badge.id_badge,
-        }
+        },
       });
 
       newBadges.push({
         id: badge.id_badge,
         name: badge.nom,
         image: badge.image,
-        description: badge.description
+        description: badge.description,
       });
     }
   }
 
   return newBadges;
 };
-
 
 /**
  * Récupère l'évolution de l'utilisateur entre deux dates
@@ -234,7 +248,9 @@ const checkNewBadges = async (userId) => {
  * @returns {Object} - Evolution et statistiques
  */
 const getUserEvolution = async (userId, startDate, endDate) => {
-  const start = startDate ? new Date(startDate) : new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 mois avant
+  const start = startDate
+    ? new Date(startDate)
+    : new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000); // 6 mois avant
   const end = endDate ? new Date(endDate) : new Date(); // aujourd'hui
 
   const evolution = await prisma.evolutions.findMany({
@@ -246,7 +262,7 @@ const getUserEvolution = async (userId, startDate, endDate) => {
       },
     },
     orderBy: {
-      date: 'asc',
+      date: "asc",
     },
   });
 
@@ -254,7 +270,7 @@ const getUserEvolution = async (userId, startDate, endDate) => {
     date: e.date.toISOString().slice(0, 10),
     weight: parseFloat(e.poids),
     height: parseFloat(e.taille),
-    bmi: Number((e.poids / ((e.taille / 100) ** 2)).toFixed(1)),
+    bmi: Number((e.poids / (e.taille / 100) ** 2).toFixed(1)),
   }));
 
   let statistics = null;
@@ -262,7 +278,9 @@ const getUserEvolution = async (userId, startDate, endDate) => {
     const first = formatted[0];
     const last = formatted[formatted.length - 1];
     const weightChange = last.weight - first.weight;
-    const weightChangePercentage = Number(((weightChange / first.weight) * 100).toFixed(2));
+    const weightChangePercentage = Number(
+      ((weightChange / first.weight) * 100).toFixed(2)
+    );
     statistics = {
       initialWeight: first.weight,
       currentWeight: last.weight,
@@ -288,7 +306,7 @@ const addEvolution = async (userId, { weight, height, date }) => {
   }
 
   const evolutionDate = date ? new Date(date) : new Date();
-  const bmi = Number((weight / ((height / 100) ** 2)).toFixed(1));
+  const bmi = Number((weight / (height / 100) ** 2).toFixed(1));
 
   const evolution = await prisma.evolutions.create({
     data: {
@@ -337,7 +355,7 @@ const getProgressStats = async (userId, period) => {
       id_user: userId,
       date: { gte: startDate },
     },
-    orderBy: { date: 'asc' },
+    orderBy: { date: "asc" },
   });
 
   let weightStats = null;
@@ -345,14 +363,21 @@ const getProgressStats = async (userId, period) => {
     const start = evolutions[0];
     const current = evolutions[evolutions.length - 1];
     const weightChange = parseFloat((current.poids - start.poids).toFixed(1));
-    const weightChangePercentage = parseFloat(((weightChange / start.poids) * 100).toFixed(2));
+    const weightChangePercentage = parseFloat(
+      ((weightChange / start.poids) * 100).toFixed(2)
+    );
 
     weightStats = {
       start: parseFloat(start.poids),
       current: parseFloat(current.poids),
       change: weightChange,
       changePercentage: weightChangePercentage,
-      trend: weightChange > 0 ? "ascending" : weightChange < 0 ? "descending" : "stable"
+      trend:
+        weightChange > 0
+          ? "ascending"
+          : weightChange < 0
+          ? "descending"
+          : "stable",
     };
   }
 
@@ -360,9 +385,9 @@ const getProgressStats = async (userId, period) => {
   const nutrition = await prisma.suivis_nutritionnels.findMany({
     where: {
       id_user: userId,
-      date: { gte: startDate }
+      date: { gte: startDate },
     },
-    include: { aliments: true }
+    include: { aliments: true },
   });
 
   const nutritionGrouped = {};
@@ -373,29 +398,77 @@ const getProgressStats = async (userId, period) => {
   }
 
   const days = Object.values(nutritionGrouped);
-  const avgCalories = Math.round(_.mean(days.map(day => _.sumBy(day, n => n.aliments.calories * n.quantite / 100))));
-  const avgProteins = Math.round(_.mean(days.map(day => _.sumBy(day, n => parseFloat(n.aliments.proteines) * n.quantite / 100))));
-  const avgCarbs = Math.round(_.mean(days.map(day => _.sumBy(day, n => parseFloat(n.aliments.glucides) * n.quantite / 100))));
-  const avgFats = Math.round(_.mean(days.map(day => _.sumBy(day, n => parseFloat(n.aliments.lipides) * n.quantite / 100))));
+  const avgCalories = Math.round(
+    _.mean(
+      days.map((day) =>
+        _.sumBy(day, (n) => (n.aliments.calories * n.quantite) / 100)
+      )
+    )
+  );
+  const avgProteins = Math.round(
+    _.mean(
+      days.map((day) =>
+        _.sumBy(
+          day,
+          (n) => (parseFloat(n.aliments.proteines) * n.quantite) / 100
+        )
+      )
+    )
+  );
+  const avgCarbs = Math.round(
+    _.mean(
+      days.map((day) =>
+        _.sumBy(
+          day,
+          (n) => (parseFloat(n.aliments.glucides) * n.quantite) / 100
+        )
+      )
+    )
+  );
+  const avgFats = Math.round(
+    _.mean(
+      days.map((day) =>
+        _.sumBy(day, (n) => (parseFloat(n.aliments.lipides) * n.quantite) / 100)
+      )
+    )
+  );
 
-  const preferences = await prisma.preferences.findFirst({ where: { id_user: userId } });
+  const preferences = await prisma.preferences.findFirst({
+    where: { id_user: userId },
+  });
   const goalCompletionRate = preferences?.calories_quotidiennes
-    ? Math.round((days.filter(day =>
-        Math.abs(_.sumBy(day, n => n.aliments.calories * n.quantite / 100) - preferences.calories_quotidiennes) < 300).length / days.length) * 100)
+    ? Math.round(
+        (days.filter(
+          (day) =>
+            Math.abs(
+              _.sumBy(day, (n) => (n.aliments.calories * n.quantite) / 100) -
+                preferences.calories_quotidiennes
+            ) < 300
+        ).length /
+          days.length) *
+          100
+      )
     : null;
 
   // 3. Activité sportive
   const sessions = await prisma.suivis_sportifs.findMany({
     where: {
       id_user: userId,
-      date: { gte: startDate }
+      date: { gte: startDate },
     },
-    include: { seances: { include: { seances_tags: { include: { tags: true } } } } }
+    include: {
+      seances: { include: { seances_tags: { include: { tags: true } } } },
+    },
   });
 
   const completedSessions = sessions.length;
-  const totalWeeks = Math.max(1, Math.round((new Date() - startDate) / (7 * 24 * 60 * 60 * 1000)));
-  const sessionsPerWeek = parseFloat((completedSessions / totalWeeks).toFixed(1));
+  const totalWeeks = Math.max(
+    1,
+    Math.round((new Date() - startDate) / (7 * 24 * 60 * 60 * 1000))
+  );
+  const sessionsPerWeek = parseFloat(
+    (completedSessions / totalWeeks).toFixed(1)
+  );
 
   const userPrefs = preferences?.seances_par_semaines || 0;
   const activityGoalRate = userPrefs
@@ -409,11 +482,18 @@ const getProgressStats = async (userId, period) => {
       activityCount[name] = (activityCount[name] || 0) + 1;
     }
   }
-  const mostFrequentActivity = Object.keys(activityCount).reduce((a, b) => activityCount[a] > activityCount[b] ? a : b, null);
+  const mostFrequentActivity = Object.keys(activityCount).reduce(
+    (a, b) => (activityCount[a] > activityCount[b] ? a : b),
+    null
+  );
 
   // 4. Streak et score
-  const streakDays = _.uniq(sessions.map(s => s.date.toISOString().slice(0, 10))).length;
-  const overallProgress = Math.round(((goalCompletionRate || 0) + (activityGoalRate || 0)) / 2);
+  const streakDays = _.uniq(
+    sessions.map((s) => s.date.toISOString().slice(0, 10))
+  ).length;
+  const overallProgress = Math.round(
+    ((goalCompletionRate || 0) + (activityGoalRate || 0)) / 2
+  );
 
   return {
     period,
@@ -423,18 +503,18 @@ const getProgressStats = async (userId, period) => {
       averageProteins: avgProteins || 0,
       averageCarbs: avgCarbs || 0,
       averageFats: avgFats || 0,
-      goalCompletionRate: goalCompletionRate || 0
+      goalCompletionRate: goalCompletionRate || 0,
     },
     activity: {
       completedSessions,
       sessionsPerWeek,
       goalCompletionRate: activityGoalRate || 0,
-      mostFrequentActivity
+      mostFrequentActivity,
     },
     overview: {
       overallProgress,
-      streakDays
-    }
+      streakDays,
+    },
   };
 };
 
@@ -452,8 +532,8 @@ const updateUserProfile = async (userId, data) => {
   const existingEmail = await prisma.users.findFirst({
     where: {
       email,
-      NOT: { id_user: userId }
-    }
+      NOT: { id_user: userId },
+    },
   });
 
   if (existingEmail) {
@@ -467,8 +547,8 @@ const updateUserProfile = async (userId, data) => {
       nom: lastName,
       email,
       sexe: gender,
-      date_de_naissance: new Date(birthDate)
-    }
+      date_de_naissance: new Date(birthDate),
+    },
   });
 
   // Calcul de l'âge
@@ -487,12 +567,12 @@ const updateUserProfile = async (userId, data) => {
     email: updatedUser.email,
     gender: updatedUser.sexe,
     birthDate: updatedUser.date_de_naissance.toISOString().split("T")[0],
-    age
+    age,
   };
 };
 
 /**
- * Met à jour les préférences de l'utilisateur 
+ * Met à jour les préférences de l'utilisateur
  * @param {number} userId - ID de l'utilisateur
  * @param {Object} body - Données des préférences
  * @returns {Object} - Préférences mises à jour
@@ -505,11 +585,13 @@ const updatePreferences = async (userId, body) => {
     nutritionalPlanId,
     dietId,
     sessionsPerWeek,
-    activities = []
+    activities = [],
   } = body;
 
   // 🔍 Vérifier si les préférences existent déjà
-  let preferences = await prisma.preferences.findFirst({ where: { id_user: userId } });
+  let preferences = await prisma.preferences.findFirst({
+    where: { id_user: userId },
+  });
 
   if (preferences) {
     preferences = await prisma.preferences.update({
@@ -520,7 +602,7 @@ const updatePreferences = async (userId, body) => {
         id_repartition_nutritionnelle: nutritionalPlanId,
         id_regime_alimentaire: dietId,
         seances_par_semaines: sessionsPerWeek,
-      }
+      },
     });
   } else {
     preferences = await prisma.preferences.create({
@@ -531,34 +613,39 @@ const updatePreferences = async (userId, body) => {
         id_repartition_nutritionnelle: nutritionalPlanId,
         id_regime_alimentaire: dietId,
         seances_par_semaines: sessionsPerWeek,
-      }
+      },
     });
   }
 
   // 🔄 Supprimer les anciennes activités liées à la préférence
   await prisma.preferences_activites.deleteMany({
-    where: { id_preference: preferences.id_preference }
+    where: { id_preference: preferences.id_preference },
   });
 
   // ✅ Ajouter les nouvelles activités
   if (activities.length > 0) {
     const newActivities = activities.map((id_activite) => ({
       id_preference: preferences.id_preference,
-      id_activite
+      id_activite,
     }));
     await prisma.preferences_activites.createMany({ data: newActivities });
   }
 
   // 🔢 Recalcul des calories et macros
   const user = await prisma.users.findUnique({ where: { id_user: userId } });
-  const nutrition = await prisma.repartitions_nutritionnelles.findUnique({ where: { id_repartition_nutritionnelle: nutritionalPlanId } });
-  const sedentarite = await prisma.niveaux_sedentarites.findUnique({ where: { id_niveau_sedentarite: sedentaryLevelId } });
+  const nutrition = await prisma.repartitions_nutritionnelles.findUnique({
+    where: { id_repartition_nutritionnelle: nutritionalPlanId },
+  });
+  const sedentarite = await prisma.niveaux_sedentarites.findUnique({
+    where: { id_niveau_sedentarite: sedentaryLevelId },
+  });
 
-  const age = new Date().getFullYear() - new Date(user.date_de_naissance).getFullYear();
+  const age =
+    new Date().getFullYear() - new Date(user.date_de_naissance).getFullYear();
 
   const lastEvolution = await prisma.evolutions.findFirst({
     where: { id_user: userId },
-    orderBy: { date: "desc" }
+    orderBy: { date: "desc" },
   });
 
   const weight = lastEvolution?.poids || 70;
@@ -568,37 +655,43 @@ const updatePreferences = async (userId, body) => {
   const bmr = 10 * weight + 6.25 * height - 5 * age + genderRatio;
   const dailyCalories = Math.round(bmr * Number(sedentarite.valeur));
 
-  const proteins = Math.round((Number(nutrition.pourcentage_proteines) / 100) * dailyCalories / 4);
-  const carbs = Math.round((Number(nutrition.pourcentage_glucides) / 100) * dailyCalories / 4);
-  const fats = Math.round((Number(nutrition.pourcentage_lipides) / 100) * dailyCalories / 9);
+  const proteins = Math.round(
+    ((Number(nutrition.pourcentage_proteines) / 100) * dailyCalories) / 4
+  );
+  const carbs = Math.round(
+    ((Number(nutrition.pourcentage_glucides) / 100) * dailyCalories) / 4
+  );
+  const fats = Math.round(
+    ((Number(nutrition.pourcentage_lipides) / 100) * dailyCalories) / 9
+  );
 
   return {
     targetWeight,
     sedentaryLevel: {
       id: sedentarite.id_niveau_sedentarite,
       name: sedentarite.nom,
-      value: sedentarite.valeur
+      value: sedentarite.valeur,
     },
     nutritionalPlan: {
       id: nutrition.id_repartition_nutritionnelle,
       name: nutrition.nom,
-      type: nutrition.type
+      type: nutrition.type,
     },
     diet: await prisma.regimes_alimentaires.findUnique({
       where: { id_regime_alimentaire: dietId },
-      select: { id_regime_alimentaire: true, nom: true }
+      select: { id_regime_alimentaire: true, nom: true },
     }),
     sessionsPerWeek,
     activities: await prisma.activites.findMany({
       where: { id_activite: { in: activities } },
-      select: { id_activite: true, nom: true }
+      select: { id_activite: true, nom: true },
     }),
     dailyCalories,
     macros: {
       proteins,
       carbs,
-      fats
-    }
+      fats,
+    },
   };
 };
 
@@ -610,13 +703,13 @@ const updatePreferences = async (userId, body) => {
 const getWeightUpdateStatus = async (userId) => {
   const user = await prisma.users.findUnique({
     where: { id_user: userId },
-    select: { cree_a: true }
+    select: { cree_a: true },
   });
 
   const lastEvolution = await prisma.evolutions.findFirst({
     where: { id_user: userId },
     orderBy: { date: "desc" },
-    select: { date: true }
+    select: { date: true },
   });
 
   const today = new Date();
@@ -627,20 +720,18 @@ const getWeightUpdateStatus = async (userId) => {
   return {
     needsUpdate: diffInDays >= 20,
     lastUpdated: lastDate,
-    daysSinceLastUpdate: diffInDays
+    daysSinceLastUpdate: diffInDays,
   };
 };
 
-
 module.exports = {
-    getUserProfile,
-    getUserBadges,
-    checkNewBadges,
-    getUserEvolution,
-    addEvolution,
-    getProgressStats,
-    updateUserProfile,
-    updatePreferences,
-    getWeightUpdateStatus,
-  };
-  
+  getUserProfile,
+  getUserBadges,
+  checkNewBadges,
+  getUserEvolution,
+  addEvolution,
+  getProgressStats,
+  updateUserProfile,
+  updatePreferences,
+  getWeightUpdateStatus,
+};
