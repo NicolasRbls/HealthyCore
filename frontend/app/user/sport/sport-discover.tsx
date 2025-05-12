@@ -52,9 +52,7 @@ export default function SportDiscoverScreen() {
   const fetchPrograms = async () => {
     setIsLoading(true);
     try {
-      console.log("Fetching programs...");
       const response = await programsService.getPrograms();
-      console.log("API response:", JSON.stringify(response));
 
       setPrograms(response.programs);
 
