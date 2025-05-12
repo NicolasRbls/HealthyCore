@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-  Dimensions,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path, Line, Circle, Text as SvgText } from "react-native-svg";
@@ -18,21 +18,27 @@ import { TextStyles } from "../../../constants/Fonts";
 import Button from "../../../components/ui/Button";
 import Card from "../../../components/ui/Card";
 import Header from "../../../components/layout/Header";
-import Input from "../../../components/ui/Input";
 import NumericInput from "../../../components/ui/NumericInput";
 import DatePicker from "../../../components/ui/DatePicker";
-import { useAuth } from "../../../context/AuthContext";
 import { router } from "expo-router";
-
-// Import des données d'exemple pour le développement
-import tempData from "../../../assets/temp.json";
+import userService, {
+  EvolutionEntry,
+  EvolutionStatistics,
+  ProgressStats,
+} from "../../../services/user.service";
 
 export default function ProgressScreen() {
-  const { user } = useAuth();
-  const [evolutionData, setEvolutionData] = useState<any[]>([]);
+  const [evolutionData, setEvolutionData] = useState<EvolutionEntry[]>([]);
+  const [statistics, setStatistics] = useState<EvolutionStatistics | null>(
+    null
+  );
+  const [progressStats, setProgressStats] = useState<ProgressStats | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [period, setPeriod] = useState("all"); // "all", "month", "year"
+  const [period, setPeriod] = useState("month"); // "all", "month", "year"
 
   // État pour le formulaire d'ajout d'évolution
   const [newEvolution, setNewEvolution] = useState({
@@ -41,88 +47,61 @@ export default function ProgressScreen() {
     date: new Date().toISOString().split("T")[0],
   });
 
-  // Simuler le chargement des données depuis l'API
   useEffect(() => {
-    // En production, nous remplacerions ceci par un appel API
-    // GET /api/user/evolution
-    setTimeout(() => {
-      const exampleEvolutions = [...tempData.evolutions_exemple]; // Créer une copie pour éviter les mutations
+    fetchEvolutionData();
+    fetchProgressStats();
+  }, [period]);
 
-      // Calculer l'IMC pour chaque entrée et formater les données
-      const formattedData = exampleEvolutions
-        .map((ev) => ({
-          date: new Date(ev.date).toLocaleDateString("fr-FR", {
-            day: "2-digit",
-            month: "short",
-          }),
-          rawDate: ev.date, // Conserver la date brute pour le filtre
-          weight: ev.poids,
-          height: ev.taille,
-          bmi: (ev.poids / ((ev.taille / 100) * (ev.taille / 100))).toFixed(1),
-        }))
-        .sort(
-          (a, b) =>
-            new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime()
-        );
+  const fetchEvolutionData = async () => {
+    try {
+      setLoading(true);
+      let startDate: string | undefined;
 
-      setEvolutionData(formattedData);
+      // Determine start date based on period
+      if (period === "month") {
+        const date = new Date();
+        date.setMonth(date.getMonth() - 1);
+        startDate = date.toISOString().split("T")[0];
+      } else if (period === "year") {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - 1);
+        startDate = date.toISOString().split("T")[0];
+      }
+
+      const response = await userService.getUserEvolution(startDate);
+      setEvolutionData(response.evolution);
+      setStatistics(response.statistics);
+    } catch (error) {
+      console.error("Error fetching evolution data:", error);
+      Alert.alert("Erreur", "Impossible de charger les données d'évolution.");
+    } finally {
       setLoading(false);
-    }, 600);
-  }, []);
-
-  // Filtrer les données selon la période sélectionnée
-  const getFilteredData = () => {
-    if (period === "all") return evolutionData;
-
-    const now = new Date();
-    let compareDate: Date;
-
-    if (period === "month") {
-      compareDate = new Date();
-      compareDate.setMonth(now.getMonth() - 1);
-    } else {
-      // period === "year"
-      compareDate = new Date();
-      compareDate.setFullYear(now.getFullYear() - 1);
     }
-
-    return evolutionData.filter(
-      (item) => new Date(item.rawDate) >= compareDate
-    );
   };
 
-  // Calculer les statistiques
-  const calculateStats = () => {
-    if (evolutionData.length === 0) return null;
+  const fetchProgressStats = async () => {
+    try {
+      const stats = await userService.getProgressStats(
+        period === "all" ? "year" : period
+      );
+      setProgressStats(stats);
+    } catch (error) {
+      console.error("Error fetching progress stats:", error);
+    }
+  };
 
-    const filteredData = getFilteredData();
-    const initialRecord = filteredData[0];
-    const currentRecord = filteredData[filteredData.length - 1];
-
-    const weightChange = currentRecord.weight - initialRecord.weight;
-    const weightChangePercentage = (
-      (weightChange / initialRecord.weight) *
-      100
-    ).toFixed(2);
-    const bmiChange = (
-      parseFloat(currentRecord.bmi) - parseFloat(initialRecord.bmi)
-    ).toFixed(1);
-
-    return {
-      initialWeight: initialRecord.weight,
-      currentWeight: currentRecord.weight,
-      weightChange: weightChange.toFixed(1),
-      weightChangePercentage,
-      initialBmi: initialRecord.bmi,
-      currentBmi: currentRecord.bmi,
-      bmiChange,
-      period:
-        period === "all" ? "totale" : period === "month" ? "1 mois" : "1 an",
-    };
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchEvolutionData();
+      await fetchProgressStats();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Gérer l'ajout d'une nouvelle évolution
-  const handleAddEvolution = () => {
+  const handleAddEvolution = async () => {
     // Validation simple
     if (!newEvolution.weight || !newEvolution.height) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs");
@@ -137,42 +116,35 @@ export default function ProgressScreen() {
       return;
     }
 
-    // En production, nous ferions un appel API
-    // POST /api/user/evolution
+    try {
+      setLoading(true);
+      await userService.addEvolutionEntry({
+        weight,
+        height,
+        date: newEvolution.date,
+      });
 
-    // Simuler l'ajout de données
-    const bmi = (weight / ((height / 100) * (height / 100))).toFixed(1);
-    const newEntry = {
-      date: new Date(newEvolution.date).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "short",
-      }),
-      rawDate: newEvolution.date,
-      weight,
-      height,
-      bmi,
-    };
+      // Réinitialiser le formulaire et fermer le modal
+      setNewEvolution({
+        weight: "",
+        height: "",
+        date: new Date().toISOString().split("T")[0],
+      });
+      setShowAddModal(false);
 
-    // Ajouter la nouvelle entrée et trier par date
-    setEvolutionData(
-      [...evolutionData, newEntry].sort(
-        (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime()
-      )
-    );
-
-    // Réinitialiser le formulaire et fermer le modal
-    setNewEvolution({
-      weight: "",
-      height: "",
-      date: new Date().toISOString().split("T")[0],
-    });
-    setShowAddModal(false);
-
-    Alert.alert("Succès", "Évolution enregistrée avec succès");
+      // Rafraîchir les données
+      await fetchEvolutionData();
+      Alert.alert("Succès", "Évolution enregistrée avec succès");
+    } catch (error) {
+      console.error("Error adding evolution:", error);
+      Alert.alert("Erreur", "Impossible d'enregistrer l'évolution.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Graphique de ligne personnalisé
-  const SimpleLineChart = ({ data }: { data: any[] }) => {
+  const SimpleLineChart = ({ data }: { data: EvolutionEntry[] }) => {
     if (!data || data.length === 0) return null;
 
     const width = Layout.window.width - 80;
@@ -257,7 +229,10 @@ export default function ProgressScreen() {
                 fill={Colors.gray.dark}
                 textAnchor="middle"
               >
-                {d.date}
+                {new Date(d.date).toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
               </SvgText>
             )
         )}
@@ -295,9 +270,6 @@ export default function ProgressScreen() {
     );
   };
 
-  // Obtenir les statistiques
-  const stats = calculateStats();
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
@@ -307,7 +279,17 @@ export default function ProgressScreen() {
         style={{ marginTop: Layout.spacing.md }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollView}>
+      <ScrollView
+        contentContainerStyle={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
+      >
         <View style={styles.container}>
           {/* Filtres de période */}
           <View style={styles.periodFilter}>
@@ -371,9 +353,9 @@ export default function ProgressScreen() {
                   Chargement du graphique...
                 </Text>
               </View>
-            ) : getFilteredData().length > 0 ? (
+            ) : evolutionData.length > 0 ? (
               <View style={styles.chartContainer}>
-                <SimpleLineChart data={getFilteredData()} />
+                <SimpleLineChart data={evolutionData} />
               </View>
             ) : (
               <View style={styles.noDataContainer}>
@@ -385,20 +367,29 @@ export default function ProgressScreen() {
           </Card>
 
           {/* Statistiques */}
-          {stats && (
+          {statistics && (
             <Card style={styles.statsCard}>
               <Text style={styles.sectionTitle}>
-                Statistiques sur {stats.period}
+                Statistiques sur{" "}
+                {period === "all"
+                  ? "toute la période"
+                  : period === "month"
+                  ? "le mois"
+                  : "l'année"}
               </Text>
 
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Poids initial</Text>
-                  <Text style={styles.statValue}>{stats.initialWeight} kg</Text>
+                  <Text style={styles.statValue}>
+                    {statistics.initialWeight} kg
+                  </Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Poids actuel</Text>
-                  <Text style={styles.statValue}>{stats.currentWeight} kg</Text>
+                  <Text style={styles.statValue}>
+                    {statistics.currentWeight} kg
+                  </Text>
                 </View>
               </View>
 
@@ -406,13 +397,13 @@ export default function ProgressScreen() {
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Différence</Text>
                   <Text style={[styles.statValue]}>
-                    {stats.weightChange} kg
+                    {statistics.weightChange} kg
                   </Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Pourcentage</Text>
                   <Text style={[styles.statValue]}>
-                    {stats.weightChangePercentage}%
+                    {statistics.weightChangePercentage}%
                   </Text>
                 </View>
               </View>
@@ -422,29 +413,102 @@ export default function ProgressScreen() {
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>IMC initial</Text>
-                  <Text style={styles.statValue}>{stats.initialBmi}</Text>
+                  <Text style={styles.statValue}>{statistics.initialBmi}</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>IMC actuel</Text>
-                  <Text style={styles.statValue}>{stats.currentBmi}</Text>
+                  <Text style={styles.statValue}>{statistics.currentBmi}</Text>
                 </View>
               </View>
 
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Différence IMC</Text>
-                  <Text style={[styles.statValue]}>{stats.bmiChange}</Text>
+                  <Text style={[styles.statValue]}>
+                    {statistics.currentBmi - statistics.initialBmi}
+                  </Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Catégorie</Text>
                   <Text style={styles.statValue}>
-                    {parseFloat(stats.currentBmi) < 18.5
+                    {parseFloat(statistics.currentBmi.toString()) < 18.5
                       ? "Maigreur"
-                      : parseFloat(stats.currentBmi) < 25
+                      : parseFloat(statistics.currentBmi.toString()) < 25
                       ? "Normal"
-                      : parseFloat(stats.currentBmi) < 30
+                      : parseFloat(statistics.currentBmi.toString()) < 30
                       ? "Surpoids"
                       : "Obésité"}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          )}
+
+          {/* Statistiques supplémentaires */}
+          {progressStats && (
+            <Card style={styles.progressStatsCard}>
+              <Text style={styles.sectionTitle}>Résumé de progression</Text>
+
+              <View style={styles.progressSection}>
+                <Text style={styles.progressSectionTitle}>Nutrition</Text>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Calories moyennes :</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.nutrition.averageCalories} kcal
+                  </Text>
+                </View>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Protéines moyennes :</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.nutrition.averageProteins} g
+                  </Text>
+                </View>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Taux de suivi :</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.nutrition.goalCompletionRate}%
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.progressSection}>
+                <Text style={styles.progressSectionTitle}>Activité</Text>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Séances complétées :</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.activity.completedSessions}
+                  </Text>
+                </View>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>
+                    Séances par semaine :
+                  </Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.activity.sessionsPerWeek}
+                  </Text>
+                </View>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Activité favorite :</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.activity.mostFrequentActivity}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.progressSection}>
+                <Text style={styles.progressSectionTitle}>Vue d'ensemble</Text>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>
+                    Progression globale :
+                  </Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.overview.overallProgress}%
+                  </Text>
+                </View>
+                <View style={styles.progressRow}>
+                  <Text style={styles.progressLabel}>Jours consécutifs :</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.overview.streakDays} jours
                   </Text>
                 </View>
               </View>
@@ -479,102 +543,112 @@ export default function ProgressScreen() {
                   <Text style={styles.recordHeaderText}>IMC</Text>
                 </View>
 
-                {evolutionData
-                  .slice()
-                  .reverse()
-                  .map((item, index) => (
-                    <View key={index} style={styles.recordItem}>
-                      <Text style={styles.recordText}>{item.date}</Text>
-                      <Text style={styles.recordText}>{item.weight} kg</Text>
-                      <Text style={styles.recordText}>{item.height} cm</Text>
-                      <Text style={styles.recordText}>{item.bmi}</Text>
-                    </View>
-                  ))}
+                {evolutionData.length > 0 ? (
+                  evolutionData
+                    .slice()
+                    .reverse()
+                    .map((item, index) => (
+                      <View key={index} style={styles.recordItem}>
+                        <Text style={styles.recordText}>
+                          {new Date(item.date).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "2-digit",
+                          })}
+                        </Text>
+                        <Text style={styles.recordText}>{item.weight} kg</Text>
+                        <Text style={styles.recordText}>{item.height} cm</Text>
+                        <Text style={styles.recordText}>{item.bmi}</Text>
+                      </View>
+                    ))
+                ) : (
+                  <Text style={styles.noDataText}>
+                    Aucune donnée d'évolution disponible
+                  </Text>
+                )}
               </>
             )}
           </Card>
-
-          {/* Modal pour ajouter une nouvelle évolution */}
-          <Modal
-            visible={showAddModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowAddModal(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Ajouter une évolution</Text>
-                  <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                    <Ionicons name="close" size={24} color={Colors.gray.dark} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.modalBody}>
-                  <DatePicker
-                    label="Date"
-                    value={
-                      newEvolution.date ? new Date(newEvolution.date) : null
-                    }
-                    onChange={(date) =>
-                      setNewEvolution({
-                        ...newEvolution,
-                        date: date
-                          ? date.toISOString().split("T")[0]
-                          : new Date().toISOString().split("T")[0],
-                      })
-                    }
-                    maxDate={new Date()}
-                    icon="calendar-outline"
-                  />
-
-                  <NumericInput
-                    label="Poids (kg)"
-                    value={newEvolution.weight}
-                    onChangeText={(value) =>
-                      setNewEvolution({ ...newEvolution, weight: value })
-                    }
-                    placeholder="Entrez votre poids"
-                    min={30}
-                    max={300}
-                    precision={1}
-                    icon="barbell-outline"
-                  />
-
-                  <NumericInput
-                    label="Taille (cm)"
-                    value={newEvolution.height}
-                    onChangeText={(value) =>
-                      setNewEvolution({ ...newEvolution, height: value })
-                    }
-                    placeholder="Entrez votre taille"
-                    min={100}
-                    max={250}
-                    precision={1}
-                    icon="resize-outline"
-                  />
-                </View>
-
-                <View style={styles.modalFooter}>
-                  <Button
-                    text="Annuler"
-                    variant="outline"
-                    onPress={() => setShowAddModal(false)}
-                    style={styles.modalButton}
-                    textStyle={styles.modalButtonText}
-                  />
-                  <Button
-                    text="Enregistrer"
-                    onPress={handleAddEvolution}
-                    style={styles.modalButton}
-                    textStyle={styles.modalButtonText}
-                  />
-                </View>
-              </View>
-            </View>
-          </Modal>
         </View>
       </ScrollView>
+
+      {/* Modal pour ajouter une nouvelle évolution */}
+      <Modal
+        visible={showAddModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Ajouter une évolution</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.gray.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <DatePicker
+                label="Date"
+                value={newEvolution.date ? new Date(newEvolution.date) : null}
+                onChange={(date) =>
+                  setNewEvolution({
+                    ...newEvolution,
+                    date: date
+                      ? date.toISOString().split("T")[0]
+                      : new Date().toISOString().split("T")[0],
+                  })
+                }
+                maxDate={new Date()}
+                icon="calendar-outline"
+              />
+
+              <NumericInput
+                label="Poids (kg)"
+                value={newEvolution.weight}
+                onChangeText={(value) =>
+                  setNewEvolution({ ...newEvolution, weight: value })
+                }
+                placeholder="Entrez votre poids"
+                min={30}
+                max={300}
+                precision={1}
+                icon="barbell-outline"
+              />
+
+              <NumericInput
+                label="Taille (cm)"
+                value={newEvolution.height}
+                onChangeText={(value) =>
+                  setNewEvolution({ ...newEvolution, height: value })
+                }
+                placeholder="Entrez votre taille"
+                min={100}
+                max={250}
+                precision={1}
+                icon="resize-outline"
+              />
+            </View>
+
+            <View style={styles.modalFooter}>
+              <Button
+                text="Annuler"
+                variant="outline"
+                onPress={() => setShowAddModal(false)}
+                style={styles.modalButton}
+                textStyle={styles.modalButtonText}
+              />
+              <Button
+                text="Enregistrer"
+                onPress={handleAddEvolution}
+                style={styles.modalButton}
+                textStyle={styles.modalButtonText}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -615,11 +689,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   graphCard: {
-    marginBottom: Layout.spacing.md, // Réduit de lg à md
+    marginBottom: Layout.spacing.md,
     padding: Layout.spacing.md,
   },
   statsCard: {
-    marginBottom: Layout.spacing.md, // Réduit de lg à md
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.md,
+  },
+  progressStatsCard: {
+    marginBottom: Layout.spacing.md,
     padding: Layout.spacing.md,
   },
   recordsCard: {
@@ -629,7 +707,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...TextStyles.h4,
     marginBottom: Layout.spacing.md,
-    flex: 1, // Permet au titre de s'adapter
+    flex: 1,
   },
   loadingContainer: {
     height: 200,
@@ -641,9 +719,9 @@ const styles = StyleSheet.create({
     color: Colors.gray.dark,
   },
   chartContainer: {
-    height: 220, // Réduit de 250 à 220
+    height: 220,
     alignItems: "center",
-    marginBottom: -Layout.spacing.md, // Réduit l'espace en bas
+    marginBottom: -Layout.spacing.md,
   },
   noDataContainer: {
     height: 200,
@@ -653,6 +731,8 @@ const styles = StyleSheet.create({
   noDataText: {
     ...TextStyles.body,
     color: Colors.gray.dark,
+    textAlign: "center",
+    padding: Layout.spacing.md,
   },
   statsRow: {
     flexDirection: "row",
@@ -682,11 +762,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: Layout.spacing.sm,
-    width: "100%", // Assurez-vous que la largeur est à 100%
+    width: "100%",
   },
   addButton: {
     marginLeft: Layout.spacing.sm,
-    minWidth: 90, // Fixe une largeur minimale
+    minWidth: 90,
   },
   recordHeader: {
     flexDirection: "row",
@@ -750,7 +830,32 @@ const styles = StyleSheet.create({
     marginHorizontal: Layout.spacing.xs + 5,
   },
   modalButtonText: {
-    fontSize: 16, // Taille de texte plus standard
+    fontSize: 16,
     fontWeight: "bold",
+  },
+  progressSection: {
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.md,
+    backgroundColor: Colors.gray.ultraLight,
+    borderRadius: Layout.borderRadius.md,
+  },
+  progressSectionTitle: {
+    ...TextStyles.bodyLarge,
+    fontWeight: "600",
+    marginBottom: Layout.spacing.sm,
+    color: Colors.brandBlue[0],
+  },
+  progressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: Layout.spacing.xs,
+  },
+  progressLabel: {
+    ...TextStyles.body,
+    color: Colors.gray.dark,
+  },
+  progressValue: {
+    ...TextStyles.body,
+    fontWeight: "600",
   },
 });
