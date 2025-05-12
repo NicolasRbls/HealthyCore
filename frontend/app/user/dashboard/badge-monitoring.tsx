@@ -7,92 +7,101 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
-
-// Import temp data
-import tempData from "../../../assets/temp.json";
-
-// Types
-interface Badge {
-  id: number;
-  name: string;
-  description: string;
-  imagePath: string;
-  obtained: boolean;
-  obtainedDate?: Date;
-}
+import userService, {
+  UnlockedBadge,
+  LockedBadge,
+} from "../../../services/user.service";
 
 export default function BadgeMonitoring() {
-  const [badges, setBadges] = useState<Badge[]>([]);
+  const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
+  const [lockedBadges, setLockedBadges] = useState<LockedBadge[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   useEffect(() => {
-    // In a real app, you would fetch this data with:
-    // GET /api/user/badges
     fetchBadges();
+    // Check for new badges when the component mounts
+    checkNewBadges();
   }, []);
 
-  const fetchBadges = () => {
+  const fetchBadges = async () => {
     setIsLoading(true);
-
     try {
-      // Get user badges from temp.json
-      const userBadges = tempData.badges_utilisateurs_exemple || [];
-
-      // Map all badges
-      const allBadges: Badge[] = tempData.badges.map((badge) => {
-        // Check if user has this badge
-        const userBadge = userBadges.find(
-          (ub) => ub.id_badge === badge.id_badge
-        );
-
-        return {
-          id: badge.id_badge,
-          name: badge.nom,
-          description: badge.description,
-          imagePath: badge.image,
-          obtained: !!userBadge,
-          obtainedDate: userBadge
-            ? new Date(userBadge.date_obtention)
-            : undefined,
-        };
-      });
-
-      setBadges(allBadges);
+      const response = await userService.getUserBadges();
+      setUnlockedBadges(response.unlockedBadges);
+      setLockedBadges(response.lockedBadges);
     } catch (error) {
       console.error("Error fetching badges:", error);
+      Alert.alert("Erreur", "Impossible de charger les badges.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Dictionnaire des mois en anglais et français
-  const monthsTranslation: Record<string, string> = {
-    January: "Janvier",
-    February: "Février",
-    March: "Mars",
-    April: "Avril",
-    May: "Mai",
-    June: "Juin",
-    July: "Juillet",
-    August: "Août",
-    September: "Septembre",
-    October: "Octobre",
-    November: "Novembre",
-    December: "Décembre",
+  const checkNewBadges = async () => {
+    try {
+      const response = await userService.checkNewBadges();
+      if (response.newBadges.length > 0) {
+        // Show alert with new badges
+        Alert.alert(
+          "Nouveaux badges débloqués !",
+          `Vous avez débloqué ${response.newBadges.length} nouveau(x) badge(s) !`,
+          [
+            {
+              text: "Super !",
+              onPress: fetchBadges, // Refresh badges after user acknowledges
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error("Error checking new badges:", error);
+    }
   };
 
-  // Helper function to format date
-  const formatDate = (date: Date): string => {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchBadges();
+      await checkNewBadges();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Format a date to a readable string
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+
+    // Dictionary for month translations
+    const monthsTranslation: Record<string, string> = {
+      January: "Janvier",
+      February: "Février",
+      March: "Mars",
+      April: "Avril",
+      May: "Mai",
+      June: "Juin",
+      July: "Juillet",
+      August: "Août",
+      September: "Septembre",
+      October: "Octobre",
+      November: "Novembre",
+      December: "Décembre",
+    };
+
     const day = date.getDate();
-    const monthEnglish = date.toLocaleString("default", { month: "long" }); // Mois en anglais
-    const monthFrench = monthsTranslation[monthEnglish]; // Mois en français via le dictionnaire
+    const monthEnglish = date.toLocaleString("default", { month: "long" });
+    const monthFrench = monthsTranslation[monthEnglish];
     const year = date.getFullYear();
+
     return `Obtenu le ${day} ${monthFrench} ${year}`;
   };
 
@@ -109,44 +118,43 @@ export default function BadgeMonitoring() {
     return imageMapping[path] || null;
   };
 
-  // Badge item component
-  const BadgeItem = ({ badge }: { badge: Badge }) => (
+  // Badge item component for unlocked badges
+  const UnlockedBadgeItem = ({ badge }: { badge: UnlockedBadge }) => (
     <View style={styles.badgeCard}>
-      <View
-        style={[
-          styles.badgeImageContainer,
-          !badge.obtained && styles.badgeNotObtained,
-        ]}
-      >
+      <View style={styles.badgeImageContainer}>
         <Image
-          source={getBadgeImage(badge.imagePath)}
+          source={getBadgeImage(badge.image)}
           style={styles.badgeImage}
           resizeMode="contain"
         />
       </View>
 
       <View style={styles.badgeInfo}>
-        <Text
-          style={[
-            styles.badgeName,
-            !badge.obtained && styles.badgeTextNotObtained,
-          ]}
-        >
+        <Text style={styles.badgeName}>{badge.name}</Text>
+        <Text style={styles.badgeDescription}>{badge.description}</Text>
+        <Text style={styles.badgeDate}>{formatDate(badge.dateObtained)}</Text>
+      </View>
+    </View>
+  );
+
+  // Badge item component for locked badges
+  const LockedBadgeItem = ({ badge }: { badge: LockedBadge }) => (
+    <View style={styles.badgeCard}>
+      <View style={[styles.badgeImageContainer, styles.badgeNotObtained]}>
+        <Image
+          source={getBadgeImage(badge.image)}
+          style={styles.badgeImage}
+          resizeMode="contain"
+        />
+      </View>
+
+      <View style={styles.badgeInfo}>
+        <Text style={[styles.badgeName, styles.badgeTextNotObtained]}>
           {badge.name}
         </Text>
-
-        <Text
-          style={[
-            styles.badgeDescription,
-            !badge.obtained && styles.badgeTextNotObtained,
-          ]}
-        >
+        <Text style={[styles.badgeDescription, styles.badgeTextNotObtained]}>
           {badge.description}
         </Text>
-
-        {badge.obtained && badge.obtainedDate && (
-          <Text style={styles.badgeDate}>{formatDate(badge.obtainedDate)}</Text>
-        )}
       </View>
     </View>
   );
@@ -160,26 +168,53 @@ export default function BadgeMonitoring() {
         style={{ marginTop: Layout.spacing.md }}
       />
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>
-          Vos récompenses pour vos accomplissements
-        </Text>
-
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
+      >
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
             <Text style={styles.loadingText}>Chargement des badges...</Text>
           </View>
-        ) : badges.length > 0 ? (
-          <View style={styles.badgesContainer}>
-            {badges.map((badge) => (
-              <BadgeItem key={badge.id} badge={badge} />
-            ))}
-          </View>
         ) : (
-          <Text style={styles.noBadgesText}>
-            Aucun badge disponible pour le moment
-          </Text>
+          <>
+            {unlockedBadges.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Badges débloqués</Text>
+                <View style={styles.badgesContainer}>
+                  {unlockedBadges.map((badge) => (
+                    <UnlockedBadgeItem key={badge.id} badge={badge} />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {lockedBadges.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Badges à débloquer</Text>
+                <View style={styles.badgesContainer}>
+                  {lockedBadges.map((badge) => (
+                    <LockedBadgeItem key={badge.id} badge={badge} />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {unlockedBadges.length === 0 && lockedBadges.length === 0 && (
+              <Text style={styles.noBadgesText}>
+                Aucun badge disponible pour le moment
+              </Text>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -201,6 +236,13 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.xl,
     textAlign: "center",
   },
+  sectionContainer: {
+    marginBottom: Layout.spacing.xl,
+  },
+  sectionTitle: {
+    ...TextStyles.h4,
+    marginBottom: Layout.spacing.md,
+  },
   badgesContainer: {
     flex: 1,
   },
@@ -208,7 +250,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: Colors.white,
     borderRadius: Layout.borderRadius.md,
-    marginBottom: Layout.spacing.lg,
+    marginBottom: Layout.spacing.md,
     padding: Layout.spacing.md,
     ...Layout.elevation.sm,
   },
