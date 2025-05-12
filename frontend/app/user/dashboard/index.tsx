@@ -66,12 +66,10 @@ export default function Dashboard() {
     try {
       // 1. Charger le profil utilisateur
       const profileData = await authService.getProfile();
-      console.log("Profile Data:", profileData);
       setUserName(profileData.user.firstName);
 
       // 2. Charger les préférences utilisateur
       const preferencesData = await dataService.getUserPreferences();
-      console.log("Preferences Data:", preferencesData);
 
       // Récupérer l'objectif calorique quotidien pour le calcul de pourcentage
       const totalCalorieGoal = parseFloat(
@@ -92,8 +90,6 @@ export default function Dashboard() {
             },
           }
         ).then((res) => res.json());
-
-        console.log("Programs Data:", programsData);
 
         if (programsData.data.todaySession) {
           setTodaySession({
