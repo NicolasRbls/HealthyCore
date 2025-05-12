@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,91 +18,53 @@ import Button from "../../../components/ui/Button";
 import Card from "../../../components/ui/Card";
 import { useAuth } from "../../../context/AuthContext";
 import Header from "../../../components/layout/Header";
-import authService from "../../../services/auth.service";
+import WeightUpdateReminder from "../../../components/ui/WeightUpdateReminder";
 import userService from "../../../services/user.service";
-
-// Import données d'exemple pour le développement
-import tempData from "../../../assets/temp.json";
+import authService from "../../../services/auth.service";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [progressStats, setProgressStats] = useState<any>(null);
 
   // Charger les données du profil
   useEffect(() => {
-    const loadProfileData = async () => {
-      try {
-        // Cette route devrait fournir toutes les informations nécessaires en un seul appel
-        const profileData = await userService.getUserProfile();
-
-        setUserData({
-          prenom: profileData.user.firstName,
-          nom: profileData.user.lastName,
-          email: profileData.user.email,
-          sexe: profileData.user.gender,
-          date_de_naissance: profileData.user.birthDate,
-          age: profileData.user.age,
-          currentWeight: profileData.metrics?.currentWeight || 0,
-          currentHeight: profileData.metrics?.currentHeight || 0,
-          bmi: profileData.metrics?.bmi || 0,
-          preferences: {
-            objectif_poids: profileData.metrics?.targetWeight || 0,
-            calories_quotidiennes: profileData.metrics?.dailyCalories || 0,
-            seances_par_semaines: profileData.metrics?.sessionsPerWeek || 0,
-          },
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Erreur lors du chargement du profil:", error);
-        // Fallback sur les données mockées
-        fallbackToMockData();
-      }
-    };
-
-    loadProfileData();
+    loadData();
   }, []);
 
-  // Fonction de fallback vers les données mockées
-  const fallbackToMockData = () => {
-    // Votre code existant avec tempData
-    const exampleUser = tempData.user_exemple;
-    const exampleEvolutions = tempData.evolutions_exemple;
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Charger le profil utilisateur
+      const profileData = await userService.getUserProfile();
+      setUserData(profileData);
 
-    // Calculer l'âge exactement
-    const birthDate = new Date(exampleUser.date_de_naissance);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+      // Charger les statistiques de progression
+      try {
+        const stats = await userService.getProgressStats("month");
+        setProgressStats(stats);
+      } catch (error) {
+        console.error("Erreur lors du chargement des statistiques:", error);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du profil:", error);
+      Alert.alert("Erreur", "Impossible de charger les informations du profil");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Obtenir les dernières données d'évolution
-    const latestEvolution = exampleEvolutions.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    )[0];
-
-    setUserData({
-      ...exampleUser,
-      age: age, // Âge exact calculé
-      currentWeight: latestEvolution.poids,
-      currentHeight: latestEvolution.taille,
-      bmi: (
-        latestEvolution.poids /
-        ((latestEvolution.taille / 100) * (latestEvolution.taille / 100))
-      ).toFixed(1),
-    });
-
-    setLoading(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   };
 
   const handleLogout = async () => {
     try {
-      // Appeler le service d'authentification pour se déconnecter
       await authService.logout();
-      // Puis utiliser la fonction de déconnexion du contexte pour nettoyer l'état local
       await logout();
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
@@ -120,78 +83,85 @@ export default function ProfileScreen() {
     router.push("/user/dashboard/badge-monitoring" as any);
   };
 
-  const handleEditPreferences = () => {
-    Alert.alert(
-      "Fonctionnalité à venir",
-      "La modification des préférences sera disponible prochainement.",
-      [{ text: "OK" }]
-    );
+  const navigateToEditProfile = () => {
+    router.push("/user/profile/edit" as any);
   };
 
   // Déterminer le type d'objectif
   const getWeightGoalType = () => {
-    if (!userData) return "";
-    const currentWeight = userData.currentWeight;
-    const targetWeight = userData.preferences.objectif_poids;
+    if (!userData || !userData.metrics) return "";
+    const currentWeight = userData.metrics.currentWeight;
+    const targetWeight = userData.metrics.targetWeight;
 
     if (targetWeight < currentWeight) return "Perte de poids";
     if (targetWeight > currentWeight) return "Prise de poids";
     return "Maintien de poids";
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header title="Profil" />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement du profil...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Helper to get BMI category
+  const getBmiCategory = (bmi: number) => {
+    if (bmi < 18.5) return "Maigreur";
+    if (bmi < 25) return "Normal";
+    if (bmi < 30) return "Surpoids";
+    return "Obésité";
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header title="Profil" style={{ marginTop: Layout.spacing.md }} />
 
-      <ScrollView contentContainerStyle={styles.scrollView}>
+      <ScrollView
+        contentContainerStyle={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
+      >
         <View style={styles.container}>
+          {/* Weight Update Reminder */}
+          <WeightUpdateReminder onWeightUpdated={loadData} />
+
           {/* Section Profile Avatar et Infos Principales */}
           <View style={styles.profileHeader}>
             <View style={styles.avatarSection}>
               <View style={styles.avatarContainer}>
                 <Text style={styles.avatarText}>
-                  {userData.prenom[0]}
-                  {userData.nom[0]}
+                  {userData?.user?.firstName?.[0] || "?"}
+                  {userData?.user?.lastName?.[0] || "?"}
                 </Text>
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.userName}>
-                  {userData.prenom} {userData.nom}
+                  {userData?.user?.firstName || "Utilisateur"}{" "}
+                  {userData?.user?.lastName || ""}
                 </Text>
                 <Text style={styles.userGoal}>{getWeightGoalType()}</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditPreferences}
-            >
-              <Text style={styles.editButtonText}>Modifier</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Métriques principales */}
           <View style={styles.metricsContainer}>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{userData.currentHeight}cm</Text>
+              <Text style={styles.metricValue}>
+                {userData?.metrics?.currentHeight || "-"}cm
+              </Text>
               <Text style={styles.metricLabel}>Taille</Text>
             </View>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{userData.currentWeight}kg</Text>
+              <Text style={styles.metricValue}>
+                {userData?.metrics?.currentWeight || "-"}kg
+              </Text>
               <Text style={styles.metricLabel}>Poids</Text>
             </View>
             <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{userData.age} ans</Text>
+              <Text style={styles.metricValue}>
+                {userData?.user?.age || "-"} ans
+              </Text>
               <Text style={styles.metricLabel}>Âge</Text>
             </View>
           </View>
@@ -205,7 +175,9 @@ export default function ProfileScreen() {
                 size={20}
                 color={Colors.gray.dark}
               />
-              <Text style={styles.accountValue}>{userData.email}</Text>
+              <Text style={styles.accountValue}>
+                {userData?.user?.email || "-"}
+              </Text>
             </View>
             <View style={styles.accountItem}>
               <Ionicons
@@ -214,9 +186,9 @@ export default function ProfileScreen() {
                 color={Colors.gray.dark}
               />
               <Text style={styles.accountValue}>
-                {userData.sexe === "H"
+                {userData?.user?.gender === "H"
                   ? "Homme"
-                  : userData.sexe === "F"
+                  : userData?.user?.gender === "F"
                   ? "Femme"
                   : "Non spécifié"}
               </Text>
@@ -228,14 +200,16 @@ export default function ProfileScreen() {
                 color={Colors.gray.dark}
               />
               <Text style={styles.accountValue}>
-                {new Date(userData.date_de_naissance).toLocaleDateString(
-                  "fr-FR",
-                  {
-                    day: "numeric",
-                    month: "numeric",
-                    year: "numeric",
-                  }
-                )}
+                {userData?.user?.birthDate
+                  ? new Date(userData.user.birthDate).toLocaleDateString(
+                      "fr-FR",
+                      {
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                      }
+                    )
+                  : "-"}
               </Text>
             </View>
           </Card>
@@ -246,26 +220,129 @@ export default function ProfileScreen() {
             <View style={styles.goalItem}>
               <Text style={styles.goalLabel}>Poids cible</Text>
               <Text style={styles.goalValue}>
-                {userData.preferences.objectif_poids} kg
+                {userData?.metrics?.targetWeight || "-"} kg
               </Text>
             </View>
             <View style={styles.goalItem}>
               <Text style={styles.goalLabel}>Calories quotidiennes</Text>
               <Text style={styles.goalValue}>
-                {userData.preferences.calories_quotidiennes} kcal
+                {userData?.metrics?.dailyCalories || "-"} kcal
               </Text>
             </View>
             <View style={styles.goalItem}>
               <Text style={styles.goalLabel}>IMC actuel</Text>
-              <Text style={styles.goalValue}>{userData.bmi}</Text>
+              <Text style={styles.goalValue}>
+                {userData?.metrics?.bmi
+                  ? `${userData.metrics.bmi} (${getBmiCategory(
+                      userData.metrics.bmi
+                    )})`
+                  : "-"}
+              </Text>
             </View>
             <View style={styles.goalItem}>
               <Text style={styles.goalLabel}>Séances par semaine</Text>
               <Text style={styles.goalValue}>
-                {userData.preferences.seances_par_semaines}
+                {userData?.metrics?.sessionsPerWeek || "-"}
               </Text>
             </View>
           </Card>
+
+          {/* Progress Stats Card */}
+          {progressStats && progressStats.weight && (
+            <Card style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Progression ce mois-ci</Text>
+
+              {/* Weight Change */}
+              <View style={styles.progressItem}>
+                <View style={styles.progressIconContainer}>
+                  <Ionicons
+                    name={
+                      progressStats.weight.trend === "ascending"
+                        ? "trending-up"
+                        : "trending-down"
+                    }
+                    size={18}
+                    color={Colors.white}
+                  />
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <Text style={styles.progressTitle}>Évolution du poids</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.weight.change > 0 ? "+" : ""}
+                    {progressStats.weight.change} kg (
+                    {progressStats.weight.changePercentage}%)
+                  </Text>
+                </View>
+              </View>
+
+              {/* Nutrition */}
+              <View style={styles.progressItem}>
+                <View
+                  style={[
+                    styles.progressIconContainer,
+                    { backgroundColor: Colors.secondary[0] },
+                  ]}
+                >
+                  <Ionicons name="restaurant" size={18} color={Colors.white} />
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <Text style={styles.progressTitle}>Nutrition</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.nutrition.goalCompletionRate}% de suivi
+                  </Text>
+                </View>
+              </View>
+
+              {/* Activity */}
+              <View style={styles.progressItem}>
+                <View
+                  style={[
+                    styles.progressIconContainer,
+                    { backgroundColor: Colors.plan.athlete.primary },
+                  ]}
+                >
+                  <Ionicons name="fitness" size={18} color={Colors.white} />
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <Text style={styles.progressTitle}>Activité sportive</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.activity.completedSessions} séances (
+                    {progressStats.activity.goalCompletionRate}%)
+                  </Text>
+                </View>
+              </View>
+
+              {/* Streak */}
+              <View style={styles.progressItem}>
+                <View
+                  style={[
+                    styles.progressIconContainer,
+                    { backgroundColor: Colors.success },
+                  ]}
+                >
+                  <Ionicons name="flame" size={18} color={Colors.white} />
+                </View>
+                <View style={styles.progressTextContainer}>
+                  <Text style={styles.progressTitle}>Série en cours</Text>
+                  <Text style={styles.progressValue}>
+                    {progressStats.overview.streakDays} jours consécutifs
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.progressDetailsButton}
+                onPress={navigateToProgress}
+              >
+                <Text style={styles.progressDetailsText}>Voir les détails</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={Colors.brandBlue[0]}
+                />
+              </TouchableOpacity>
+            </Card>
+          )}
 
           {/* Liens vers d'autres sections */}
           <View style={styles.buttonContainer}>
@@ -279,6 +356,13 @@ export default function ProfileScreen() {
               text="Mes badges"
               onPress={navigateToBadges}
               leftIcon="ribbon-outline"
+              variant="outline"
+              style={styles.button}
+            />
+            <Button
+              text="Modifier mon profil"
+              onPress={navigateToEditProfile}
+              leftIcon="create-outline"
               variant="outline"
               style={styles.button}
             />
@@ -386,6 +470,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     marginBottom: Layout.spacing.lg,
+    padding: Layout.spacing.md,
   },
   sectionTitle: {
     ...TextStyles.h4,
@@ -423,5 +508,44 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: Layout.spacing.md,
+  },
+  progressItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Layout.spacing.md,
+  },
+  progressIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.brandBlue[0],
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Layout.spacing.md,
+  },
+  progressTextContainer: {
+    flex: 1,
+  },
+  progressTitle: {
+    ...TextStyles.body,
+    fontWeight: "600",
+  },
+  progressValue: {
+    ...TextStyles.bodySmall,
+    color: Colors.gray.dark,
+  },
+  progressDetailsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray.ultraLight,
+  },
+  progressDetailsText: {
+    ...TextStyles.body,
+    color: Colors.brandBlue[0],
+    marginRight: Layout.spacing.xs,
   },
 });
