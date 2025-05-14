@@ -24,6 +24,7 @@ import userService, { ProfileUpdateData } from "../../../services/user.service";
 import SelectableOption from "../../../components/registration/SelectableOption";
 import dataService from "../../../services/data.service";
 import NumericInput from "../../../components/ui/NumericInput";
+import NutritionalPlansSelector from "../../../components/nutrition/NutritionalPlansSelector";
 
 export default function EditProfile() {
   const [userData, setUserData] = useState<any>(null);
@@ -32,6 +33,9 @@ export default function EditProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [currentTab, setCurrentTab] = useState("profile"); // 'profile' or 'preferences'
+  const [weightGoalType, setWeightGoalType] = useState<
+    "perte_de_poids" | "prise_de_poids" | "maintien" | null
+  >(null);
 
   // Data for dropdowns
   const [sedentaryLevels, setSedentaryLevels] = useState<any[]>([]);
@@ -45,6 +49,17 @@ export default function EditProfile() {
     fetchUserProfile();
     fetchDropdownData();
   }, []);
+
+  // Fonction pour déterminer l'objectif de poids en fonction du poids actuel et du poids cible
+  const determineWeightGoalType = (currentWeight, targetWeight) => {
+    if (!currentWeight || !targetWeight) return "maintien";
+
+    const difference = targetWeight - currentWeight;
+
+    if (difference < -0.5) return "perte_de_poids";
+    if (difference > 0.5) return "prise_de_poids";
+    return "maintien";
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -64,8 +79,15 @@ export default function EditProfile() {
 
       // Initialize preferences form
       if (response.metrics && response.preferences) {
+        const currentWeight = response.metrics.currentWeight;
+        const targetWeight = response.metrics.targetWeight;
+
+        // Déterminer l'objectif de poids
+        const goalType = determineWeightGoalType(currentWeight, targetWeight);
+        setWeightGoalType(goalType);
+
         setPreferencesForm({
-          targetWeight: response.metrics.targetWeight,
+          targetWeight: targetWeight,
           sedentaryLevelId: response.preferences.sedentaryLevel?.id,
           nutritionalPlanId: response.preferences.nutritionalPlan?.id,
           dietId: response.preferences.diet?.id,
@@ -122,7 +144,20 @@ export default function EditProfile() {
   };
 
   const handlePreferencesChange = (field: string, value: any) => {
-    setPreferencesForm((prev) => ({ ...prev, [field]: value }));
+    setPreferencesForm((prev) => {
+      const newForm = { ...prev, [field]: value };
+
+      // Si le poids cible change, mettre à jour l'objectif de poids
+      if (field === "targetWeight" && userData?.metrics?.currentWeight) {
+        const newGoalType = determineWeightGoalType(
+          userData.metrics.currentWeight,
+          value
+        );
+        setWeightGoalType(newGoalType);
+      }
+
+      return newForm;
+    });
   };
 
   const toggleActivity = (activityId: number) => {
@@ -397,26 +432,20 @@ export default function EditProfile() {
                 <Text style={styles.sectionTitle}>Nutrition</Text>
 
                 <Text style={styles.fieldLabel}>Plan nutritionnel</Text>
+
+                {/* Utiliser le nouveau composant NutritionalPlansSelector */}
                 {loadingDropdowns ? (
                   <ActivityIndicator size="small" color={Colors.brandBlue[0]} />
                 ) : (
-                  nutritionalPlans.map((plan) => (
-                    <SelectableOption
-                      key={plan.id_repartition_nutritionnelle}
-                      title={plan.nom}
-                      subtitle={`${plan.pourcentage_glucides}% G, ${plan.pourcentage_proteines}% P, ${plan.pourcentage_lipides}% L`}
-                      selected={
-                        preferencesForm.nutritionalPlanId ===
-                        plan.id_repartition_nutritionnelle
-                      }
-                      onPress={() =>
-                        handlePreferencesChange(
-                          "nutritionalPlanId",
-                          plan.id_repartition_nutritionnelle
-                        )
-                      }
-                    />
-                  ))
+                  <NutritionalPlansSelector
+                    plans={nutritionalPlans}
+                    selectedPlanId={preferencesForm.nutritionalPlanId}
+                    onPlanSelected={(planId) =>
+                      handlePreferencesChange("nutritionalPlanId", planId)
+                    }
+                    isLoading={loadingDropdowns}
+                    userWeightGoal={weightGoalType}
+                  />
                 )}
 
                 <Text style={styles.fieldLabel}>Régime alimentaire</Text>
