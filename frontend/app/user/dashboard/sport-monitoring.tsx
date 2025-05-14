@@ -8,6 +8,7 @@ import {
   Switch,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -44,6 +45,7 @@ export default function SportMonitoring() {
   const [todaySession, setTodaySession] = useState<Session | null>(null);
   const [weekSessions, setWeekSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchSportData();
@@ -142,6 +144,15 @@ export default function SportMonitoring() {
       setTodaySession(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchSportData();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -339,7 +350,18 @@ export default function SportMonitoring() {
         </View>
       )}
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
+      >
         <Text style={styles.sectionTitle}>Ma séance du jour</Text>
         {isLoading ? (
           <PlaceholderCard />

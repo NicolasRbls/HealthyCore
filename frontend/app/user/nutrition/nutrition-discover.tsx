@@ -12,6 +12,7 @@ import {
   Modal,
   Dimensions,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -63,6 +64,7 @@ export default function NutritionDiscoverScreen() {
   }>({});
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     // In a real app, you would fetch this data with:
@@ -127,6 +129,15 @@ export default function NutritionDiscoverScreen() {
       console.error("Error fetching nutrition data:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchNutritionData();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -277,6 +288,14 @@ export default function NutritionDiscoverScreen() {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
       >
         {/* Featured Section */}
         <View style={styles.section}>

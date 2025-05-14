@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import imageMapping from "../../../constants/imageMapping";
 import { router } from "expo-router";
@@ -44,6 +45,16 @@ export default function SportDiscoverScreen() {
   );
   const [recommendedPrograms, setRecommendedPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchPrograms();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     fetchPrograms();
@@ -164,6 +175,14 @@ export default function SportDiscoverScreen() {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pour vous</Text>

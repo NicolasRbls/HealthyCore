@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -60,6 +61,7 @@ export default function NutritionMonitoring() {
     },
   });
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     // In a real app, you would fetch this data with:
@@ -161,6 +163,15 @@ export default function NutritionMonitoring() {
     });
 
     setFoodEntries(entries);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Helper function to get the correct image using a mapping approach
@@ -379,7 +390,17 @@ export default function NutritionMonitoring() {
         style={{ marginTop: Layout.spacing.md }}
       />
 
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
+      >
         <View style={styles.summarySection}>
           <Text style={styles.remainingText}>
             Vous pouvez encore manger{" "}
