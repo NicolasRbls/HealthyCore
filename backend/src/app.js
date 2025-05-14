@@ -11,7 +11,7 @@ const validationRoutes = require("./modules/validation/validation.routes");
 
 // Admin routes
 const adminUserRoutes = require("./modules/admin/user/admin.user.routes");
-const adminTagRoutes = require("./modules/admin/tag/admin.tag.routes");
+const adminTagRoutes = require("./modules/admin/tags/admin.tag.routes");
 const adminExerciseRoutes = require("./modules/admin/exercise/admin.exercise.routes");
 
 // openfoodfacts routes
