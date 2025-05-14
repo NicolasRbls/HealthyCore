@@ -8,9 +8,11 @@ const authRoutes = require("./modules/auth/auth.routes");
 const userRoutes = require("./modules/user/user.routes");
 const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
-const adminRoutes = require("./modules/admin/admin.routes");
-//const foodsRoutes = require("./modules/admin/foods/foods.routes");
 
+// Admin routes
+const adminUserRoutes = require("./modules/admin/user/admin.user.routes");
+const adminTagRoutes = require("./modules/admin/tag/admin.tag.routes");
+const adminExerciseRoutes = require("./modules/admin/exercise/admin.exercise.routes");
 
 // openfoodfacts routes
 const openFoodFactsRoutes = require("./modules/openfoodfacts/openfoodfacts.routes");
@@ -47,16 +49,17 @@ app.use("/api/user", userRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/validation", validationRoutes);
 
-// Error handling middleware (should be last)
-app.use(errorMiddleware);
 
 // Admin routes
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin/user", adminUserRoutes);
+app.use("/api/admin/tag", adminTagRoutes);
+app.use("/api/admin/exercise", adminExerciseRoutes);
 
 // Add OpenFoodFacts routes
 app.use("/api/openfoodfacts", openFoodFactsRoutes);
 
-// Add foods routes
-//app.use("/api/admin/foods", foodsRoutes);
+// Error handling middleware (should be last)
+app.use(errorMiddleware);
+
 
 module.exports = app;
