@@ -647,14 +647,11 @@ const generateWeekSchedule = (programSessions, sportFollowUps) => {
 
   // Date actuelle
   const today = new Date();
-  console.log("Date serveur actuelle:", today.toISOString());
-  console.log("Jour actuel (getDay):", today.getDay());
 
   // CORRECTION: Ajuster le jour de la semaine pour tenir compte du décalage
   // Dans votre environnement, les jours semblent décalés d'une unité
   // (aujourd'hui est mardi mais getDay() retourne 3 qui est mercredi)
   const adjustedDay = (today.getDay() - 1 + 7) % 7; // Ajustement cyclique (-1)
-  console.log("Jour ajusté:", adjustedDay); // Devrait maintenant donner 2 pour mardi
 
   // Trouver le lundi en utilisant le jour ajusté
   const mondayOffset = adjustedDay === 0 ? -6 : 1 - adjustedDay;
@@ -677,8 +674,6 @@ const generateWeekSchedule = (programSessions, sportFollowUps) => {
 
     // Utiliser l'index i pour les jours de la semaine puisque nous commençons par lundi
     const dayName = daysOfWeek[i];
-
-    console.log(`Jour ${i}: ${dateString} est un ${dayName}`);
 
     // Déterminer la session pour ce jour
     let sessionForDay = null;
@@ -876,12 +871,6 @@ const getTodaySession = async (userId) => {
 
   // Appliquer le même ajustement que dans generateWeekSchedule
   const adjustedDay = (now.getDay() - 1 + 7) % 7;
-  console.log(
-    "getTodaySession - Jour actuel:",
-    now.getDay(),
-    "Jour ajusté:",
-    adjustedDay
-  );
 
   // 1. Chercher une séance déjà complétée aujourd'hui
   const completedToday = await prisma.suivis_sportifs.findFirst({
@@ -902,7 +891,6 @@ const getTodaySession = async (userId) => {
   });
 
   if (completedToday) {
-    console.log("getTodaySession - Séance déjà complétée aujourd'hui trouvée");
     return {
       id: completedToday.seances.id_seance,
       name: completedToday.seances.nom,
@@ -957,7 +945,6 @@ const getTodaySession = async (userId) => {
     !activeUserProgram ||
     activeUserProgram.programmes.seances_programmes.length === 0
   ) {
-    console.log("getTodaySession - Aucun programme actif trouvé");
     return null;
   }
 
@@ -976,8 +963,6 @@ const getTodaySession = async (userId) => {
   const mondayOffset = adjustedDay === 0 ? -6 : 1 - adjustedDay;
   const daysSinceMonday = adjustedDay; // Le jour actuel ajusté représente le nombre de jours depuis lundi
 
-  console.log("getTodaySession - Jours depuis lundi:", daysSinceMonday);
-
   // Trouver la séance programmée pour aujourd'hui (si elle existe)
   // Basé sur la logique de distribution des séances dans generateWeekSchedule
   const todayProgrammedSession =
@@ -987,19 +972,11 @@ const getTodaySession = async (userId) => {
         ]
       : null;
 
-  console.log(
-    "getTodaySession - Session programmée pour aujourd'hui:",
-    todayProgrammedSession ? todayProgrammedSession.id_seance : "aucune"
-  );
-
   // Si nous avons une séance programmée pour aujourd'hui qui n'est pas complétée
   if (
     todayProgrammedSession &&
     !completedSessionIds.includes(todayProgrammedSession.id_seance)
   ) {
-    console.log(
-      "getTodaySession - Retournant la séance programmée pour aujourd'hui"
-    );
     return {
       id: todayProgrammedSession.seances.id_seance,
       name: todayProgrammedSession.seances.nom,
@@ -1028,11 +1005,9 @@ const getTodaySession = async (userId) => {
   );
 
   if (!nextSession) {
-    console.log("getTodaySession - Toutes les séances sont complétées");
     return null;
   }
 
-  console.log("getTodaySession - Retournant la prochaine séance non complétée");
   return {
     id: nextSession.seances.id_seance,
     name: nextSession.seances.nom,

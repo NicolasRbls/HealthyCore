@@ -57,8 +57,6 @@ export default function SportMonitoring() {
         apiService.get("/data/programs/sport-progress"),
         apiService.get("/data/programs/today-session"),
       ]);
-      console.log("Sport Progress Data:", sportProgressData);
-      console.log("Today Session Data:", todaySessionData);
 
       // Obtenir la date du jour pour comparer
       const today = new Date();
