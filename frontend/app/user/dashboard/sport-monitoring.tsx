@@ -24,7 +24,7 @@ interface Session {
   date: string;
   done: boolean;
   icon?: string;
-  isDaySession?: boolean; // Nouvel attribut pour marquer les séances du jour
+  isDaySession?: boolean;
 }
 
 interface WeekDay {
@@ -52,10 +52,18 @@ export default function SportMonitoring() {
   const fetchSportData = async () => {
     setIsLoading(true);
     try {
-      // Récupérer le suivi sportif de l'utilisateur
-      const sportProgressData = await apiService.get(
-        "/data/programs/sport-progress"
-      );
+      // Récupérer les deux données en parallèle pour de meilleures performances
+      const [sportProgressData, todaySessionData] = await Promise.all([
+        apiService.get("/data/programs/sport-progress"),
+        apiService.get("/data/programs/today-session"),
+      ]);
+      console.log("Sport Progress Data:", sportProgressData);
+      console.log("Today Session Data:", todaySessionData);
+
+      // Obtenir la date du jour pour comparer
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
 
       // Si l'utilisateur a un programme actif
       if (sportProgressData.activeProgram) {
@@ -74,20 +82,16 @@ export default function SportMonitoring() {
           sportProgressData.weeklySchedule &&
           sportProgressData.weeklySchedule.length > 0
         ) {
-          // Obtenir la date du jour pour comparer
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
-
+          // Traiter l'emploi du temps hebdomadaire
           const sessionList = sportProgressData.weeklySchedule
             .filter((day: WeekDay) => day.session !== null)
             .map((day: WeekDay) => {
               // Vérifier si c'est la séance du jour
-              const dayDate = new Date(day.date);
-              dayDate.setHours(0, 0, 0, 0);
               const isToday = day.date === todayStr;
 
               // Formater la date en format lisible
+              const dayDate = new Date(day.date);
+              dayDate.setHours(0, 0, 0, 0);
               const formattedDate = dayDate.toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "numeric",
@@ -102,14 +106,17 @@ export default function SportMonitoring() {
                 isDaySession: isToday,
               };
             });
+
           setWeekSessions(sessionList);
         }
+      } else {
+        // Réinitialiser les états si aucun programme actif
+        setCurrentProgram("");
+        setProgramDescription("");
+        setWeekSessions([]);
       }
 
-      // Récupérer la séance du jour
-      const todaySessionData = await apiService.get(
-        "/data/programs/today-session"
-      );
+      // Traiter la séance du jour depuis todaySessionData
       if (todaySessionData.todaySession) {
         const todayDate = new Date();
         const formattedDate = todayDate.toLocaleDateString("fr-FR", {
@@ -125,39 +132,14 @@ export default function SportMonitoring() {
           icon: getSessionIconType(todaySessionData.todaySession.name),
           isDaySession: true,
         });
-      }
-
-      // Vérifier si des séances du jour existent dans weekSessions
-      // mais ne sont pas encore complétées
-      if (
-        todaySessionData.todaySession &&
-        !todaySessionData.todaySession.completed
-      ) {
-        const todaySessionInWeek = weekSessions.find(
-          (s) => s.isDaySession && s.id === todaySessionData.todaySession.id
-        );
-
-        if (todaySessionInWeek && !todaySessionInWeek.done) {
-          // On pourrait proposer de compléter automatiquement via une alerte
-          setTimeout(() => {
-            Alert.alert(
-              "Séance du jour",
-              `Voulez-vous marquer "${todaySessionData.todaySession.name}" comme terminée?`,
-              [
-                { text: "Non", style: "cancel" },
-                {
-                  text: "Oui",
-                  onPress: () =>
-                    toggleSessionDone(todaySessionData.todaySession.id, null),
-                },
-              ]
-            );
-          }, 1000);
-        }
+      } else {
+        setTodaySession(null);
       }
     } catch (error) {
       console.error("Error fetching sport data:", error);
       // En cas d'erreur, charger des données par défaut (vides)
+      setCurrentProgram("");
+      setProgramDescription("");
       setWeekSessions([]);
       setTodaySession(null);
     } finally {
@@ -370,6 +352,7 @@ export default function SportMonitoring() {
             Aucune séance prévue aujourd'hui
           </Text>
         )}
+
         <Text style={styles.sectionTitle}>Ma semaine</Text>
         {isLoading ? (
           <>
@@ -380,8 +363,8 @@ export default function SportMonitoring() {
         ) : weekSessions.length > 0 ? (
           weekSessions
             .filter((session) =>
-              todaySession ? session.name !== todaySession.name : true
-            ) // Filtrer pour exclure les séances avec le même nom que la séance du jour
+              todaySession ? session.id !== todaySession.id : true
+            ) // Filtrer pour exclure la séance du jour déjà affichée plus haut
             .map((session) => (
               <SessionCard key={session.id} session={session} />
             ))

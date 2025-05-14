@@ -14,14 +14,11 @@ import { useAuth } from "../../../context/AuthContext";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
-import * as SecureStore from "expo-secure-store";
 
 // Import services
 import authService from "../../../services/auth.service";
 import dataService from "../../../services/data.service";
-
-// Import temp data for now
-import tempData from "../../../assets/temp.json";
+import apiService from "../../../services/api.service";
 
 // Type definitions
 interface NutritionSummary {
@@ -34,6 +31,17 @@ interface DailySession {
   id: number;
   name: string;
   description: string;
+}
+
+interface WeekDay {
+  day: string;
+  date: string;
+  session: {
+    id: number;
+    name: string;
+    order: number;
+    completed: boolean;
+  } | null;
 }
 
 interface Objective {
@@ -78,41 +86,52 @@ export default function Dashboard() {
         preferencesData.preferences.calories_quotidiennes
       );
 
-      // 3. Essayer de charger la séance du jour
+      // 3. Charger les données sportives à partir de sport-progress uniquement
       try {
-        const programsData = await fetch(
-          `${
-            process.env.EXPO_PUBLIC_API_URL || "http://192.168.56.1:5000/api"
-          }/data/programs/today-session`,
-          {
-            headers: {
-              Authorization: `Bearer ${await SecureStore.getItemAsync(
-                "token"
-              )}`,
-            },
-          }
-        ).then((res) => res.json());
+        const sportProgressData = await apiService.get(
+          "/data/programs/sport-progress"
+        );
 
-        if (programsData.data.todaySession) {
-          setTodaySession({
-            id: programsData.data.todaySession.id,
-            name: programsData.data.todaySession.name.split(" ")[0],
-            description: programsData.data.todaySession.exercises
-              ? `(${extractMuscleGroups(
-                  programsData.data.todaySession.exercises
-                )})`
-              : "",
-          });
+        // Obtenir la date du jour pour comparer
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+
+        // Vérifier s'il y a une séance pour aujourd'hui dans le planning hebdomadaire
+        if (
+          sportProgressData.weeklySchedule &&
+          sportProgressData.weeklySchedule.length > 0
+        ) {
+          const todayScheduleItem = sportProgressData.weeklySchedule.find(
+            (day: WeekDay) => day.date === todayStr && day.session !== null
+          );
+
+          if (todayScheduleItem && todayScheduleItem.session) {
+            setTodaySession({
+              id: todayScheduleItem.session.id,
+              name: todayScheduleItem.session.name.split("(")[0],
+              description: todayScheduleItem.session.name
+                .split("(")[1]
+                .replace(")", ""),
+            });
+          } else {
+            // Si pas de séance pour aujourd'hui dans le planning
+            setTodaySession({
+              id: 0,
+              name: "Repos",
+              description: "Aucune séance prévue",
+            });
+          }
         } else {
-          // Si pas de séance, mettre une séance factice reconnaissable
+          // Si aucun planning hebdomadaire
           setTodaySession({
             id: 0,
             name: "Repos",
-            description: "(Aucune séance prévue)",
+            description: "Aucune séance prévue",
           });
         }
       } catch (error) {
-        console.error("Error loading today's session:", error);
+        console.error("Error loading sport progress data:", error);
         // Fallback sur les données mockées
         mockTodaySession();
       }
@@ -139,11 +158,6 @@ export default function Dashboard() {
     } finally {
       setRefreshing(false);
     }
-  };
-
-  const extractMuscleGroups = (exercises) => {
-    // Fonction d'extraction de groupes musculaires
-    return "Pectoraux, Triceps, Épaules";
   };
 
   const mockNutritionalData = (totalCalorieGoal) => {
