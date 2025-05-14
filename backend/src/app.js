@@ -9,7 +9,7 @@ const userRoutes = require("./modules/user/user.routes");
 const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
-const foodsRoutes = require("./modules/admin/foods/foods.routes");
+//const foodsRoutes = require("./modules/admin/foods/foods.routes");
 
 
 // openfoodfacts routes
@@ -57,6 +57,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/openfoodfacts", openFoodFactsRoutes);
 
 // Add foods routes
-app.use("/api/admin/foods", foodsRoutes);
+//app.use("/api/admin/foods", foodsRoutes);
 
 module.exports = app;

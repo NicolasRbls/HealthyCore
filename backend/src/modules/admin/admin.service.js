@@ -109,7 +109,6 @@ const getUserPreferencesById = async (userId) => {
 
 module.exports = {
   getUserCount,
-  getPaginatedUsers,
   deleteUser,
   // Récupérer les informations d'un détaillées d'un utilisateur par son ID
   getUserInfosById,

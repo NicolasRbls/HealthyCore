@@ -9,9 +9,9 @@ const router = express.Router();
 
 
 // Mettre à jour un utilisateur
-router.put("/users/:id", adminController.updateContent);
+//router.put("/users/:id", adminController.updateContent);
 
 // Supprimer un utilisateur
-router.delete("/users/:id", adminController.deleteUser);
+//router.delete("/users/:id", adminController.deleteUser);
 
 module.exports = router;
