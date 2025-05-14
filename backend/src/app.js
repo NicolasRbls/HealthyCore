@@ -48,18 +48,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/validation", validationRoutes);
+app.use("/api/openfoodfacts", openFoodFactsRoutes);
 
-
-// Admin routes
+// Configure Admin routes
 app.use("/api/admin/user", adminUserRoutes);
 app.use("/api/admin/tag", adminTagRoutes);
 app.use("/api/admin/exercise", adminExerciseRoutes);
 
-// Add OpenFoodFacts routes
-app.use("/api/openfoodfacts", openFoodFactsRoutes);
 
 // Error handling middleware (should be last)
 app.use(errorMiddleware);
-
 
 module.exports = app;
