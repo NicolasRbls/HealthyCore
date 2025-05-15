@@ -2,6 +2,7 @@ const axios = require('axios');
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+const numberedvalues = ['calories', 'proteines', 'glucides', 'lipides', 'temps_preparation'];
 
 /**
  * Récupère tous les aliments avec filtrage et pagination
@@ -209,8 +210,19 @@ const createFood = async (foodData) => {
   return newFood;
 }
 
+const updateFood = async (foodId, foodData) => {
+
+  const updatedFood = await prisma.aliments.update({
+    where: { id_aliment: foodId },
+    data: foodData
+  });
+
+  return updatedFood;
+}
+
 module.exports = {
     getAllFoods,
     getFoodById,
-    createFood
+    createFood,
+    updateFood
 };

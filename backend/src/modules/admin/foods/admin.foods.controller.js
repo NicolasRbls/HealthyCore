@@ -4,6 +4,7 @@ const { AppError } = require('../../../utils/response.utils');
 
 const validTypes   = ['produit', 'recette']
 const validSources = ['user', 'admin', 'api']
+const numberedvalues = ['calories', 'proteines', 'glucides', 'lipides', 'temps_preparation'];
 
 
 exports.getFoods = catchAsync(async (req, res) => {
@@ -112,5 +113,40 @@ exports.createFood = catchAsync(async (req, res) => {
         status: 'success',
         data: food,
         message: 'Aliment créé avec succès'
+    });
+});
+
+exports.updateFood = catchAsync(async (req, res) => {
+    const foodId = parseInt(req.params.foodId);
+    var foodData = req.query;
+    
+    if (!foodId || isNaN(foodId)) {
+        throw new AppError('L\'id de l\'aliment est invalide', 400, 'INVALID_FOOD_ID');
+    }
+
+    if (!foodData || Object.keys(foodData).length === 0) {
+        throw new AppError('Les données de l\'aliment sont requises', 400, 'MISSING_FOOD_DATA');
+    }
+
+    // Formattage des types
+    for (const key in foodData) {
+        if (numberedvalues.includes(key)) {
+          if (foodData[key] === "calories") {
+            foodData[key] = parseInt(foodData[key]);
+          } else {
+            foodData[key] = parseFloat(foodData[key]);
+          }
+        }
+    }
+
+    const updatedFood = await adminFoodsService.updateFood(foodId, foodData);
+    if (!updatedFood) {
+          throw new AppError('Erreur lors de la mise à jour de l\'aliment', 500, 'FOOD_UPDATE_ERROR');
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: updatedFood,
+        message: 'Aliment mis à jour avec succès'
     });
 });
