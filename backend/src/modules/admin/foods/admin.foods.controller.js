@@ -69,30 +69,44 @@ exports.getFoodById = catchAsync(async (req, res) => {
     });
 });
 
-exports.createFood = catchAsync(async (req, res) => {
-    const { name, type, source, image, preparationTime, barcode } = req.body;
-    const tags = req.body.tags || [];
 
-    if (!name || !type || !source) {
-        throw new AppError('Nom, type et source de l\'aliment sont requis', 400, 'MISSING_FOOD_INFO');
+
+exports.createFood = catchAsync(async (req, res) => {
+
+    aliment = req.query;
+    const { name, type, tags, barcode, userId } = req.query;
+
+    if (tags && tags.length > 0) {
+        aliment.tags = tags.split('-').map(tag => parseInt(tag)) || []; 
+    }
+
+    if (!userId) {
+        throw new AppError('L\'id de l\'utilisateur est requis', 400, 'MISSING_USER_ID');
+    }
+
+    if (type == 'produit' && !barcode) {
+        throw new AppError('Le code-barres est requis pour les aliments', 400, 'MISSING_BARCODE');
+    }
+
+    if (!name || !type) {
+        throw new AppError('Nom et type de l\'aliment sont requis', 400, 'MISSING_FOOD_INFO');
     }
 
     if (type && !validTypes.includes(type)) {
       throw new AppError('Type d\'aliment invalide', 400, 'INVALID_FOOD_TYPE');
     }
-    if (source && !validSources.includes(source)) {
-      throw new AppError('Source d\'aliment invalide', 400, 'INVALID_FOOD_SOURCE');
-    }
 
     const food = await adminFoodsService.createFood({
-        name,
-        type,
-        source,
-        image,
-        preparationTime,
-        barcode,
-        tags
+       aliment 
     });
+
+    if (food === "EXISTING_FOOD") {
+        throw new AppError('L\'aliment existe déjà', 409, 'EXISTING_FOOD');
+    }
+
+    if (!food) {
+        throw new AppError('Erreur lors de la création de l\'aliment', 500, 'FOOD_CREATION_ERROR');
+    }
 
     res.status(201).json({
         status: 'success',

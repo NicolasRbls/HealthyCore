@@ -167,7 +167,50 @@ const getFoodById = async (foodId) => {
   }
 }
 
+const createFood = async (foodData) => {
+  const newAliment = foodData.aliment;
+  const tagsAdded = newAliment.tags || [];
+
+  if (newAliment.type == 'produit') {
+    const existingFood = await prisma.aliments.findFirst({
+      where: { code_barres: newAliment.barcode}
+    });
+
+    if (existingFood) {
+      return "EXISTING_FOOD";
+    }
+  
+  }
+
+  // Création de l'aliment
+  const newFood = await prisma.aliments.create({
+    data: {
+      nom: newAliment.name,
+      type: newAliment.type,
+      source: "admin",
+      image: newAliment.image || "",
+      calories: newAliment.calories || 0,
+      proteines: newAliment.proteins || 0,
+      glucides: newAliment.carbs || 0,
+      lipides: newAliment.fats || 0,
+      description: newAliment.description || null,
+      ingredients: newAliment.ingredients || null,
+      temps_preparation: newAliment.preparationTime || 0,
+      code_barres: newAliment.barcode || null,
+      aliments_tags: {
+        create: tagsAdded.map(tagId => ({
+          id_tag: tagId
+        }))
+      },
+      id_user: parseInt(newAliment.userId)
+    }
+  });
+
+  return newFood;
+}
+
 module.exports = {
     getAllFoods,
-    getFoodById
+    getFoodById,
+    createFood
 };
