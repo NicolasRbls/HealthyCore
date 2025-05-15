@@ -13,6 +13,7 @@ const validationRoutes = require("./modules/validation/validation.routes");
 const adminUserRoutes = require("./modules/admin/user/admin.user.routes");
 const adminTagRoutes = require("./modules/admin/tags/admin.tag.routes");
 const adminExerciseRoutes = require("./modules/admin/exercise/admin.exercise.routes");
+const adminFoodsRoutes = require("./modules/admin/foods/admin.foods.routes");
 
 // openfoodfacts routes
 const openFoodFactsRoutes = require("./modules/openfoodfacts/openfoodfacts.routes");
@@ -54,6 +55,7 @@ app.use("/api/openfoodfacts", openFoodFactsRoutes);
 app.use("/api/admin/user", adminUserRoutes);
 app.use("/api/admin/tag", adminTagRoutes);
 app.use("/api/admin/exercise", adminExerciseRoutes);
+app.use("/api/admin/foods", adminFoodsRoutes);
 
 
 // Error handling middleware (should be last)
