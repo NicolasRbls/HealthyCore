@@ -61,7 +61,7 @@ export default function LoginPage() {
       console.log("Connexion avec:", data);
       localStorage.setItem("adminToken", "fake-token-for-development");
 
-      router.push("/");
+      router.push("/dashboard");
     } catch (error) {
       console.error("Erreur de connexion:", error);
     } finally {
@@ -74,7 +74,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md m-auto">
         <div className="p-8 bg-white rounded-xl shadow-md">
           <div className="mb-6 text-center">
-            <h1 className="text-3xl font-bold text-brand-gradient">FitCoach</h1>
+            <h1 className="text-3xl font-bold text-brand-gradient">
+              HealthyCore
+            </h1>
             <p className="text-gray-600 mt-2">Connexion à l'administration</p>
           </div>
 
