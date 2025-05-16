@@ -100,32 +100,36 @@ export default function UsersPage() {
     }
   };
 
-  const columns = [
+  const columns: {
+    header: string;
+    accessorKey: keyof User;
+    cell?: (item: User) => React.ReactNode;
+  }[] = [
     {
       header: "ID",
-      accessorKey: "id_user" as keyof User,
+      accessorKey: "id_user",
     },
     {
       header: "Nom",
-      accessorKey: "nom" as keyof User,
-      cell: (user: User) => (
+      accessorKey: "nom",
+      cell: (item: User) => (
         <div className="font-medium">
-          {user.prenom} {user.nom}
+          {item.prenom} {item.nom}
         </div>
       ),
     },
     {
       header: "Email",
-      accessorKey: "email" as keyof User,
+      accessorKey: "email",
     },
     {
       header: "Genre",
-      accessorKey: "sexe" as keyof User,
-      cell: (user: User) => (
+      accessorKey: "sexe",
+      cell: (item: User) => (
         <Badge variant="outline">
-          {user.sexe === "H"
+          {item.sexe === "H"
             ? "Homme"
-            : user.sexe === "F"
+            : item.sexe === "F"
             ? "Femme"
             : "Non spécifié"}
         </Badge>
@@ -133,38 +137,38 @@ export default function UsersPage() {
     },
     {
       header: "Date d'inscription",
-      accessorKey: "cree_a" as keyof User,
-      cell: (user: User) => (
+      accessorKey: "cree_a",
+      cell: (item: User) => (
         <span>
-          {format(new Date(user.cree_a), "dd MMM yyyy", { locale: fr })}
+          {format(new Date(item.cree_a), "dd MMM yyyy", { locale: fr })}
         </span>
       ),
     },
     {
       header: "Rôle",
-      accessorKey: "role" as keyof User,
-      cell: (user: User) => (
-        <Badge variant={user.role === "admin" ? "destructive" : "default"}>
-          {user.role === "admin" ? "Admin" : "Utilisateur"}
+      accessorKey: "role",
+      cell: (item: User) => (
+        <Badge variant={item.role === "admin" ? "destructive" : "default"}>
+          {item.role === "admin" ? "Admin" : "Utilisateur"}
         </Badge>
       ),
     },
     {
       header: "Actions",
-      accessorKey: "actions",
-      cell: (user: User) => (
+      accessorKey: "id_user",
+      cell: (item: User) => (
         <div className="flex space-x-2">
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handleViewUser(user)}
+            onClick={() => handleViewUser(item)}
           >
             <Eye className="h-4 w-4" />
           </Button>
           <Button
             variant="destructive"
             size="icon"
-            onClick={() => handleDeleteClick(user)}
+            onClick={() => handleDeleteClick(item)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

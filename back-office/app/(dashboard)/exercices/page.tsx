@@ -253,30 +253,32 @@ export default function ExercisesPage() {
     setPagination((prev) => ({ ...prev, limit: pageSize, currentPage: 1 }));
   };
 
-  const columns = [
+  const columns: {
+    header: string;
+    accessorKey: keyof Exercise;
+    cell?: (item: Exercise) => React.ReactNode;
+  }[] = [
     {
       header: "ID",
-      accessorKey: "id_exercice" as keyof Exercise,
+      accessorKey: "id_exercice",
     },
     {
       header: "Nom",
-      accessorKey: "nom" as keyof Exercise,
-      cell: (exercise: Exercise) => (
-        <div className="font-medium">{exercise.nom}</div>
-      ),
+      accessorKey: "nom",
+      cell: (item: Exercise) => <div className="font-medium">{item.nom}</div>,
     },
     {
       header: "Équipement",
-      accessorKey: "equipement" as keyof Exercise,
-      cell: (exercise: Exercise) => <div>{exercise.equipement || "Aucun"}</div>,
+      accessorKey: "equipement",
+      cell: (item: Exercise) => <div>{item.equipement || "Aucun"}</div>,
     },
     {
       header: "Tags",
-      accessorKey: "tags",
-      cell: (exercise: Exercise) => (
+      accessorKey: "id_exercice",
+      cell: (item: Exercise) => (
         <div className="flex flex-wrap gap-1">
-          {exercise.tags &&
-            exercise.tags.map((tag) => (
+          {item.tags &&
+            item.tags.map((tag) => (
               <Badge key={tag.id_tag} variant="outline" className="mr-1">
                 {tag.nom}
               </Badge>
@@ -286,27 +288,27 @@ export default function ExercisesPage() {
     },
     {
       header: "Actions",
-      accessorKey: "actions",
-      cell: (exercise: Exercise) => (
+      accessorKey: "id_exercice",
+      cell: (item: Exercise) => (
         <div className="flex space-x-2">
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handleViewExercise(exercise)}
+            onClick={() => handleViewExercise(item)}
           >
             <Eye className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handleEditClick(exercise)}
+            onClick={() => handleEditClick(item)}
           >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="destructive"
             size="icon"
-            onClick={() => handleDeleteClick(exercise)}
+            onClick={() => handleDeleteClick(item)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

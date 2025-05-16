@@ -159,39 +159,39 @@ export default function SessionsPage() {
     setPagination((prev) => ({ ...prev, limit: pageSize, currentPage: 1 }));
   };
 
-  const columns = [
+  const columns: {
+    header: string;
+    accessorKey: keyof Session;
+    cell?: (item: Session) => React.ReactNode;
+  }[] = [
     {
       header: "ID",
-      accessorKey: "id_seance" as keyof Session,
+      accessorKey: "id_seance",
     },
     {
       header: "Nom",
-      accessorKey: "nom" as keyof Session,
-      cell: (session: Session) => (
-        <div className="font-medium">{session.nom}</div>
-      ),
+      accessorKey: "nom",
+      cell: (item: Session) => <div className="font-medium">{item.nom}</div>,
     },
     {
       header: "Exercices",
-      accessorKey: "exerciseCount" as keyof Session,
-      cell: (session: Session) => (
-        <div>{session.exerciseCount || 0} exercices</div>
+      accessorKey: "id_seance",
+      cell: (item: Session) => (
+        <div>{(item as any).exerciseCount || 0} exercices</div>
       ),
     },
     {
       header: "Créée par",
-      accessorKey: "createdBy",
-      cell: (session: Session) => (
-        <div>{session.createdBy?.name || "Admin"}</div>
-      ),
+      accessorKey: "id_seance",
+      cell: (item: Session) => <div>{item.createdBy?.name || "Admin"}</div>,
     },
     {
       header: "Tags",
-      accessorKey: "tags",
-      cell: (session: Session) => (
+      accessorKey: "id_seance",
+      cell: (item: Session) => (
         <div className="flex flex-wrap gap-1">
-          {session.tags &&
-            session.tags.map((tag) => (
+          {item.tags &&
+            item.tags.map((tag) => (
               <Badge key={tag.id_tag} variant="outline" className="mr-1">
                 {tag.nom}
               </Badge>
@@ -201,8 +201,8 @@ export default function SessionsPage() {
     },
     {
       header: "Actions",
-      accessorKey: "actions",
-      cell: (session: Session) => (
+      accessorKey: "id_seance",
+      cell: (item: Session) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -211,17 +211,17 @@ export default function SessionsPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => handleViewSession(session)}>
+            <DropdownMenuItem onClick={() => handleViewSession(item)}>
               <Eye className="mr-2 h-4 w-4" />
               Voir les détails
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditSession(session)}>
+            <DropdownMenuItem onClick={() => handleEditSession(item)}>
               <Edit className="mr-2 h-4 w-4" />
               Modifier
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => handleDeleteClick(session)}
+              onClick={() => handleDeleteClick(item)}
               className="text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />

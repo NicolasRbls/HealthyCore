@@ -196,48 +196,52 @@ export default function TagsPage() {
     setPagination((prev) => ({ ...prev, limit: pageSize, currentPage: 1 }));
   };
 
-  const columns = [
+  const columns: {
+    header: string;
+    accessorKey: keyof Tag;
+    cell?: (item: Tag) => React.ReactNode;
+  }[] = [
     {
       header: "ID",
-      accessorKey: "id_tag" as keyof Tag,
+      accessorKey: "id_tag",
     },
     {
       header: "Nom",
-      accessorKey: "nom" as keyof Tag,
-      cell: (tag: Tag) => <div className="font-medium">{tag.nom}</div>,
+      accessorKey: "nom",
+      cell: (item: Tag) => <div className="font-medium">{item.nom}</div>,
     },
     {
       header: "Type",
-      accessorKey: "type" as keyof Tag,
-      cell: (tag: Tag) => (
-        <Badge variant={tag.type === "sport" ? "default" : "secondary"}>
-          {tag.type === "sport" ? "Sport" : "Aliment"}
+      accessorKey: "type",
+      cell: (item: Tag) => (
+        <Badge variant={item.type === "sport" ? "default" : "secondary"}>
+          {item.type === "sport" ? "Sport" : "Aliment"}
         </Badge>
       ),
     },
     {
       header: "Actions",
-      accessorKey: "actions",
-      cell: (tag: Tag) => (
+      accessorKey: "id_tag",
+      cell: (item: Tag) => (
         <div className="flex space-x-2">
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handleViewTag(tag)}
+            onClick={() => handleViewTag(item)}
           >
             <Eye className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => handleEditClick(tag)}
+            onClick={() => handleEditClick(item)}
           >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="destructive"
             size="icon"
-            onClick={() => handleDeleteClick(tag)}
+            onClick={() => handleDeleteClick(item)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
