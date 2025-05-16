@@ -116,15 +116,15 @@ export default function ProgramsPage() {
   };
 
   const handleViewProgram = (program: Program) => {
-    router.push(`/programs/${program.id_programme}`);
+    router.push(`/dashboard/programs/${program.id_programme}`);
   };
 
   const handleEditProgram = (program: Program) => {
-    router.push(`/programs/${program.id_programme}/edit`);
+    router.push(`/dashboard/programs/${program.id_programme}/edit`);
   };
 
   const handleCreateProgram = () => {
-    router.push("/programs/create");
+    router.push("/dashboard/programs/create");
   };
 
   const handleDeleteClick = (program: Program) => {
@@ -235,7 +235,7 @@ export default function ProgramsPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Programmes"
-          description={`Total: ${pagination.total} programme${
+          description={`Total : ${pagination.total} programme${
             pagination.total > 1 ? "s" : ""
           }`}
           actionLabel="Ajouter un programme"
@@ -251,7 +251,7 @@ export default function ProgramsPage() {
               <SelectValue placeholder="Filtrer par tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les tags</SelectItem>
+              <SelectItem value="all">Tous les tags</SelectItem>
               {tags.map((tag) => (
                 <SelectItem key={tag.id_tag} value={tag.id_tag.toString()}>
                   {tag.nom}

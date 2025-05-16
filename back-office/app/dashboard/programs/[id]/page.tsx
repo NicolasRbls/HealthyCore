@@ -63,7 +63,7 @@ export default function ProgramDetailPage() {
   };
 
   const handleEditClick = () => {
-    router.push(`/programs/${programId}/edit`);
+    router.push(`/dashboard/programs/${programId}/edit`);
   };
 
   const handleDeleteClick = () => {
@@ -74,14 +74,14 @@ export default function ProgramDetailPage() {
     try {
       await programService.deleteProgram(programId);
       setIsDeleteDialogOpen(false);
-      router.push("/programs");
+      router.push("/dashboard/programs");
     } catch (error) {
       console.error("Erreur lors de la suppression du programme:", error);
     }
   };
 
   const handleViewSession = (sessionId: number) => {
-    router.push(`/sessions/${sessionId}`);
+    router.push(`/dashboard/sessions/${sessionId}`);
   };
 
   if (isLoading) {
@@ -113,7 +113,7 @@ export default function ProgramDetailPage() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => router.push("/programs")}
+                onClick={() => router.push("/dashboard/programs")}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour à la liste
@@ -131,7 +131,10 @@ export default function ProgramDetailPage() {
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => router.push("/programs")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/programs")}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour à la liste
           </Button>
