@@ -239,12 +239,6 @@ export default function ProfileScreen() {
                   : "-"}
               </Text>
             </View>
-            <View style={styles.goalItem}>
-              <Text style={styles.goalLabel}>Séances par semaine</Text>
-              <Text style={styles.goalValue}>
-                {userData?.metrics?.sessionsPerWeek || "-"}
-              </Text>
-            </View>
           </Card>
 
           {/* Progress Stats Card */}
