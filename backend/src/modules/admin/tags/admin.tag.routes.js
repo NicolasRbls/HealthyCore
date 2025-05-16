@@ -4,10 +4,10 @@ const { isAdmin } = require("../../auth/auth.middleware");
 
 const router = express.Router();
 
-router.get("/", adminTagController.getAllTags);
-router.put("/:id_tag", adminTagController.updateTag);
-router.post("/", adminTagController.createTag);
-router.delete("/:id_tag", adminTagController.deleteTag);
-router.get("/:id_tag", adminTagController.getTagById);
+router.get("/", isAdmin, adminTagController.getAllTags);
+router.put("/:id_tag", isAdmin, adminTagController.updateTag);
+router.post("/", isAdmin, adminTagController.createTag);
+router.delete("/:id_tag", isAdmin, adminTagController.deleteTag);
+router.get("/:id_tag", isAdmin, adminTagController.getTagById);
 
 module.exports = router;
