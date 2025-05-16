@@ -238,6 +238,158 @@ const searchFoodInOpenFoodFactsAndSave = async (searchTerm) => {
   }
 }
 
+const getNutritionSummary = async (userId) => {
+  // Récupérer la préférence active de l'utilisateur (supposé 1 seule active)
+  const preference = await prisma.preferences.findFirst({
+    where: { id_user: userId },
+    include: {
+      repartitions_nutritionnelles: true
+    }
+  });
+
+  if (!preference) {
+    throw new Error('Préférences nutritionnelles non définies pour cet utilisateur');
+  }
+
+  // Objectifs
+  const calorieGoal = Number(preference.calories_quotidiennes);
+  const rep = preference.repartitions_nutritionnelles;
+  const proteinGoal = Math.round(calorieGoal * Number(rep.pourcentage_proteines) / 4 / 100);
+  const carbGoal = Math.round(calorieGoal * Number(rep.pourcentage_glucides) / 4 / 100);
+  const fatGoal = Math.round(calorieGoal * Number(rep.pourcentage_lipides) / 9 / 100);
+
+  // Début et fin de la journée
+  const today = new Date();
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+  // Récupérer les suivis nutritionnels du jour
+  const suivis = await prisma.suivis_nutritionnels.findMany({
+    where: {
+      id_user: userId,
+      date: {
+        gte: startOfDay,
+        lte: endOfDay
+      }
+    },
+    include: {
+      aliments: true
+    }
+  });
+
+  // Calcul des totaux consommés
+  let caloriesConsumed = 0, proteins = 0, carbs = 0, fats = 0;
+  for (const suivi of suivis) {
+    const q = suivi.quantite || 1;
+    const alim = suivi.aliments;
+    if (!alim) continue;
+    caloriesConsumed += Number(alim.calories) * q;
+    proteins += Number(alim.proteines) * q;
+    carbs += Number(alim.glucides) * q;
+    fats += Number(alim.lipides) * q;
+  }
+
+  // Pourcentages
+  const percentCompleted = (value, goal) => goal > 0 ? Math.round((value / goal) * 100) : 0;
+
+  return {
+    calorieGoal,
+    caloriesConsumed,
+    caloriesRemaining: calorieGoal - caloriesConsumed,
+    percentCompleted: percentCompleted(caloriesConsumed, calorieGoal),
+    macronutrients: {
+      proteins: {
+        goal: proteinGoal,
+        consumed: Math.round(proteins),
+        unit: "g",
+        percentCompleted: percentCompleted(proteins, proteinGoal)
+      },
+      carbs: {
+        goal: carbGoal,
+        consumed: Math.round(carbs),
+        unit: "g",
+        percentCompleted: percentCompleted(carbs, carbGoal)
+      },
+      fats: {
+        goal: fatGoal,
+        consumed: Math.round(fats),
+        unit: "g",
+        percentCompleted: percentCompleted(fats, fatGoal)
+      }
+    }
+  };
+};
+
+const getTodayNutrition = async (userId) => {
+  // Début et fin de la journée
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10);
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+  // Récupérer tous les suivis nutritionnels du jour
+  const suivis = await prisma.suivis_nutritionnels.findMany({
+    where: {
+      id_user: userId,
+      date: {
+        gte: startOfDay,
+        lte: endOfDay
+      }
+    },
+    include: {
+      aliments: true
+    },
+    orderBy: { id_suivi_nutritionnel: 'asc' }
+  });
+
+  const meals = {};
+
+  // Totaux
+  let totalCalories = 0, totalProteins = 0, totalCarbs = 0, totalFats = 0;
+
+  // Répartir les suivis par repas
+  for (const suivi of suivis) {
+    const mealKey = (suivi.repas || '').toLowerCase();
+
+    const quantity = suivi.quantite || 1;
+
+    for (alim in suivi.aliments) {
+      if (!meals[mealKey]) {
+        meals[mealKey] = [];
+      }
+      const foodData = {
+        id: suivi.id_suivi_nutritionnel,
+        foodId: alim.id_aliment,
+        name: alim.nom,
+        quantity: quantity,
+        calories: Math.round(Number(alim.calories) * quantity / 100),
+        proteins: Number(alim.proteines) * quantity / 100,
+        carbs: Number(alim.glucides) * quantity / 100,
+        fats: Number(alim.lipides) * quantity / 100,
+        image: alim.image
+      };
+      meals[mealKey].push(foodData);
+      totalCalories += foodData.calories;
+      totalProteins += foodData.proteins;
+      totalCarbs += foodData.carbs;
+      totalFats += foodData.fats;
+    }
+  }
+
+  return {
+    date: dateStr,
+    meals,
+    totals: {
+      calories: Math.round(totalCalories),
+      proteins: Math.round(totalProteins * 10) / 10,
+      carbs: Math.round(totalCarbs * 10) / 10,
+      fats: Math.round(totalFats * 10) / 10
+    }
+  };
+};
+
 module.exports = {
-    getAllFoods,
+  getAllFoods,
+  getNutritionSummary,
+  getTodayNutrition
 };
