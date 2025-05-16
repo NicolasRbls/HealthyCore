@@ -164,7 +164,20 @@ exports.deleteFood = catchAsync(async (req, res) => {
 
     res.status(200).json({
         status: 'success',
-        data: foodId,
+        data: deletedFood,
         message: 'Aliment supprimé avec succès'
+    });
+});
+
+exports.getFoodStats = catchAsync(async (req, res) => {
+    const stats = await adminFoodsService.getFoodStats();
+    if (!stats) {
+        throw new AppError('Erreur lors de la récupération des statistiques', 500, 'FOOD_STATS_ERROR');
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: stats,
+        message: 'Statistiques des aliments récupérées avec succès'
     });
 });

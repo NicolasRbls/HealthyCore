@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { PrismaClient } = require("@prisma/client");
+const { get } = require('lodash');
 const prisma = new PrismaClient();
 
 const numberedvalues = ['calories', 'proteines', 'glucides', 'lipides', 'temps_preparation'];
@@ -223,16 +224,30 @@ const updateFood = async (foodId, foodData) => {
 const deleteFood = async (foodId) => {
   const deletedFood = await prisma.aliments.delete({
     where: { id_aliment: foodId }
-  });
-  // Supprimer les tags associés
+  })
   await prisma.aliments_tags.deleteMany({
     where: { id_aliment: foodId }
   });
-  // Supprimer les suivis nutritionnels associés
   await prisma.suivis_nutritionnels.deleteMany({
     where: { id_aliment: foodId }
   });
   return deletedFood;
+}
+
+const getFoodStats = async () => {
+  const totalFoods = await prisma.aliments.count();
+  const totalRecipes = await prisma.aliments.count({
+    where: { type: 'recette' }
+  });
+  const totalProducts = await prisma.aliments.count({
+    where: { type: 'produit' }
+  });
+
+  return {
+    totalFoods,
+    totalRecipes,
+    totalProducts
+  };
 }
 
 
@@ -241,5 +256,6 @@ module.exports = {
     getFoodById,
     createFood,
     updateFood,
-    deleteFood
+    deleteFood,
+    getFoodStats
 };
