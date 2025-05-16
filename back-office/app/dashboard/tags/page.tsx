@@ -257,7 +257,7 @@ export default function TagsPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Tags"
-          description={`Total: ${pagination.total} tag${
+          description={`Total : ${pagination.total} tag${
             pagination.total > 1 ? "s" : ""
           }`}
           actionLabel="Ajouter un tag"
@@ -270,7 +270,7 @@ export default function TagsPage() {
               <SelectValue placeholder="Filtrer par type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les types</SelectItem>
+              <SelectItem value="all">Tous les types</SelectItem>
               <SelectItem value="sport">Sport</SelectItem>
               <SelectItem value="aliment">Aliment</SelectItem>
             </SelectContent>
