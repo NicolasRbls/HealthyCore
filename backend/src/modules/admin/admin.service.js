@@ -1,62 +1,18 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-/**
- * Récupérer le nombre total d'utilisateurs (hors admins)
- */
+// Récupérer le nombre total d'utilisateurs
 const getUserCount = async () => {
     return await prisma.users.count({
     where: { role: { not: "admin" } },
   });
 };
 
-/**
- * Récupérer une liste paginée d'utilisateurs avec recherche.
- * @param {Object} options - Contient la pagination et le filtre de recherche
- * @param {number} options.page - Numéro de la page
- * @param {number} options.limit - Nombre de résultats par page
- * @param {string} options.search - Termes de recherche
- */
-const getPaginatedUsers = async ({ page, limit, search }) => {
-  const searchFilter = search
-    ? {
-        OR: [
-          { prenom: { contains: search, mode: "insensitive" } },
-          { nom: { contains: search, mode: "insensitive" } },
-        ],
-      }
-    : {};
+// Récupérer la liste paginée de tous les utilisateurs
 
-  const users = await prisma.users.findMany({
-    where: {
-      role: { not: "admin" },
-      ...searchFilter,
-    },
-    skip: (page - 1) * limit,
-    take: limit,
-    select: {
-      id_user: true,
-      prenom: true,
-      nom: true,
-      email: true,
-    },
-  });
 
-  const totalUsers = await prisma.users.count({
-    where: {
-      role: { not: "admin" },
-      ...searchFilter,
-    },
-  });
-
-  return { users, total: totalUsers };
-};
-
-/**
- * Supprimer un utilisateur et toutes ses données associées
- */
+// Supprimer un utilisateur et toutes ses données associées
 const deleteUser = async (userId, adminId, adminPassword) => {
-  // Vérifier que l'utilisateur à supprimer existe
   const userToDelete = await prisma.users.findUnique({
     where: { id_user: parseInt(userId) },
   });
@@ -74,8 +30,6 @@ const deleteUser = async (userId, adminId, adminPassword) => {
     throw new AppError("Administrateur non trouvé", 404, "ADMIN_NOT_FOUND");
   }
 
-  // Ici, vous devriez utiliser une méthode de vérification de mot de passe sécurisée
-  // comme bcrypt.compare() plutôt que cette comparaison directe (à titre d'exemple)
   const bcrypt = require('bcrypt');
   const isPasswordValid = await bcrypt.compare(adminPassword, admin.mot_de_passe);
   
@@ -101,10 +55,63 @@ const deleteUser = async (userId, adminId, adminPassword) => {
   return true;
 }
 
+const getUserInfosById = async (userId) => {
+  const user = await prisma.users.findUnique({
+    where: { id_user: parseInt(userId) },
+    select: {
+      prenom: true,
+      nom: true,
+      email: true,
+      sexe: true,
+      role: true,
+      cree_a: true,
+      mis_a_jour_a: true
+    },
+  });
+
+  if (!user) {
+    throw new AppError("Utilisateur non trouvé", 404, "USER_NOT_FOUND");
+  }
+
+  return user;
+}
+
+const getLastEvolutionById = async (userId) => {
+  const lastEvo = await prisma.evolutions.findFirst({
+    where: { id_user: parseInt(userId) },
+    select: {
+      date: true,
+      poids: true,
+      taille: true
+    },
+    orderBy: { date: "desc" },
+    take: 1,
+  });
+  
+  return lastEvo;
+}
+
+const getUserPreferencesById = async (userId) => {
+  const nutritionSummary = await prisma.preferences.findMany({
+    where: { id_user: parseInt(userId) },
+    select: {
+      objectif_poids: true,
+      id_repartition_nutritionnelle: true,
+      id_regime_alimentaire: true,
+      id_niveau_sedentarite: true,
+      bmr: true,
+      calories_quotidiennes: true
+    },
+  });
+
+  return nutritionSummary;
+}
 
 module.exports = {
   getUserCount,
-  getPaginatedUsers,
-  //getUserDetails,
-  deleteUser
+  deleteUser,
+  // Récupérer les informations d'un détaillées d'un utilisateur par son ID
+  getUserInfosById,
+  getLastEvolutionById,
+  getUserPreferencesById,
 };

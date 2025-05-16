@@ -1,6 +1,6 @@
-const foodService = require('./foods.service');
-const { catchAsync } = require('../../../utils/catcherror.utils');
-const { AppError } = require('../../../utils/response.utils');
+const foodService = require('./nutrition.service');
+const { catchAsync } = require('../../utils/catcherror.utils');
+const { AppError } = require('../../utils/response.utils');
 
 /**
  * Contrôleur pour les routes d'administration

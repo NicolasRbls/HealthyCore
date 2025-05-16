@@ -1,12 +1,10 @@
 const express = require("express");
-const foodController = require("./foods.controller");
-console.log(foodController);
-const { isAdmin } = require("../../auth/auth.middleware");
+const foodController = require("./nutrition.controller");
 
 const router = express.Router();
 
 /**
- *  @route GET /api/admin/foods
+ *  @route GET /api/admin/nutrition
  * @desc Récupérer tous les aliments avec pagination    
  *  @access Private (Admin)
  */
