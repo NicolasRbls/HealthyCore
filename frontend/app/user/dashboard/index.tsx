@@ -19,6 +19,7 @@ import { TextStyles } from "../../../constants/Fonts";
 import authService from "../../../services/auth.service";
 import dataService from "../../../services/data.service";
 import apiService from "../../../services/api.service";
+import objectivesService from "../../../services/objectives.service";
 
 // Type definitions
 interface NutritionSummary {
@@ -46,8 +47,10 @@ interface WeekDay {
 
 interface Objective {
   id: number;
+  objectiveId: number;
   title: string;
   completed: boolean;
+  date: string;
 }
 
 export default function Dashboard() {
@@ -86,7 +89,21 @@ export default function Dashboard() {
         preferencesData.preferences.calories_quotidiennes
       );
 
-      // 3. Charger les données sportives à partir de sport-progress uniquement
+      // 3. Charger les objectifs quotidiens
+      try {
+        const objectivesResponse = await objectivesService.getDailyObjectives();
+        if (objectivesResponse && objectivesResponse.objectives) {
+          setObjectives(objectivesResponse.objectives);
+        } else {
+          // Fallback sur les objectifs mockés
+          mockObjectives();
+        }
+      } catch (error) {
+        console.error("Error loading objectives:", error);
+        mockObjectives();
+      }
+
+      // 4. Charger les données sportives à partir de sport-progress
       try {
         const sportProgressData = await apiService.get(
           "/data/programs/sport-progress"
@@ -136,12 +153,9 @@ export default function Dashboard() {
         mockTodaySession();
       }
 
-      // 4. Pour les données nutritionnelles, utiliser des données mockées
+      // 5. Pour les données nutritionnelles, utiliser des données mockées
       // IMPORTANT: Dans la vraie vie, vous feriez un appel à une API
       mockNutritionalData(totalCalorieGoal);
-
-      // 5. Pour les objectifs, utiliser des données mockées
-      mockObjectives();
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       // Fallback complet sur les données mockées
@@ -189,13 +203,17 @@ export default function Dashboard() {
     setObjectives([
       {
         id: 1,
+        objectiveId: 1,
         title: "Ajouter un repas au suivi nutritionnel",
         completed: false,
+        date: new Date().toISOString().split("T")[0],
       },
       {
         id: 2,
+        objectiveId: 2,
         title: "Compléter la séance d'entraînement du jour",
         completed: false,
+        date: new Date().toISOString().split("T")[0],
       },
     ]);
   };

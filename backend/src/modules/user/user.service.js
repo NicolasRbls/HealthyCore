@@ -163,29 +163,62 @@ const conditionHandlers = {
   FIRST_DAY_COMPLETED: async (userId) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // force à 00:00:00 pour matcher les dates
-    const goals = await prisma.objectifs_utilisateurs.findMany({
+
+    // Récupérer tous les objectifs disponibles pour connaître le total
+    const totalObjectives = await prisma.objectifs.count();
+
+    // Récupérer les objectifs complétés aujourd'hui
+    const completedGoals = await prisma.objectifs_utilisateurs.count({
       where: {
         id_user: userId,
         date: today,
         statut: "done",
       },
     });
-    return goals.length >= 1;
+
+    // Vérifier que tous les objectifs du jour sont complétés
+    return completedGoals === totalObjectives;
   },
 
   SEVEN_DAYS_COMPLETED: async (userId) => {
-    const past7 = await prisma.objectifs_utilisateurs.findMany({
+    // Récupérer tous les objectifs disponibles pour connaître le total par jour
+    const totalObjectives = await prisma.objectifs.count();
+
+    // Période de 7 jours vers le passé
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    // Récupérer les objectifs complétés sur la période
+    const completedGoals = await prisma.objectifs_utilisateurs.findMany({
       where: {
         id_user: userId,
         date: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          gte: sevenDaysAgo,
         },
         statut: "done",
       },
     });
-    const days = new Set(past7.map((o) => o.date.toISOString().slice(0, 10)));
-    return days.size >= 7;
+
+    // Regrouper par date pour vérifier les jours complets
+    const completedByDay = {};
+    completedGoals.forEach((goal) => {
+      const dateKey = goal.date.toISOString().split("T")[0];
+      if (!completedByDay[dateKey]) {
+        completedByDay[dateKey] = 0;
+      }
+      completedByDay[dateKey]++;
+    });
+
+    // Compter les jours où tous les objectifs ont été complétés
+    const completelyCompletedDays = Object.values(completedByDay).filter(
+      (count) => count === totalObjectives
+    ).length;
+
+    // Vérifier si au moins 7 jours ont tous leurs objectifs complétés
+    return completelyCompletedDays >= 7;
   },
+
   ADD_FIRST_FOOD: async (userId) => {
     const food = await prisma.suivis_nutritionnels.findFirst({
       where: { id_user: userId },

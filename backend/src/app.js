@@ -10,7 +10,7 @@ const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
 const adminRoutes = require("./modules/admin/admin.routes");
 const foodsRoutes = require("./modules/admin/foods/foods.routes");
-
+const objectivesRoutes = require("./modules/objectives/objectives.routes");
 
 // openfoodfacts routes
 const openFoodFactsRoutes = require("./modules/openfoodfacts/openfoodfacts.routes");
@@ -46,6 +46,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/validation", validationRoutes);
+app.use("/api/objectives", objectivesRoutes);
 
 // Error handling middleware (should be last)
 app.use(errorMiddleware);
