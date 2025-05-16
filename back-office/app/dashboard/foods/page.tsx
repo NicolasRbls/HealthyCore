@@ -148,15 +148,15 @@ export default function FoodsPage() {
   };
 
   const handleViewFood = (food: Food) => {
-    router.push(`/foods/${food.id_aliment}`);
+    router.push(`/dashboard/foods/${food.id_aliment}`);
   };
 
   const handleEditFood = (food: Food) => {
-    router.push(`/foods/${food.id_aliment}/edit`);
+    router.push(`/dashboard/foods/${food.id_aliment}/edit`);
   };
 
   const handleCreateFood = () => {
-    router.push("/foods/create");
+    router.push("/dashboard/foods/create");
   };
 
   const handleDeleteClick = (food: Food) => {
@@ -314,7 +314,7 @@ export default function FoodsPage() {
           <TabsContent value="list" className="mt-6">
             <PageHeader
               title="Aliments"
-              description={`Total: ${pagination.total} aliment${
+              description={`Total : ${pagination.total} aliment${
                 pagination.total > 1 ? "s" : ""
               }`}
               actionLabel="Ajouter un aliment"
@@ -345,7 +345,7 @@ export default function FoodsPage() {
                       <SelectValue placeholder="Type d'aliment" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tous les types</SelectItem>
+                      <SelectItem value="all">Tous les types</SelectItem>
                       <SelectItem value="produit">Produit</SelectItem>
                       <SelectItem value="recette">Recette</SelectItem>
                     </SelectContent>
@@ -359,7 +359,7 @@ export default function FoodsPage() {
                       <SelectValue placeholder="Source" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Toutes les sources</SelectItem>
+                      <SelectItem value="all">Toutes les sources</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="user">Utilisateur</SelectItem>
                       <SelectItem value="api">API</SelectItem>
@@ -374,7 +374,7 @@ export default function FoodsPage() {
                       <SelectValue placeholder="Tag" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tous les tags</SelectItem>
+                      <SelectItem value="all">Tous les tags</SelectItem>
                       {tags.map((tag) => (
                         <SelectItem
                           key={tag.id_tag}
