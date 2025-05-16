@@ -4,10 +4,6 @@ const { isAdmin } = require("../auth/auth.middleware");
 
 const router = express.Router();
 
-
-
-
-
 // Mettre à jour un utilisateur
 //router.put("/users/:id", adminController.updateContent);
 

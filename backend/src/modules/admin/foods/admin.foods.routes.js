@@ -4,11 +4,11 @@ const { isAdmin } = require("../../auth/auth.middleware");
 
 const router = express.Router();
 
-router.get("/", adminFoodsController.getFoods);
-router.get("/:foodId", adminFoodsController.getFoodById);
-router.post("/", adminFoodsController.createFood);
-router.get("/stats", adminFoodsController.getFoodStats);
-router.put("/:foodId", adminFoodsController.updateFood);
-router.delete("/:foodId", adminFoodsController.deleteFood);
+router.get("/", isAdmin, adminFoodsController.getFoods);
+router.get("/:foodId", isAdmin, adminFoodsController.getFoodById);
+router.post("/", isAdmin, adminFoodsController.createFood);
+router.get("/stats", isAdmin, adminFoodsController.getFoodStats);
+router.put("/:foodId", isAdmin, adminFoodsController.updateFood);
+router.delete("/:foodId", isAdmin, adminFoodsController.deleteFood);
 
 module.exports = router;
