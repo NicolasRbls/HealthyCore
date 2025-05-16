@@ -324,7 +324,7 @@ export default function ExercisesPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Exercices"
-          description={`Total: ${pagination.total} exercice${
+          description={`Total : ${pagination.total} exercice${
             pagination.total > 1 ? "s" : ""
           }`}
           actionLabel="Ajouter un exercice"
@@ -340,7 +340,7 @@ export default function ExercisesPage() {
               <SelectValue placeholder="Filtrer par tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les tags</SelectItem>
+              <SelectItem value="all">Tous les tags</SelectItem>
               {tags.map((tag) => (
                 <SelectItem key={tag.id_tag} value={tag.id_tag.toString()}>
                   {tag.nom}
