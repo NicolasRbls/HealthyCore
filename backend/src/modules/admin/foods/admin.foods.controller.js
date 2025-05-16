@@ -150,3 +150,21 @@ exports.updateFood = catchAsync(async (req, res) => {
         message: 'Aliment mis à jour avec succès'
     });
 });
+
+exports.deleteFood = catchAsync(async (req, res) => {
+    const foodId = parseInt(req.params.foodId);
+    if (!foodId || isNaN(foodId)) {
+        throw new AppError('L\'id de l\'aliment est invalide', 400, 'INVALID_FOOD_ID');
+    }
+
+    const deletedFood = await adminFoodsService.deleteFood(foodId);
+    if (!deletedFood) {
+        throw new AppError('Erreur lors de la suppression de l\'aliment', 500, 'FOOD_DELETION_ERROR');
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: foodId,
+        message: 'Aliment supprimé avec succès'
+    });
+});

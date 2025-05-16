@@ -220,9 +220,26 @@ const updateFood = async (foodId, foodData) => {
   return updatedFood;
 }
 
+const deleteFood = async (foodId) => {
+  const deletedFood = await prisma.aliments.delete({
+    where: { id_aliment: foodId }
+  });
+  // Supprimer les tags associés
+  await prisma.aliments_tags.deleteMany({
+    where: { id_aliment: foodId }
+  });
+  // Supprimer les suivis nutritionnels associés
+  await prisma.suivis_nutritionnels.deleteMany({
+    where: { id_aliment: foodId }
+  });
+  return deletedFood;
+}
+
+
 module.exports = {
     getAllFoods,
     getFoodById,
     createFood,
-    updateFood
+    updateFood,
+    deleteFood
 };

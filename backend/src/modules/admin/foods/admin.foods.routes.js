@@ -9,6 +9,6 @@ router.get("/:foodId", adminFoodsController.getFoodById);
 router.post("/", adminFoodsController.createFood);
 //router.get("/stats", adminFoodsController.getFoodStats);
 router.put("/:foodId", adminFoodsController.updateFood);
-//router.delete("/:foodId", adminFoodsController.deleteFood);
+router.delete("/:foodId", adminFoodsController.deleteFood);
 
 module.exports = router;
