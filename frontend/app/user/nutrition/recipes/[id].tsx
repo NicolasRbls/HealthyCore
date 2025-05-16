@@ -405,7 +405,16 @@ export default function RecipeDetailScreen() {
   const getRecipeImage = () => {
     if (!recipe) return null;
 
-    // Map recipe IDs to the imageMapping
+    // Check if the image path is an HTTP or HTTPS URL
+    if (
+      recipe.image &&
+      (recipe.image.startsWith("http://") ||
+        recipe.image.startsWith("https://"))
+    ) {
+      return { uri: recipe.image };
+    }
+
+    // Map product IDs to the imageMapping
     const mappedId = 200 + recipe.id_aliment;
 
     return (

@@ -309,9 +309,13 @@ export default function SessionDetailsScreen() {
                     <View style={styles.gifContainer}>
                       <Image
                         source={
-                          imageMapping[exercise.id] || {
-                            uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
-                          }
+                          exercise.gif &&
+                          (exercise.gif.startsWith("http://") ||
+                            exercise.gif.startsWith("https://"))
+                            ? { uri: exercise.gif }
+                            : imageMapping[exercise.id] || {
+                                uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
+                              }
                         }
                         style={styles.exerciseGif}
                         resizeMode="contain"

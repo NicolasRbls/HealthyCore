@@ -178,10 +178,9 @@ export default function NutritionMonitoring() {
   const getImageSource = (imagePath: string | null) => {
     if (!imagePath) return null;
 
-    // In a real app with backend:
-    // if (imagePath.startsWith('http')) {
-    //   return { uri: imagePath };
-    // }
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+      return { uri: imagePath };
+    }
 
     // Define a mapping for the images in temp.json to their actual requires
     const imageMapping: Record<string, any> = {

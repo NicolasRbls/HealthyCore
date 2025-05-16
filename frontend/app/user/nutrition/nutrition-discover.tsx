@@ -143,6 +143,14 @@ export default function NutritionDiscoverScreen() {
 
   // Get food image based on id
   const getFoodImage = (food: FoodProduct) => {
+    // Check if the image path is an HTTP or HTTPS URL
+    if (
+      food.image &&
+      (food.image.startsWith("http://") || food.image.startsWith("https://"))
+    ) {
+      return { uri: food.image };
+    }
+
     // Map aliment IDs to the imageMapping
     const mappedId = 200 + food.id_aliment;
 

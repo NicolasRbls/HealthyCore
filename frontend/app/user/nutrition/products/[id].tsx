@@ -97,6 +97,15 @@ export default function ProductDetailScreen() {
   const getProductImage = () => {
     if (!product) return null;
 
+    // Check if the image path is an HTTP or HTTPS URL
+    if (
+      product.image &&
+      (product.image.startsWith("http://") ||
+        product.image.startsWith("https://"))
+    ) {
+      return { uri: product.image };
+    }
+
     // Map product IDs to the imageMapping
     const mappedId = 200 + product.id_aliment;
 

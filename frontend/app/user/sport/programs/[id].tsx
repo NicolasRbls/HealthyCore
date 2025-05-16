@@ -299,11 +299,15 @@ export default function ProgramDetailsScreen() {
         <View style={styles.imageContainer}>
           <Image
             source={
-              imageMapping[program.id + 100] || {
-                uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-                  program.name
-                )}`,
-              }
+              program.image &&
+              (program.image.startsWith("http://") ||
+                program.image.startsWith("https://"))
+                ? { uri: program.image }
+                : imageMapping[program.id + 100] || {
+                    uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+                      program.name
+                    )}`,
+                  }
             }
             style={styles.coverImage}
             resizeMode="contain"
