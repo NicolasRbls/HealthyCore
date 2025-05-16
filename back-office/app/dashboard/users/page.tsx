@@ -79,7 +79,7 @@ export default function UsersPage() {
   };
 
   const handleViewUser = (user: User) => {
-    router.push(`/users/${user.id_user}`);
+    router.push(`/dashboard/users/${user.id_user}`);
   };
 
   const handleDeleteClick = (user: User) => {
@@ -184,7 +184,7 @@ export default function UsersPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Utilisateurs"
-          description={`Total: ${pagination.total} utilisateur${
+          description={`Total : ${pagination.total} utilisateur${
             pagination.total > 1 ? "s" : ""
           }`}
         />

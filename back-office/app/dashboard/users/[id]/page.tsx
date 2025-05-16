@@ -82,7 +82,7 @@ export default function UserDetailPage() {
       await userService.deleteUser(userId, confirmPassword);
       setDeleteDialogOpen(false);
       setConfirmPassword("");
-      router.push("/users");
+      router.push("/dashboard/users");
     } catch (error) {
       console.error("Erreur lors de la suppression de l'utilisateur:", error);
     }
@@ -117,7 +117,7 @@ export default function UserDetailPage() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => router.push("/users")}
+                onClick={() => router.push("/dashboard/users")}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour à la liste
@@ -135,7 +135,10 @@ export default function UserDetailPage() {
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => router.push("/users")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/users")}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour à la liste
           </Button>
@@ -156,7 +159,7 @@ export default function UserDetailPage() {
                 <div className="flex items-center">
                   <UserCircle className="h-5 w-5 mr-2 text-gray-400" />
                   <span className="text-sm text-gray-500 w-32">
-                    Nom complet:
+                    Nom complet :
                   </span>
                   <span className="font-medium">
                     {user.prenom} {user.nom}
@@ -164,7 +167,7 @@ export default function UserDetailPage() {
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-500 w-32">Email:</span>
+                  <span className="text-sm text-gray-500 w-32">Email :</span>
                   <span className="font-medium">{user.email}</span>
                 </div>
                 <div className="flex items-center">
@@ -189,7 +192,7 @@ export default function UserDetailPage() {
                 <div className="flex items-center">
                   <Cake className="h-5 w-5 mr-2 text-gray-400" />
                   <span className="text-sm text-gray-500 w-32">
-                    Date de naissance:
+                    Date de naissance :
                   </span>
                   <span className="font-medium">
                     {format(new Date(user.date_de_naissance), "dd MMMM yyyy", {
@@ -210,7 +213,7 @@ export default function UserDetailPage() {
                 </div>
                 <div className="flex items-center">
                   <Activity className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-500 w-32">Rôle:</span>
+                  <span className="text-sm text-gray-500 w-32">Rôle :</span>
                   <Badge
                     variant={user.role === "admin" ? "destructive" : "default"}
                   >
@@ -246,7 +249,7 @@ export default function UserDetailPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Ruler className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">Taille:</span>
+                      <span className="text-sm text-gray-500">Taille :</span>
                     </div>
                     <span className="font-medium">
                       {user.evolution.currentHeight} cm
@@ -255,7 +258,7 @@ export default function UserDetailPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Activity className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">IMC:</span>
+                      <span className="text-sm text-gray-500">IMC :</span>
                     </div>
                     <span className="font-medium">
                       {user.evolution.currentBMI}
@@ -266,7 +269,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Weight className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Poids initial:
+                        Poids initial :
                       </span>
                     </div>
                     <span className="font-medium">
@@ -277,7 +280,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Activity className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Variation de poids:
+                        Variation de poids :
                       </span>
                     </div>
                     <Badge
@@ -298,7 +301,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Clock className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Durée d'utilisation:
+                        Durée d'utilisation :
                       </span>
                     </div>
                     <span className="font-medium">
@@ -326,7 +329,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Utensils className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Objectif calorique:
+                        Objectif calorique :
                       </span>
                     </div>
                     <span className="font-medium">
@@ -337,7 +340,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Utensils className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Régime alimentaire:
+                        Régime alimentaire :
                       </span>
                     </div>
                     <Badge variant="outline">
@@ -348,26 +351,26 @@ export default function UserDetailPage() {
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <span className="text-sm text-gray-500">
-                        Répartition des macronutriments:
+                        Répartition des macronutriments :
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="p-2 bg-gray-50 rounded-lg text-center">
                         <div className="text-xs text-gray-500">Glucides</div>
                         <div className="font-medium">
-                          {user.nutritionSummary.macroDistribution.carbs}%
+                          {user.nutritionSummary.macroDistribution.carbs} %
                         </div>
                       </div>
                       <div className="p-2 bg-gray-50 rounded-lg text-center">
                         <div className="text-xs text-gray-500">Protéines</div>
                         <div className="font-medium">
-                          {user.nutritionSummary.macroDistribution.protein}%
+                          {user.nutritionSummary.macroDistribution.protein} %
                         </div>
                       </div>
                       <div className="p-2 bg-gray-50 rounded-lg text-center">
                         <div className="text-xs text-gray-500">Lipides</div>
                         <div className="font-medium">
-                          {user.nutritionSummary.macroDistribution.fat}%
+                          {user.nutritionSummary.macroDistribution.fat} %
                         </div>
                       </div>
                     </div>
@@ -376,7 +379,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Utensils className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Entrées enregistrées:
+                        Entrées enregistrées :
                       </span>
                     </div>
                     <span className="font-medium">
@@ -407,7 +410,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Calendar className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Objectif hebdomadaire:
+                        Objectif hebdomadaire :
                       </span>
                     </div>
                     <span className="font-medium">
@@ -418,7 +421,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Activity className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Séances réalisées:
+                        Séances réalisées :
                       </span>
                     </div>
                     <span className="font-medium">
@@ -429,7 +432,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Activity className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Activité favorite:
+                        Activité favorite :
                       </span>
                     </div>
                     <Badge variant="outline">
@@ -440,7 +443,7 @@ export default function UserDetailPage() {
                     <div className="flex items-center">
                       <Calendar className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Dernière séance:
+                        Dernière séance :
                       </span>
                     </div>
                     <span className="font-medium">
