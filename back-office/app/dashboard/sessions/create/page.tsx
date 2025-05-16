@@ -127,7 +127,7 @@ export default function CreateSessionPage() {
         description: "La séance a été créée avec succès",
       });
 
-      router.push("/sessions");
+      router.push("/dashboard/sessions");
     } catch (error) {
       console.error("Erreur lors de la création de la séance:", error);
       toast({
@@ -161,7 +161,10 @@ export default function CreateSessionPage() {
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => router.push("/sessions")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/sessions")}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour à la liste
           </Button>
@@ -182,7 +185,7 @@ export default function CreateSessionPage() {
                       <FormLabel>Nom de la séance</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Ex: Full Body Débutant"
+                          placeholder="Ex : Full Body Débutant"
                           {...field}
                         />
                       </FormControl>
@@ -451,7 +454,7 @@ export default function CreateSessionPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push("/sessions")}
+                onClick={() => router.push("/dashboard/sessions")}
                 disabled={isSubmitting}
               >
                 Annuler

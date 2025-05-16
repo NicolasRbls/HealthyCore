@@ -123,15 +123,15 @@ export default function SessionsPage() {
   };
 
   const handleViewSession = (session: Session) => {
-    router.push(`/sessions/${session.id_seance}`);
+    router.push(`/dashboard/sessions/${session.id_seance}`);
   };
 
   const handleEditSession = (session: Session) => {
-    router.push(`/sessions/${session.id_seance}/edit`);
+    router.push(`/dashboard/sessions/${session.id_seance}/edit`);
   };
 
   const handleCreateSession = () => {
-    router.push("/sessions/create");
+    router.push("/dashboard/sessions/create");
   };
 
   const handleDeleteClick = (session: Session) => {
@@ -240,7 +240,7 @@ export default function SessionsPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Séances"
-          description={`Total: ${pagination.total} séance${
+          description={`Total : ${pagination.total} séance${
             pagination.total > 1 ? "s" : ""
           }`}
           actionLabel="Ajouter une séance"
@@ -256,7 +256,7 @@ export default function SessionsPage() {
               <SelectValue placeholder="Filtrer par tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les tags</SelectItem>
+              <SelectItem value="all">Tous les tags</SelectItem>
               {tags.map((tag) => (
                 <SelectItem key={tag.id_tag} value={tag.id_tag.toString()}>
                   {tag.nom}

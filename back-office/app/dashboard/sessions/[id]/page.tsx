@@ -62,7 +62,7 @@ export default function SessionDetailPage() {
   };
 
   const handleEditClick = () => {
-    router.push(`/sessions/${sessionId}/edit`);
+    router.push(`/dashboard/sessions/${sessionId}/edit`);
   };
 
   const handleDeleteClick = () => {
@@ -73,7 +73,7 @@ export default function SessionDetailPage() {
     try {
       await sessionService.deleteSession(sessionId);
       setIsDeleteDialogOpen(false);
-      router.push("/sessions");
+      router.push("/dashboard/sessions");
     } catch (error) {
       console.error("Erreur lors de la suppression de la séance:", error);
     }
@@ -108,7 +108,7 @@ export default function SessionDetailPage() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => router.push("/sessions")}
+                onClick={() => router.push("/dashboard/sessions")}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour à la liste
@@ -126,7 +126,10 @@ export default function SessionDetailPage() {
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => router.push("/sessions")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/sessions")}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour à la liste
           </Button>
@@ -166,7 +169,7 @@ export default function SessionDetailPage() {
                 <div className="flex items-center">
                   <Dumbbell className="h-5 w-5 mr-2 text-gray-400" />
                   <span className="text-sm text-gray-500 w-32">
-                    Nombre d'exercices:
+                    Nombre d'exercices :
                   </span>
                   <span className="font-medium">
                     {session.exercises?.length || 0}
@@ -174,7 +177,9 @@ export default function SessionDetailPage() {
                 </div>
                 <div className="flex items-center">
                   <Users className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-500 w-32">Créée par:</span>
+                  <span className="text-sm text-gray-500 w-32">
+                    Créée par :
+                  </span>
                   <span className="font-medium">
                     {session.createdBy?.name || "Admin"}
                   </span>
@@ -188,7 +193,7 @@ export default function SessionDetailPage() {
                     <div className="flex items-center">
                       <Calendar className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500 w-32">
-                        Programmes:
+                        Programmes :
                       </span>
                       <span className="font-medium">
                         {session.usageStats.programs}
@@ -197,7 +202,7 @@ export default function SessionDetailPage() {
                     <div className="flex items-center">
                       <Users className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500 w-32">
-                        Utilisateurs:
+                        Utilisateurs :
                       </span>
                       <span className="font-medium">
                         {session.usageStats.users}
@@ -244,7 +249,9 @@ export default function SessionDetailPage() {
                         <div className="flex items-center">
                           <Repeat className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="text-sm">
-                            <span className="text-gray-500">Répétitions: </span>
+                            <span className="text-gray-500">
+                              Répétitions :{" "}
+                            </span>
                             <span className="font-medium">
                               {exercise.repetitions}
                             </span>
@@ -256,7 +263,7 @@ export default function SessionDetailPage() {
                         <div className="flex items-center">
                           <Clock className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="text-sm">
-                            <span className="text-gray-500">Séries: </span>
+                            <span className="text-gray-500">Séries : </span>
                             <span className="font-medium">{exercise.sets}</span>
                           </span>
                         </div>
@@ -266,7 +273,7 @@ export default function SessionDetailPage() {
                         <div className="flex items-center">
                           <Timer className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="text-sm">
-                            <span className="text-gray-500">Durée: </span>
+                            <span className="text-gray-500">Durée : </span>
                             <span className="font-medium">
                               {exercise.duration} sec
                             </span>

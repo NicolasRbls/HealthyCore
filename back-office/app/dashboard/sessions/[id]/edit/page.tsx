@@ -170,7 +170,7 @@ export default function EditSessionPage() {
         description: "La séance a été mise à jour avec succès",
       });
 
-      router.push(`/sessions/${sessionId}`);
+      router.push(`/dashboard/sessions/${sessionId}`);
     } catch (error) {
       console.error("Erreur lors de la mise à jour de la séance:", error);
       toast({
@@ -228,7 +228,7 @@ export default function EditSessionPage() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => router.push("/sessions")}
+                onClick={() => router.push("/dashboard/sessions")}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour à la liste
@@ -242,13 +242,13 @@ export default function EditSessionPage() {
 
   return (
     <>
-      <Header title={`Modifier: ${session.nom}`} />
+      <Header title={`Modifier : ${session.nom}`} />
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
           <Button
             variant="outline"
-            onClick={() => router.push(`/sessions/${sessionId}`)}
+            onClick={() => router.push(`/dashboard/sessions/${sessionId}`)}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour aux détails
@@ -546,7 +546,7 @@ export default function EditSessionPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push(`/sessions/${sessionId}`)}
+                onClick={() => router.push(`/dashboard/sessions/${sessionId}`)}
                 disabled={isSubmitting}
               >
                 Annuler
