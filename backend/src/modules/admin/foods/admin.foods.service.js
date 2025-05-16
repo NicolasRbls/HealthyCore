@@ -250,7 +250,6 @@ const getFoodStats = async () => {
   };
 }
 
-
 module.exports = {
     getAllFoods,
     getFoodById,
