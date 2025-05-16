@@ -29,29 +29,13 @@ export function Header({ title, subtitle }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="relative hidden md:flex items-center">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-            />
-            <Input
-              placeholder="Rechercher..."
-              className="pl-10 w-[250px] focus:w-[300px] transition-all border-gray-200"
-            />
-          </div>
-
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell size={20} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src="/avatar.png" alt="Admin" />
                   <AvatarFallback className="bg-gradient-to-r from-[#92A3FD] to-[#9DCEFF] text-white">
-                    AD
+                    A
                   </AvatarFallback>
                 </Avatar>
               </Button>

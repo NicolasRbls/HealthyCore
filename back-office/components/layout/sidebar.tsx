@@ -23,43 +23,43 @@ const sidebarLinks = [
   {
     title: "Dashboard",
     icon: <LayoutDashboard size={20} />,
-    href: "/",
+    href: "/dashboard",
     color: Colors.brandBlue[0],
   },
   {
     title: "Utilisateurs",
     icon: <Users size={20} />,
-    href: "/users",
+    href: "/dashboard/users",
     color: Colors.info,
   },
   {
     title: "Tags",
     icon: <Tag size={20} />,
-    href: "/tags",
+    href: "/dashboard/tags",
     color: Colors.success,
   },
   {
     title: "Exercices",
     icon: <Dumbbell size={20} />,
-    href: "/exercises",
+    href: "/dashboard/exercises",
     color: Colors.plan.athlete.primary,
   },
   {
     title: "Séances",
     icon: <Calendar size={20} />,
-    href: "/sessions",
+    href: "/dashboard/sessions",
     color: Colors.plan.cardio.primary,
   },
   {
     title: "Programmes",
     icon: <BookOpen size={20} />,
-    href: "/programs",
+    href: "/dashboard/programs",
     color: Colors.plan.muscle.primary,
   },
   {
     title: "Aliments",
     icon: <Coffee size={20} />,
-    href: "/foods",
+    href: "/dashboard/foods",
     color: Colors.plan.durable.primary,
   },
 ];
@@ -71,11 +71,10 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-
   return (
     <div
       className={cn(
-        "flex flex-col h-screen bg-white border-r transition-all duration-300",
+        "flex flex-col h-screen bg-white border-r transition-all duration-300 fixed top-0 left-0",
         collapsed ? "w-[80px]" : "w-[250px]",
         className
       )}
@@ -84,7 +83,7 @@ export function Sidebar({ className }: SidebarProps) {
         {!collapsed && (
           <div className="flex items-center">
             <span className="text-xl font-bold text-brand-gradient">
-              FitCoach
+              HealthyCore
             </span>
             <span className="ml-1 text-xl font-bold">Admin</span>
           </div>
