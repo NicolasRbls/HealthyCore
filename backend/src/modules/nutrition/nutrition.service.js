@@ -137,7 +137,7 @@ const searchFoodInOpenFoodFactsAndSave = async (searchTerm) => {
         search_simple: 1,
         action: 'process',
         json: 1,
-        page_size: 5 // Limiter à 5 résultats
+        page_size: 5
       }
     });
     
@@ -388,8 +388,152 @@ const getTodayNutrition = async (userId) => {
   };
 };
 
+const logNutrition = async (userId, { foodId, quantity, meal, date }) => {
+  // Vérifier que l'aliment existe
+  const food = await prisma.aliments.findUnique({
+    where: { id_aliment: foodId }
+  });
+  if (!food) throw new Error("Aliment introuvable");
+
+  // Date du suivi
+  const logDate = date ? new Date(date) : new Date();
+
+  // Créer le suivi nutritionnel
+  const suivi = await prisma.suivis_nutritionnels.create({
+    data: {
+      id_user: userId,
+      id_aliment: foodId,
+      quantite: quantity,
+      repas: meal,
+      date: logDate
+    }
+  });
+
+  // Vérifier si l'objectif calorique est atteint
+  const today = new Date(logDate);
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+  const suivis = await prisma.suivis_nutritionnels.findMany({
+    where: {
+      id_user: userId,
+      date: { gte: startOfDay, lte: endOfDay }
+    },
+    include: { aliments: true }
+  });
+
+  let caloriesConsumed = 0;
+  for (const s of suivis) {
+    if (s.aliments)
+      caloriesConsumed += Number(s.aliments.calories) * (s.quantite || 1) / 100;
+  }
+
+  // Objectif calorique du jour
+  const preference = await prisma.preferences.findFirst({
+    where: { id_user: userId },
+  });
+  const calorieGoal = preference ? Number(preference.calories_quotidiennes) : 0;
+  const completed = calorieGoal > 0 ? caloriesConsumed >= calorieGoal : false;
+
+  return {
+    nutritionEntry: {
+      id: suivi.id_suivi_nutritionnel,
+      food: {
+        id: food.id_aliment,
+        name: food.nom,
+        calories: Math.round(Number(food.calories) * quantity / 100),
+        proteins: Number(food.proteines) * quantity / 100,
+        carbs: Number(food.glucides) * quantity / 100,
+        fats: Number(food.lipides) * quantity / 100
+      },
+      meal,
+      quantity,
+      date: logDate.toISOString().slice(0, 10)
+    },
+    dailyObjective: { completed }
+  };
+};
+
+const deleteNutritionEntry = async (userId, entryId) => {
+  // Vérifier que l'entrée existe et appartient à l'utilisateur
+  const entry = await prisma.suivis_nutritionnels.findUnique({
+    where: { id_suivi_nutritionnel: Number(entryId) }
+  });
+  if (!entry || entry.id_user !== userId) {
+    throw new Error("Entrée non trouvée ou non autorisée");
+  }
+
+  await prisma.suivis_nutritionnels.delete({
+    where: { id_suivi_nutritionnel: Number(entryId) }
+  });
+
+  return;
+};
+
+const getNutritionHistory = async (userId, { startDate, endDate }) => {
+  // Définir les dates par défaut
+  const today = new Date();
+  const defaultEnd = new Date(today.setHours(23, 59, 59, 999));
+  const defaultStart = new Date(defaultEnd);
+  defaultStart.setDate(defaultEnd.getDate() - 6); // 7 jours par défaut
+
+  const start = startDate ? new Date(startDate) : defaultStart;
+  const end = endDate ? new Date(endDate) : defaultEnd;
+
+  // Récupérer les suivis dans la période
+  const suivis = await prisma.suivis_nutritionnels.findMany({
+    where: {
+      id_user: userId,
+      date: {
+        gte: start,
+        lte: end
+      }
+    },
+    include: { aliments: true },
+    orderBy: { date: 'desc' }
+  });
+
+  // Récupérer l'objectif calorique de l'utilisateur
+  const preference = await prisma.preferences.findFirst({
+    where: { id_user: userId }
+  });
+  const calorieGoal = preference ? Number(preference.calories_quotidiennes) : 0;
+
+  // Grouper par jour
+  const grouped = {};
+  for (const suivi of suivis) {
+    const dateStr = suivi.date.toISOString().slice(0, 10);
+    if (!grouped[dateStr]) {
+      grouped[dateStr] = { calories: 0, proteins: 0, carbs: 0, fats: 0 };
+    }
+    const q = suivi.quantite || 1;
+    const alim = suivi.aliments;
+    if (!alim) continue;
+    grouped[dateStr].calories += Number(alim.calories) * q / 100;
+    grouped[dateStr].proteins += Number(alim.proteines) * q / 100;
+    grouped[dateStr].carbs += Number(alim.glucides) * q / 100;
+    grouped[dateStr].fats += Number(alim.lipides) * q / 100;
+  }
+
+  // Formater l'historique
+  const history = Object.entries(grouped)
+    .sort((a, b) => b[0].localeCompare(a[0])) // du plus récent au plus ancien
+    .map(([date, vals]) => ({
+      date,
+      calories: Math.round(vals.calories),
+      proteins: Math.round(vals.proteins * 10) / 10,
+      carbs: Math.round(vals.carbs * 10) / 10,
+      fats: Math.round(vals.fats * 10) / 10,
+      goalCompleted: calorieGoal > 0 ? vals.calories >= calorieGoal : false
+    }));
+
+  return { history };
+};
+
 module.exports = {
   getAllFoods,
   getNutritionSummary,
-  getTodayNutrition
+  getTodayNutrition,
+  logNutrition,
+  deleteNutritionEntry,
+  getNutritionHistory
 };

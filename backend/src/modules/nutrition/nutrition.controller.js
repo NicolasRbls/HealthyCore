@@ -74,3 +74,45 @@ exports.getTodayNutrition = catchAsync(async (req, res) => {
     message: "Suivi nutritionnel d'aujourd'hui récupéré avec succès"
   });
 });
+
+exports.logNutrition = catchAsync(async (req, res) => {
+  const userId = req.user.id_user;
+  const { foodId, quantity, meal, date } = req.body;
+
+  if (!foodId || !quantity || !meal) {
+    throw new AppError("foodId, quantity et meal sont obligatoires", 400, "MISSING_FIELDS");
+  }
+
+  const data = await foodService.logNutrition(userId, { foodId, quantity, meal, date });
+
+  res.status(201).json({
+    status: "success",
+    data,
+    message: "Aliment ajouté au suivi nutritionnel"
+  });
+});
+
+
+exports.deleteNutritionEntry = catchAsync(async (req, res) => {
+  const userId = req.user.id_user;
+  const entryId = req.params.entryId;
+
+  await foodService.deleteNutritionEntry(userId, entryId);
+
+  res.status(200).json({
+    status: "success",
+    message: "Entrée supprimée du suivi nutritionnel"
+  });
+});
+
+exports.getNutritionHistory = catchAsync(async (req, res) => {
+  const userId = req.user.id_user;
+  const { startDate, endDate } = req.query;
+  const data = await foodService.getNutritionHistory(userId, { startDate, endDate });
+
+  res.status(200).json({
+    status: "success",
+    data,
+    message: "Historique nutritionnel récupéré avec succès"
+  });
+});
