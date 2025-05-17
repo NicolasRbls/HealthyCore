@@ -8,6 +8,7 @@ const authRoutes = require("./modules/auth/auth.routes");
 const userRoutes = require("./modules/user/user.routes");
 const dataRoutes = require("./modules/data/data.routes");
 const validationRoutes = require("./modules/validation/validation.routes");
+const nutritionRoutes = require("./modules/nutrition/nutrition.routes");
 
 // Admin routes
 const adminUserRoutes = require("./modules/admin/user/admin.user.routes");
@@ -50,6 +51,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/validation", validationRoutes);
 app.use("/api/openfoodfacts", openFoodFactsRoutes);
+app.use("/api/nutrition", nutritionRoutes);
 
 // Configure Admin routes
 app.use("/api/admin/user", adminUserRoutes);

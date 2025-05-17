@@ -83,6 +83,8 @@ const getAllFoods = async ({
     prisma.aliments.count({ where })
   ]);
   
+  const fullTotal = total; // Total d'aliments trouvés
+
   // Si la recherche est active et qu'aucun résultat n'est trouvé, 
   // on essaie de chercher via l'API OpenFoodFacts
   let apiResults = [];
@@ -277,16 +279,15 @@ const getNutritionSummary = async (userId) => {
     }
   });
 
-  // Calcul des totaux consommés
   let caloriesConsumed = 0, proteins = 0, carbs = 0, fats = 0;
   for (const suivi of suivis) {
     const q = suivi.quantite || 1;
     const alim = suivi.aliments;
     if (!alim) continue;
-    caloriesConsumed += Number(alim.calories) * q;
-    proteins += Number(alim.proteines) * q;
-    carbs += Number(alim.glucides) * q;
-    fats += Number(alim.lipides) * q;
+    caloriesConsumed += Number(alim.calories) * q/100;
+    proteins += Number(alim.proteines) * q/100;
+    carbs += Number(alim.glucides) * q/100;
+    fats += Number(alim.lipides) * q/100;
   }
 
   // Pourcentages
@@ -321,7 +322,6 @@ const getNutritionSummary = async (userId) => {
 };
 
 const getTodayNutrition = async (userId) => {
-  // Début et fin de la journée
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10);
   const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -343,37 +343,40 @@ const getTodayNutrition = async (userId) => {
   });
 
   const meals = {};
-
+  console.log(suivis);
   // Totaux
   let totalCalories = 0, totalProteins = 0, totalCarbs = 0, totalFats = 0;
 
   // Répartir les suivis par repas
   for (const suivi of suivis) {
     const mealKey = (suivi.repas || '').toLowerCase();
+    const quantity = suivi.quantite || 100;
 
-    const quantity = suivi.quantite || 1;
-
-    for (alim in suivi.aliments) {
-      if (!meals[mealKey]) {
-        meals[mealKey] = [];
-      }
-      const foodData = {
-        id: suivi.id_suivi_nutritionnel,
-        foodId: alim.id_aliment,
-        name: alim.nom,
-        quantity: quantity,
-        calories: Math.round(Number(alim.calories) * quantity / 100),
-        proteins: Number(alim.proteines) * quantity / 100,
-        carbs: Number(alim.glucides) * quantity / 100,
-        fats: Number(alim.lipides) * quantity / 100,
-        image: alim.image
-      };
-      meals[mealKey].push(foodData);
-      totalCalories += foodData.calories;
-      totalProteins += foodData.proteins;
-      totalCarbs += foodData.carbs;
-      totalFats += foodData.fats;
+    if (!meals[mealKey]) {
+      meals[mealKey] = [];
     }
+
+    const aliment = suivi.aliments;
+    if (!aliment) continue;
+
+    const foodData = {
+      id: suivi.id_suivi_nutritionnel,
+      foodId: aliment.id_aliment,
+      name: aliment.nom,
+      quantity: quantity,
+      calories: Math.round(Number(aliment.calories) * quantity / 100),
+      proteins: Number(aliment.proteines) * quantity / 100,
+      carbs: Number(aliment.glucides) * quantity / 100,
+      fats: Number(aliment.lipides) * quantity / 100,
+      image: aliment.image
+    };
+
+    meals[mealKey].push(foodData);
+    totalCalories += foodData.calories;
+    totalProteins += foodData.proteins;
+    totalCarbs += foodData.carbs;
+    totalFats += foodData.fats;
+
   }
 
   return {
@@ -424,7 +427,7 @@ const logNutrition = async (userId, { foodId, quantity, meal, date }) => {
   let caloriesConsumed = 0;
   for (const s of suivis) {
     if (s.aliments)
-      caloriesConsumed += Number(s.aliments.calories) * (s.quantite || 1) / 100;
+      caloriesConsumed += Number(s.aliments.calories) * (s.quantite || 1)/100;
   }
 
   // Objectif calorique du jour
@@ -440,10 +443,10 @@ const logNutrition = async (userId, { foodId, quantity, meal, date }) => {
       food: {
         id: food.id_aliment,
         name: food.nom,
-        calories: Math.round(Number(food.calories) * quantity / 100),
-        proteins: Number(food.proteines) * quantity / 100,
-        carbs: Number(food.glucides) * quantity / 100,
-        fats: Number(food.lipides) * quantity / 100
+        calories: Number(food.calories),
+        proteins: Number(food.proteines),
+        carbs: Number(food.glucides),
+        fats: Number(food.lipides)
       },
       meal,
       quantity,
