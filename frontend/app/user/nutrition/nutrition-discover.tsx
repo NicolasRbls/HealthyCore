@@ -13,6 +13,7 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -22,7 +23,7 @@ import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
 import Card from "../../../components/ui/Card";
 import imageMapping from "../../../constants/imageMapping";
-import { Camera } from "expo-camera";
+import { CameraView, Camera } from "expo-camera";
 
 // Import temp data
 import tempData from "../../../assets/temp.json";
@@ -65,6 +66,51 @@ export default function NutritionDiscoverScreen() {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<
+    boolean | null
+  >(null);
+  const [scanned, setScanned] = useState<boolean>(false);
+
+  useEffect(() => {
+    const getCameraPermissions = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasCameraPermission(status === "granted");
+    };
+
+    getCameraPermissions();
+  }, []);
+
+  // Ajoutez cette fonction avec les autres fonctions
+  const handleBarCodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
+    // Définir scanned à true pour éviter les scans multiples
+    setScanned(true);
+
+    // Fermer la modale AVANT d'afficher l'alerte
+    setShowQRScanner(false);
+
+    // Délai court pour s'assurer que la modale est bien fermée avant d'afficher l'alerte
+    setTimeout(() => {
+      Alert.alert(
+        "Code-barres détecté",
+        `Le code ${data} a été scanné avec succès !`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Réinitialiser l'état scanned pour le prochain scan
+              setScanned(false);
+            },
+          },
+        ]
+      );
+    }, 300);
+  };
 
   useEffect(() => {
     // In a real app, you would fetch this data with:
@@ -224,16 +270,65 @@ export default function NutritionDiscoverScreen() {
           </View>
 
           <View style={styles.scannerArea}>
-            <View style={styles.scannerPlaceholder}>
-              <Ionicons
-                name="scan-outline"
-                size={120}
-                color={Colors.gray.light}
-              />
-              <Text style={styles.scannerText}>
-                Cadrez le code-barres dans la zone de scan
-              </Text>
-            </View>
+            {hasCameraPermission === null ? (
+              <View style={styles.scannerPlaceholder}>
+                <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+                <Text style={styles.scannerText}>
+                  Demande d'accès à la caméra...
+                </Text>
+              </View>
+            ) : hasCameraPermission === false ? (
+              <View style={styles.scannerPlaceholder}>
+                <Ionicons
+                  name="camera-off-outline"
+                  size={120}
+                  color={Colors.gray.light}
+                />
+                <Text style={styles.scannerText}>Accès à la caméra refusé</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.cancelButton,
+                    { marginTop: Layout.spacing.md },
+                  ]}
+                  onPress={async () => {
+                    const { status } =
+                      await Camera.requestCameraPermissionsAsync();
+                    setHasCameraPermission(status === "granted");
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>
+                    Demander à nouveau
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <CameraView
+                style={styles.camera}
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                barcodeScannerSettings={{
+                  barcodeTypes: ["ean13", "ean8", "upc_e", "upc_a"],
+                }}
+              >
+                <View style={styles.scannerOverlay}>
+                  <View style={styles.scannerTargetBorder}>
+                    <Ionicons
+                      name="scan-outline"
+                      size={120}
+                      color={Colors.white}
+                      style={{ opacity: 0.7 }}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.scannerText,
+                      { color: Colors.white, marginTop: Layout.spacing.xl },
+                    ]}
+                  >
+                    Cadrez le code-barres dans la zone de scan
+                  </Text>
+                </View>
+              </CameraView>
+            )}
           </View>
 
           <TouchableOpacity
@@ -595,5 +690,25 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: Colors.gray.dark,
     fontWeight: "600",
+  },
+  camera: {
+    width: "100%",
+    height: "100%",
+    borderRadius: Layout.borderRadius.md,
+  },
+  scannerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scannerTargetBorder: {
+    width: 200,
+    height: 200,
+    borderWidth: 2,
+    borderColor: Colors.white,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
