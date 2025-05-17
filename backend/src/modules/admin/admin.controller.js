@@ -42,6 +42,42 @@ const adminController = {
     });
   }),
 
+  getTotalUserCount: catchAsync(async (req, res) => {
+    const totalCount = await adminService.getUserCount();
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalCount
+      },
+      message: 'Nombre total d\'utilisateurs récupéré avec succès'
+    });
+  }),
+
+  getUserById: catchAsync(async (req, res) => {
+    const { id } = req.params;
+    
+    const user = await adminService.getUserInfosById(id);
+    
+    if (!user) {
+      throw new AppError('Utilisateur non trouvé', 404, 'USER_NOT_FOUND');
+    }
+
+    const evolution = await adminService.getLastEvolutionById(id);
+    const preferences = await adminService.getUserPreferencesById(id);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user,
+        evolution,
+        preferences
+      },
+      message: 'Utilisateur récupéré avec succès'
+    });
+  }),
+
+
   /**
    * Supprimer un utilisateur et toutes ses données associées
    */
