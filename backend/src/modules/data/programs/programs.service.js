@@ -517,6 +517,105 @@ const getSessionDetails = async (sessionId) => {
 };
 
 /**
+ * Marquer une séance comme terminée
+ * @param {number} userId - ID de l'utilisateur
+ * @param {number} sessionId - ID de la séance
+ * @param {string|null} date - Date de la séance (au format ISO 8601)
+ * @return {Promise<Object>} - Détails de la séance marquée comme terminée
+ * @throws {Error} - Si une erreur se produit lors de la mise à jour de la séance
+ */
+const completeSession = async (userId, sessionId, date = null) => {
+  try {
+    const session = await prisma.seances.findUnique({
+      where: { id_seance: sessionId },
+    });
+
+    if (!session) {
+      throw new AppError("Séance non trouvée", 404, "SESSION_NOT_FOUND");
+    }
+
+    const completionDate = date ? new Date(date) : new Date();
+    completionDate.setHours(0, 0, 0, 0);
+
+    const existingCompletion = await prisma.suivis_sportifs.findFirst({
+      where: {
+        id_user: userId,
+        id_seance: sessionId,
+        date: completionDate,
+      },
+    });
+
+    if (existingCompletion) {
+      throw new AppError(
+        "Cette séance a déjà été marquée comme terminée pour cette date",
+        409,
+        "SESSION_ALREADY_COMPLETED"
+      );
+    }
+
+    const sportFollowUp = await prisma.suivis_sportifs.create({
+      data: {
+        id_user: userId,
+        id_seance: sessionId,
+        date: completionDate,
+      },
+    });
+
+    let dailyObjectiveCompleted = false;
+    const sportObjective = await prisma.objectifs.findFirst({
+      where: {
+        titre: { contains: "séance de sport", mode: "insensitive" },
+      },
+    });
+
+    if (sportObjective) {
+      const existingObjective = await prisma.objectifs_utilisateurs.findFirst({
+        where: {
+          id_user: userId,
+          id_objectif: sportObjective.id_objectif,
+          date: completionDate,
+        },
+      });
+
+      if (existingObjective) {
+        if (existingObjective.statut !== "done") {
+          await prisma.objectifs_utilisateurs.update({
+            where: {
+              id_objectif_utilisateur:
+                existingObjective.id_objectif_utilisateur,
+            },
+            data: { statut: "done" },
+          });
+          dailyObjectiveCompleted = true;
+        }
+      } else {
+        await prisma.objectifs_utilisateurs.create({
+          data: {
+            id_user: userId,
+            id_objectif: sportObjective.id_objectif,
+            date: completionDate,
+            statut: "done",
+          },
+        });
+        dailyObjectiveCompleted = true;
+      }
+    }
+
+    return {
+      id: sportFollowUp.id_suivi_sportif,
+      sessionId: sessionId,
+      date: completionDate,
+      sessionName: session.nom,
+      dailyObjective: {
+        completed: dailyObjectiveCompleted,
+      },
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Récupérer les progrès sportifs de l'utilisateur
  * @param {number} userId - ID de l'utilisateur
  * @return {Promise<Object>} - Progrès sportifs de l'utilisateur
@@ -645,65 +744,81 @@ const generateWeekSchedule = (programSessions, sportFollowUps) => {
     "Dimanche",
   ];
 
-  // Date actuelle
+  // Date actuelle - en utilisant la construction de date locale
   const today = new Date();
 
-  // CORRECTION: Ajuster le jour de la semaine pour tenir compte du décalage
-  // Dans votre environnement, les jours semblent décalés d'une unité
-  // (aujourd'hui est mardi mais getDay() retourne 3 qui est mercredi)
-  const adjustedDay = (today.getDay() - 1 + 7) % 7; // Ajustement cyclique (-1)
+  // Pour tenir compte du décalage horaire, on travaille avec la date locale
+  // Format YYYY-MM-DD sans le décalage horaire
+  const todayLocal = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
 
-  // Trouver le lundi en utilisant le jour ajusté
-  const mondayOffset = adjustedDay === 0 ? -6 : 1 - adjustedDay;
+  // Obtenir le jour de la semaine basé sur la date locale
+  const currentDayOfWeek = todayLocal.getDay();
 
-  // Créer un tableau de dates pour toute la semaine
+  // Calculer la date du lundi de cette semaine
+  const mondayDate = new Date(todayLocal);
+
+  if (currentDayOfWeek === 0) {
+    // Dimanche
+    mondayDate.setDate(todayLocal.getDate() - 6);
+  } else {
+    mondayDate.setDate(todayLocal.getDate() - (currentDayOfWeek - 1));
+  }
+
+  // Créer le tableau de dates pour chaque jour de la semaine
   const weekDates = [];
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + mondayOffset + i);
-    date.setHours(0, 0, 0, 0);
+    const date = new Date(mondayDate);
+    date.setDate(mondayDate.getDate() + i);
     weekDates.push(date);
   }
 
-  // Construire le weekSchedule avec jours corrigés
+  // Jours d'entraînement : lundi (0), mercredi (2), vendredi (4)
+  const trainingDayIndices = [0, 2, 4]; // Lundi, Mercredi, Vendredi
+
+  // Construire le weekSchedule
   const weekSchedule = [];
 
   for (let i = 0; i < 7; i++) {
     const currentDate = weekDates[i];
-    const dateString = currentDate.toISOString().split("T")[0];
+    // Utiliser directement le format YYYY-MM-DD sans conversion timezone
+    const dateString = `${currentDate.getFullYear()}-${String(
+      currentDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
 
-    // Utiliser l'index i pour les jours de la semaine puisque nous commençons par lundi
-    const dayName = daysOfWeek[i];
-
-    // Déterminer la session pour ce jour
+    // Déterminer si ce jour a une séance programmée
     let sessionForDay = null;
+    const sessionIndex = trainingDayIndices.indexOf(i);
 
-    if (i % 2 === 0 && i < 6) {
-      const sessionIndex = Math.floor(i / 2);
+    if (sessionIndex !== -1 && sessionIndex < programSessions.length) {
+      const programSession = programSessions[sessionIndex];
 
-      if (sessionIndex < programSessions.length) {
-        const programSession = programSessions[sessionIndex];
+      // Vérifier si la séance a été complétée
+      const isCompleted = sportFollowUps.some((followUp) => {
+        const followUpDate = new Date(followUp.date);
+        // Utiliser le même format pour les dates de comparaison
+        const followUpDateString = `${followUpDate.getFullYear()}-${String(
+          followUpDate.getMonth() + 1
+        ).padStart(2, "0")}-${String(followUpDate.getDate()).padStart(2, "0")}`;
+        return (
+          followUpDateString === dateString &&
+          followUp.id_seance === programSession.id_seance
+        );
+      });
 
-        const isCompleted = sportFollowUps.some((followUp) => {
-          const followUpDate = new Date(followUp.date);
-          const followUpDateString = followUpDate.toISOString().split("T")[0];
-          return (
-            followUpDateString === dateString &&
-            followUp.id_seance === programSession.id_seance
-          );
-        });
-
-        sessionForDay = {
-          id: programSession.seances.id_seance,
-          name: programSession.seances.nom,
-          order: programSession.ordre_seance,
-          completed: isCompleted,
-        };
-      }
+      sessionForDay = {
+        id: programSession.seances.id_seance,
+        name: programSession.seances.nom,
+        order: programSession.ordre_seance,
+        completed: isCompleted,
+      };
     }
 
     weekSchedule.push({
-      day: dayName,
+      day: daysOfWeek[i],
       date: dateString,
       session: sessionForDay,
     });
@@ -723,25 +838,42 @@ const generateEmptyWeekSchedule = () => {
     "Dimanche",
   ];
 
+  // Date actuelle en utilisant la construction de date locale
   const today = new Date();
 
-  // Appliquer le même ajustement
-  const adjustedDay = (today.getDay() - 1 + 7) % 7;
-  const mondayOffset = adjustedDay === 0 ? -6 : 1 - adjustedDay;
+  // Pour tenir compte du décalage horaire
+  const todayLocal = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
 
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + mondayOffset);
-  monday.setHours(0, 0, 0, 0);
+  // Obtenir le jour de la semaine basé sur la date locale
+  const currentDayOfWeek = todayLocal.getDay();
 
+  // Calculer la date du lundi de cette semaine
+  const mondayDate = new Date(todayLocal);
+
+  if (currentDayOfWeek === 0) {
+    // Dimanche
+    mondayDate.setDate(todayLocal.getDate() - 6);
+  } else {
+    mondayDate.setDate(todayLocal.getDate() - (currentDayOfWeek - 1));
+  }
+
+  // Générer le calendrier vide
   const weekSchedule = [];
 
   for (let i = 0; i < 7; i++) {
-    const currentDate = new Date(monday);
-    currentDate.setDate(monday.getDate() + i);
-    const dateString = currentDate.toISOString().split("T")[0];
+    const currentDate = new Date(mondayDate);
+    currentDate.setDate(mondayDate.getDate() + i);
+    // Utiliser directement le format YYYY-MM-DD sans conversion timezone
+    const dateString = `${currentDate.getFullYear()}-${String(
+      currentDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
 
     weekSchedule.push({
-      day: daysOfWeek[i], // Utilisation directe de l'index
+      day: daysOfWeek[i],
       date: dateString,
       session: null,
     });
@@ -751,126 +883,33 @@ const generateEmptyWeekSchedule = () => {
 };
 
 /**
- * Marquer une séance comme terminée
- * @param {number} userId - ID de l'utilisateur
- * @param {number} sessionId - ID de la séance
- * @param {string|null} date - Date de la séance (au format ISO 8601)
- * @return {Promise<Object>} - Détails de la séance marquée comme terminée
- * @throws {Error} - Si une erreur se produit lors de la mise à jour de la séance
- */
-const completeSession = async (userId, sessionId, date = null) => {
-  try {
-    const session = await prisma.seances.findUnique({
-      where: { id_seance: sessionId },
-    });
-
-    if (!session) {
-      throw new AppError("Séance non trouvée", 404, "SESSION_NOT_FOUND");
-    }
-
-    const completionDate = date ? new Date(date) : new Date();
-    completionDate.setHours(0, 0, 0, 0);
-
-    const existingCompletion = await prisma.suivis_sportifs.findFirst({
-      where: {
-        id_user: userId,
-        id_seance: sessionId,
-        date: completionDate,
-      },
-    });
-
-    if (existingCompletion) {
-      throw new AppError(
-        "Cette séance a déjà été marquée comme terminée pour cette date",
-        409,
-        "SESSION_ALREADY_COMPLETED"
-      );
-    }
-
-    const sportFollowUp = await prisma.suivis_sportifs.create({
-      data: {
-        id_user: userId,
-        id_seance: sessionId,
-        date: completionDate,
-      },
-    });
-
-    let dailyObjectiveCompleted = false;
-    const sportObjective = await prisma.objectifs.findFirst({
-      where: {
-        titre: { contains: "séance de sport", mode: "insensitive" },
-      },
-    });
-
-    if (sportObjective) {
-      const existingObjective = await prisma.objectifs_utilisateurs.findFirst({
-        where: {
-          id_user: userId,
-          id_objectif: sportObjective.id_objectif,
-          date: completionDate,
-        },
-      });
-
-      if (existingObjective) {
-        if (existingObjective.statut !== "done") {
-          await prisma.objectifs_utilisateurs.update({
-            where: {
-              id_objectif_utilisateur:
-                existingObjective.id_objectif_utilisateur,
-            },
-            data: { statut: "done" },
-          });
-          dailyObjectiveCompleted = true;
-        }
-      } else {
-        await prisma.objectifs_utilisateurs.create({
-          data: {
-            id_user: userId,
-            id_objectif: sportObjective.id_objectif,
-            date: completionDate,
-            statut: "done",
-          },
-        });
-        dailyObjectiveCompleted = true;
-      }
-    }
-
-    return {
-      id: sportFollowUp.id_suivi_sportif,
-      sessionId: sessionId,
-      date: completionDate,
-      sessionName: session.nom,
-      dailyObjective: {
-        completed: dailyObjectiveCompleted,
-      },
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Récupérer la séance du jour pour un utilisateur
- * @param {number} userId - ID de l'utilisateur
- * @return {Promise<Object|null>} - Détails de la séance du jour ou null si aucune séance n'est prévue
- * @throws {Error} - Si une erreur se produit lors de la récupération de la séance
- */
-/**
  * Récupérer la séance du jour pour un utilisateur
  * @param {number} userId - ID de l'utilisateur
  * @return {Promise<Object|null>} - Détails de la séance du jour ou null si aucune séance n'est prévue
  * @throws {Error} - Si une erreur se produit lors de la récupération de la séance
  */
 const getTodaySession = async (userId) => {
-  // Appliquer le même ajustement de date que dans generateWeekSchedule
+  // Date du jour actuel, en utilisant la construction de date locale
   const now = new Date();
 
-  // Date du jour actuel, avec heures à 0 pour comparaison avec la BDD
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
+  // Pour tenir compte du décalage horaire
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Appliquer le même ajustement que dans generateWeekSchedule
-  const adjustedDay = (now.getDay() - 1 + 7) % 7;
+  // Pour la comparaison avec la base de données, on a besoin de minuit UTC
+  // mais en gardant la date locale correcte
+  const today = new Date(
+    Date.UTC(
+      todayLocal.getFullYear(),
+      todayLocal.getMonth(),
+      todayLocal.getDate()
+    )
+  );
+
+  // Obtenir le jour de la semaine basé sur la date locale
+  const currentDayOfWeek = todayLocal.getDay();
+
+  // Conversion de l'indice du jour de la semaine au format 0 = lundi, ..., 6 = dimanche
+  const dayIndex = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
 
   // 1. Chercher une séance déjà complétée aujourd'hui
   const completedToday = await prisma.suivis_sportifs.findFirst({
@@ -956,78 +995,105 @@ const getTodaySession = async (userId) => {
 
   const completedSessionIds = completedSessions.map((s) => s.id_seance);
 
-  // 4. Chercher la séance pour aujourd'hui dans le planning hebdomadaire
-  // Utiliser la même logique que generateWeekSchedule pour trouver le jour actuel
+  // 4. Déterminer si aujourd'hui est un jour d'entraînement
+  // en fonction du nombre total de séances dans le programme
 
-  // Calculer les jours de la semaine comme dans generateWeekSchedule
-  const mondayOffset = adjustedDay === 0 ? -6 : 1 - adjustedDay;
-  const daysSinceMonday = adjustedDay; // Le jour actuel ajusté représente le nombre de jours depuis lundi
+  // Nombre total de séances dans le programme
+  const totalSessions = activeUserProgram.programmes.seances_programmes.length;
 
-  // Trouver la séance programmée pour aujourd'hui (si elle existe)
-  // Basé sur la logique de distribution des séances dans generateWeekSchedule
-  const todayProgrammedSession =
-    daysSinceMonday % 2 === 0 && daysSinceMonday < 6
-      ? activeUserProgram.programmes.seances_programmes[
-          Math.floor(daysSinceMonday / 2)
-        ]
-      : null;
+  // Déterminer les jours d'entraînement en fonction du nombre de séances
+  let trainingDayIndices = [];
 
-  // Si nous avons une séance programmée pour aujourd'hui qui n'est pas complétée
-  if (
-    todayProgrammedSession &&
-    !completedSessionIds.includes(todayProgrammedSession.id_seance)
-  ) {
-    return {
-      id: todayProgrammedSession.seances.id_seance,
-      name: todayProgrammedSession.seances.nom,
-      program: {
-        id: activeUserProgram.id_programme,
-        name: activeUserProgram.programmes.nom,
-      },
-      completed: false,
-      exercises: todayProgrammedSession.seances.exercices_seances.map((es) => ({
-        id: es.exercices.id_exercice,
-        name: es.exercices.nom,
-        order: es.ordre_exercice,
-        sets: es.series,
-        repetitions: es.repetitions,
-        duration: es.duree,
-        description: es.exercices.description,
-        equipment: es.exercices.equipement,
-        gif: es.exercices.gif,
-      })),
-    };
+  switch (totalSessions) {
+    case 1:
+      // 1 séance : milieu de semaine (mercredi)
+      trainingDayIndices = [2];
+      break;
+
+    case 2:
+      // 2 séances : lundi et jeudi
+      trainingDayIndices = [0, 3];
+      break;
+
+    case 3:
+      // 3 séances : lundi, mercredi, vendredi
+      trainingDayIndices = [0, 2, 4];
+      break;
+
+    case 4:
+      // 4 séances : lundi, mardi, jeudi, vendredi
+      trainingDayIndices = [0, 1, 3, 4];
+      break;
+
+    case 5:
+      // 5 séances : lundi à vendredi (jours ouvrés)
+      trainingDayIndices = [0, 1, 2, 3, 4];
+      break;
+
+    case 6:
+      // 6 séances : tous les jours sauf dimanche
+      trainingDayIndices = [0, 1, 2, 3, 4, 5];
+      break;
+
+    case 7:
+      // 7 séances : tous les jours
+      trainingDayIndices = [0, 1, 2, 3, 4, 5, 6];
+      break;
+
+    default:
+      // Si plus de 7 séances, on distribue de façon cyclique
+      // en commençant par lundi
+      for (let i = 0; i < Math.min(totalSessions, 7); i++) {
+        trainingDayIndices.push(i);
+      }
   }
 
-  // 5. Si pas de séance spécifique pour aujourd'hui, chercher la prochaine non complétée
-  const nextSession = activeUserProgram.programmes.seances_programmes.find(
-    (sp) => !completedSessionIds.includes(sp.id_seance)
-  );
+  const isTodayTrainingDay = trainingDayIndices.includes(dayIndex);
 
-  if (!nextSession) {
-    return null;
+  // Si aujourd'hui est un jour d'entraînement
+  if (isTodayTrainingDay) {
+    // Trouver l'index de la séance correspondant au jour de la semaine actuel
+    const trainingDayIndex = trainingDayIndices.indexOf(dayIndex);
+
+    // Vérifier si l'index est valide et que nous avons une séance pour ce jour
+    if (
+      trainingDayIndex !== -1 &&
+      trainingDayIndex < activeUserProgram.programmes.seances_programmes.length
+    ) {
+      const todayProgrammedSession =
+        activeUserProgram.programmes.seances_programmes[trainingDayIndex];
+
+      // Si la séance n'est pas encore complétée
+      if (!completedSessionIds.includes(todayProgrammedSession.id_seance)) {
+        return {
+          id: todayProgrammedSession.seances.id_seance,
+          name: todayProgrammedSession.seances.nom,
+          program: {
+            id: activeUserProgram.id_programme,
+            name: activeUserProgram.programmes.nom,
+          },
+          completed: false,
+          exercises: todayProgrammedSession.seances.exercices_seances.map(
+            (es) => ({
+              id: es.exercices.id_exercice,
+              name: es.exercices.nom,
+              order: es.ordre_exercice,
+              sets: es.series,
+              repetitions: es.repetitions,
+              duration: es.duree,
+              description: es.exercices.description,
+              equipment: es.exercices.equipement,
+              gif: es.exercices.gif,
+            })
+          ),
+        };
+      } else {
+      }
+    } else {
+    }
+  } else {
   }
-
-  return {
-    id: nextSession.seances.id_seance,
-    name: nextSession.seances.nom,
-    program: {
-      id: activeUserProgram.id_programme,
-      name: activeUserProgram.programmes.nom,
-    },
-    completed: false,
-    exercises: nextSession.seances.exercices_seances.map((es) => ({
-      id: es.exercices.id_exercice,
-      name: es.exercices.nom,
-      order: es.ordre_exercice,
-      sets: es.series,
-      repetitions: es.repetitions,
-      duration: es.duree,
-      description: es.exercices.description,
-      equipment: es.exercices.equipement,
-      gif: es.exercices.gif,
-    })),
-  };
+  return null;
 };
 
 module.exports = {
