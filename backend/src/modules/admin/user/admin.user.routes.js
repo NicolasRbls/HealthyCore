@@ -25,4 +25,11 @@ router.get("/", isAdmin, adminUserController.getAllUsers);
  */
 router.get("/:id", isAdmin, adminUserController.getUserById);
 
+/**
+ * @route DELETE /api/admin/users/:id
+ * @desc Supprimer un utilisateur par son ID
+ * @access Private (Admin)
+ */
+router.delete("/:id", isAdmin, adminUserController.deleteUser);
+
 module.exports = router;
