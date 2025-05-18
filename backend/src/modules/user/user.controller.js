@@ -1,7 +1,6 @@
 const userService = require("./user.service");
 const { success, AppError } = require("../../utils/response.utils");
 
-
 /* * Récupérer le profil utilisateur
  * @param {Object} req - Requête HTTP
  * @param {Object} res - Réponse HTTP

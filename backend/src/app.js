@@ -16,6 +16,7 @@ const adminTagRoutes = require("./modules/admin/tags/admin.tag.routes");
 const adminExerciseRoutes = require("./modules/admin/exercises/admin.exercises.routes");
 const adminFoodsRoutes = require("./modules/admin/foods/admin.foods.routes");
 const adminSessionsRoutes = require("./modules/admin/sessions/admin.sessions.routes");
+const adminProgramsRoutes = require("./modules/admin/programs/admin.programs.routes");
 
 // openfoodfacts routes
 const openFoodFactsRoutes = require("./modules/openfoodfacts/openfoodfacts.routes");
@@ -60,6 +61,7 @@ app.use("/api/admin/tag", adminTagRoutes);
 app.use("/api/admin/exercises", adminExerciseRoutes);
 app.use("/api/admin/foods", adminFoodsRoutes);
 app.use("/api/admin/sessions", adminSessionsRoutes);
+app.use("/api/admin/programs", adminProgramsRoutes);
 
 
 // Error handling middleware (should be last)

@@ -64,3 +64,34 @@ exports.getUserById = catchAsync(async (req, res, next) => {
         message: 'Utilisateur récupéré avec succès'
     });
 });
+
+exports.deleteUser = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { password } = req.body;
+    const adminId = req.user.id_user;
+
+    if (!password) {
+        throw new AppError('Mot de passe manquant', 400, 'PASSWORD_MISSING');
+    }
+
+    const isPasswordValid = await adminUserService.checkAdminPassword(adminId, password);
+    if (!isPasswordValid) {
+        throw new AppError('Mot de passe incorrect', 401, 'INVALID_PASSWORD');
+    }
+
+    if (!id) {
+        throw new AppError('ID d\'utilisateur manquant', 400, 'USER_ID_MISSING');
+    }
+
+    const user = await adminUserService.deleteUser(id);
+    if (!user) {
+        throw new AppError('Utilisateur non trouvé', 404, 'USER_NOT_FOUND');
+    }
+    res.status(200).json({
+        status: 'success',
+        data: {
+            user
+        },
+        message: 'Utilisateur supprimé avec succès'
+    });
+});

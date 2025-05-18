@@ -1,5 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { comparePassword } = require("../../../password.utils");
+
 
 // Récupérer le nombre total d'utilisateurs
 const getUserCount = async () => {
@@ -47,54 +49,34 @@ const getPaginatedUsers = async ({ page, limit, search }) => {
   return { users, total: totalUsers };
 };
 
-// const getUserById = async (id) => {
-//     const user = await prisma.users.findUnique({
-//         where: { id_user: parseInt(id) },
-//         select: {
-//             id_user: true,
-//             prenom: true,
-//             nom: true,
-//             email: true,
-//             sexe: true,
-//             role: true,
-//             cree_a: true,
-//             mis_a_jour_a: true
-//         }
-//     });
-//     return user;
-// };
+const checkAdminPassword = async (id, password) => {
+  const admin = await prisma.users.findUnique({
+    where: { id_user: id },
+  });
 
-// const getUserPreferences = async (id) => {
-//     const preferences = await prisma.preferences.findMany({
-//         where: { id_user: parseInt(id) },
-//         select: {
-//           objectif_poids: true,
-//           id_repartition_nutritionnelle: true,
-//           id_regime_alimentaire: true,
-//           id_niveau_sedentarite: true,
-//           bmr: true,
-//           calories_quotidiennes: true
-//         },
-//     });
-//     return preferences;
-// };
+  if (!admin) {
+    throw new Error("Utilisateur non trouvé");
+  }
 
-// const getLastEvolution = async (id) => {
-//     const lastEvo = await prisma.evolutions.findFirst({
-//         where: { id_user: parseInt(id) },
-//         select: {
-//             date: true,
-//             poids: true,
-//             taille: true
-//         },
-//         orderBy: { date: "desc" },
-//         take: 1,
-//     });
-//     return lastEvo;
-// }
+  const isPasswordValid = await comparePassword(password, admin.mot_de_passe);
+
+  if (!isPasswordValid) {
+    throw new Error("Mot de passe incorrect");
+  }
+
+  return true;
+}
+
+const deleteUser = async (id) => {
+  const user = await prisma.users.delete({
+    where: { id_user: id },
+  });
+
+  return user;
+}
 
 module.exports = {
     getUserCount, // Récupérer le nombre total d'utilisateurs
     getPaginatedUsers, // Récupérer la liste paginée des utilisateurs
-
+    deleteUser
 };
