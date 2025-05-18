@@ -87,7 +87,6 @@ const getUserDailyObjectives = catchAsync(async (req, res) => {
  */
 const checkObjectivesCompletion = async (userId, objectives) => {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   // Vérifier l'objectif "Ajouter un aliment à son suivi quotidien"
   const foodObjective = objectives.find((obj) =>

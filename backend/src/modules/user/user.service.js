@@ -162,7 +162,6 @@ const conditionHandlers = {
 
   FIRST_DAY_COMPLETED: async (userId) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // force à 00:00:00 pour matcher les dates
 
     // Récupérer tous les objectifs disponibles pour connaître le total
     const totalObjectives = await prisma.objectifs.count();
@@ -187,7 +186,6 @@ const conditionHandlers = {
     // Période de 7 jours vers le passé
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
 
     // Récupérer les objectifs complétés sur la période
     const completedGoals = await prisma.objectifs_utilisateurs.findMany({
