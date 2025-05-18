@@ -89,7 +89,7 @@ exports.deleteSession = catchAsync(async (req, res, next) => {
 
   await adminSessionsService.deleteSession(sessionId);
 
-  res.status(204).json({
+  res.status(200).json({
     status: "success",
     message: "Séance supprimée avec succès"
   });

@@ -261,6 +261,8 @@ const updateSession = async (sessionId, { name, tagIds, exercises }) => {
 const deleteSession = async (sessionId) => {
   // Supprimer les associations d'exercices
   await prisma.exercices_seances.deleteMany({ where: { id_seance: sessionId } });
+
+  await prisma.seances_programmes.deleteMany({ where: { id_seance: sessionId } });
   
   // Supprimer les associations de tags
   await prisma.seances_tags.deleteMany({ where: { id_seance: sessionId } });
