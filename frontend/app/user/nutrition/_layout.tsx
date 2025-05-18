@@ -17,9 +17,23 @@ export default function NutritionLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="nutrition-discover" />
-      <Stack.Screen name="recipes/[id]" />
-      <Stack.Screen name="products/[id]" />
+      <Stack.Screen name="index" options={{ title: "Nutrition" }} />
+      <Stack.Screen
+        name="nutrition-discover"
+        options={{ title: "Découvrir des Aliments" }}
+      />
+      <Stack.Screen
+        name="recipes/[id]"
+        options={{ title: "Détails Recette" }}
+      />
+      <Stack.Screen
+        name="products/[id]"
+        options={{ title: "Détails Produit" }}
+      />
+      <Stack.Screen
+        name="search-products"
+        options={{ title: "Recherche Produit" }}
+      />
     </Stack>
   );
 }
