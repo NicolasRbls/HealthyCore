@@ -8,6 +8,8 @@ import {
   Image,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,22 +19,24 @@ import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
 import Card from "../../../components/ui/Card";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
-
-// Import temp data
-import tempData from "../../../assets/temp.json";
+import { useAuth } from "../../../context/AuthContext";
+import { nutritionService } from "../../../services/nutrition.service";
 
 // Type definitions
 interface MacroNutrient {
-  percentage: number;
+  goal: number;
   consumed: number;
   remaining: number;
+  percentCompleted: number;
+  unit: string;
 }
 
 interface NutritionSummary {
-  consumedCalories: number;
-  remainingCalories: number;
-  totalCalories: number;
-  macros: {
+  calorieGoal: number;
+  caloriesConsumed: number;
+  caloriesRemaining: number;
+  percentCompleted: number;
+  macronutrients: {
     carbs: MacroNutrient;
     proteins: MacroNutrient;
     fats: MacroNutrient;
@@ -41,128 +45,79 @@ interface NutritionSummary {
 
 interface FoodEntry {
   id: number;
+  foodId: number;
   name: string;
   meal: string;
   quantity: number;
   calories: number;
-  image: string | null;
-  foodId?: number; // Optional ID linking to the original food item
+  image?: string;
+  type?: string;
+}
+
+interface NutritionData {
+  date: string;
+  meals: {
+    [key: string]: FoodEntry[];
+  };
+  totals: {
+    calories: number;
+    proteins: number;
+    carbs: number;
+    fats: number;
+  };
 }
 
 export default function NutritionMonitoring() {
-  const [summary, setSummary] = useState<NutritionSummary>({
-    consumedCalories: 0,
-    remainingCalories: 0,
-    totalCalories: 0,
-    macros: {
-      carbs: { percentage: 0, consumed: 0, remaining: 0 },
-      proteins: { percentage: 0, consumed: 0, remaining: 0 },
-      fats: { percentage: 0, consumed: 0, remaining: 0 },
-    },
-  });
+  const { user } = useAuth();
+  const [summary, setSummary] = useState<NutritionSummary | null>(null);
+  const [nutritionData, setNutritionData] = useState<NutritionData | null>(
+    null
+  );
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteInProgress, setDeleteInProgress] = useState<number | null>(null);
 
   useEffect(() => {
-    // In a real app, you would fetch this data with:
-    // GET /api/user/nutrition/today
-
     loadData();
   }, []);
 
-  const loadData = () => {
-    // Get user preferences
-    const userData = tempData.user_exemple;
-    const userPreferences = userData.preferences;
-
-    // Get nutritional tracking data
-    const nutritionalTracking = tempData.suivis_nutritionnels_exemple;
-
-    // Calculate consumed calories and macros
-    let totalCalories = 0;
-    let totalCarbs = 0;
-    let totalProteins = 0;
-    let totalFats = 0;
-
-    const entries: FoodEntry[] = [];
-
-    nutritionalTracking.forEach((tracking) => {
-      const aliment = tempData.aliments.find(
-        (a) => a.id_aliment === tracking.id_aliment
-      );
-      if (aliment) {
-        const quantity = tracking.quantite / 100; // assuming quantity is in grams
-        const calories = aliment.calories * quantity;
-
-        totalCalories += calories;
-        totalCarbs += parseFloat(aliment.glucides) * quantity;
-        totalProteins += parseFloat(aliment.proteines) * quantity;
-        totalFats += parseFloat(aliment.lipides) * quantity;
-
-        // Add to food entries
-        entries.push({
-          id: tracking.id_suivi_nutritionnel,
-          name: aliment.nom,
-          meal: tracking.repas,
-          quantity: tracking.quantite,
-          calories: Math.round(calories),
-          image: aliment.image,
-          foodId: aliment.id_aliment, // Store the original food ID for navigation
-        });
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // Load nutrition summary
+      const summaryData = await nutritionService.getNutritionSummary();
+      if (summaryData) {
+        setSummary(summaryData);
       }
-    });
 
-    // Get calorie goal and remaining calories
-    const totalCalorieGoal = userPreferences.calories_quotidiennes;
-    const remainingCalories = totalCalorieGoal - totalCalories;
+      // Load today's nutrition data
+      const todayData = await nutritionService.getTodayNutrition();
+      if (todayData) {
+        setNutritionData(todayData);
 
-    // Get nutritional plan for macro distribution
-    const nutritionalPlan = tempData.repartitionsNutritionnelles.find(
-      (plan) =>
-        plan.id_repartition_nutritionnelle ===
-        userPreferences.id_repartition_nutritionnelle
-    );
+        // Flatten meals into a single array for display
+        const allEntries: FoodEntry[] = [];
+        Object.entries(todayData.meals).forEach(([mealType, entries]) => {
+          entries.forEach((entry) => {
+            allEntries.push({
+              ...entry,
+              meal: mealType,
+            });
+          });
+        });
 
-    // Calculate macro targets and percentages
-    const carbPercentage = nutritionalPlan
-      ? parseFloat(nutritionalPlan.pourcentage_glucides)
-      : 50;
-    const proteinPercentage = nutritionalPlan
-      ? parseFloat(nutritionalPlan.pourcentage_proteines)
-      : 20;
-    const fatPercentage = nutritionalPlan
-      ? parseFloat(nutritionalPlan.pourcentage_lipides)
-      : 30;
-
-    const carbTarget = (totalCalorieGoal * (carbPercentage / 100)) / 4; // 4 calories per gram of carbs
-    const proteinTarget = (totalCalorieGoal * (proteinPercentage / 100)) / 4; // 4 calories per gram of protein
-    const fatTarget = (totalCalorieGoal * (fatPercentage / 100)) / 9; // 9 calories per gram of fat
-
-    // Set nutrition summary
-    setSummary({
-      consumedCalories: Math.round(totalCalories),
-      remainingCalories: Math.round(remainingCalories),
-      totalCalories: totalCalorieGoal,
-      macros: {
-        carbs: {
-          percentage: Math.round((totalCarbs / carbTarget) * 100),
-          consumed: Math.round(totalCarbs),
-          remaining: Math.round(carbTarget - totalCarbs),
-        },
-        proteins: {
-          percentage: Math.round((totalProteins / proteinTarget) * 100),
-          consumed: Math.round(totalProteins),
-          remaining: Math.round(proteinTarget - totalProteins),
-        },
-        fats: {
-          percentage: Math.round((totalFats / fatTarget) * 100),
-          consumed: Math.round(totalFats),
-          remaining: Math.round(fatTarget - totalFats),
-        },
-      },
-    });
-
-    setFoodEntries(entries);
+        setFoodEntries(allEntries);
+      }
+    } catch (error) {
+      console.error("Error loading nutrition data:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de charger les données nutritionnelles. Veuillez réessayer plus tard."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onRefresh = async () => {
@@ -174,44 +129,43 @@ export default function NutritionMonitoring() {
     }
   };
 
-  // Helper function to get the correct image using a mapping approach
-  const getImageSource = (imagePath: string | null) => {
-    if (!imagePath) return null;
+  // Delete food entry
+  const deleteFoodEntry = async (entryId: number) => {
+    setDeleteInProgress(entryId);
+    try {
+      await nutritionService.deleteNutritionEntry(entryId);
 
-    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-      return { uri: imagePath };
+      // Remove from local state
+      setFoodEntries((prevEntries) =>
+        prevEntries.filter((entry) => entry.id !== entryId)
+      );
+
+      // Reload data to update summary
+      await loadData();
+
+      Alert.alert(
+        "Suppression réussie",
+        "L'aliment a été supprimé de votre suivi nutritionnel."
+      );
+    } catch (error) {
+      console.error("Error deleting food entry:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de supprimer l'aliment. Veuillez réessayer plus tard."
+      );
+    } finally {
+      setDeleteInProgress(null);
     }
-
-    // Define a mapping for the images in temp.json to their actual requires
-    const imageMapping: Record<string, any> = {
-      "/assets/images/aliments/1-nutella-1kg.png": require("../../../assets/images/aliments/1-nutella-1kg.png"),
-      "/assets/images/aliments/2-prince-100g.png": require("../../../assets/images/aliments/2-prince-100g.png"),
-      "/assets/images/aliments/3-fruits-secs-alesto-200g.png": require("../../../assets/images/aliments/3-fruits-secs-alesto-200g.png"),
-      "/assets/images/aliments/4-pat-noisettes-bonne-maman-360g.png": require("../../../assets/images/aliments/4-pat-noisettes-bonne-maman-360g.png"),
-      "/assets/images/aliments/5-tuc-100g.png": require("../../../assets/images/aliments/5-tuc-100g.png"),
-      "/assets/images/aliments/6-salade-verte-avocat.png": require("../../../assets/images/aliments/6-salade-verte-avocat.png"),
-      "/assets/images/aliments/7-pates-tomates-mozza.png": require("../../../assets/images/aliments/7-pates-tomates-mozza.png"),
-      "/assets/images/aliments/8-perfect-white-rice.png": require("../../../assets/images/aliments/8-perfect-white-rice.png"),
-    };
-
-    // Return the mapped image or null if not found
-    return imageMapping[imagePath] || null;
-  };
-
-  // Helper to translate meal types
-  const getMealLabel = (mealType: string): string => {
-    const mealLabels: Record<string, string> = {
-      "petit-dejeuner": "Petit-déjeuner",
-      dejeuner: "Déjeuner",
-      diner: "Dîner",
-      collation: "Collation",
-    };
-    return mealLabels[mealType] || mealType;
   };
 
   // Navigate to discover page
   const navigateToDiscover = () => {
     router.push("/user/nutrition/nutrition-discover");
+  };
+
+  // Navigate to history page
+  const navigateToHistory = () => {
+    router.push("/user/dashboard/history");
   };
 
   // Macro nutrient component
@@ -232,8 +186,8 @@ export default function NutritionMonitoring() {
     const strokeWidth = 6;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (circumference * percentage) / 100;
-    const fontSize = 20; // Taille de la police
-    const textYOffset = fontSize / 2; // Ajustement vertical pour le centrage
+    const fontSize = 20;
+    const textYOffset = fontSize / 2;
 
     return (
       <View style={styles.macroContainer}>
@@ -262,7 +216,7 @@ export default function NutritionMonitoring() {
           />
           <SvgText
             x={radius}
-            y={radius + textYOffset} // Calcul de la position y pour le centrage
+            y={radius + textYOffset}
             textAnchor="middle"
             fontSize={fontSize + 5}
             fontWeight="bold"
@@ -283,49 +237,50 @@ export default function NutritionMonitoring() {
   };
 
   // Navigate to food detail
-  const navigateToFoodDetail = (
-    foodId: number,
-    foodType: string = "produit"
-  ) => {
-    // Find the original food item in the aliments data
-    const foodItem = tempData.aliments.find((a) => a.id_aliment === foodId);
+  const navigateToFoodDetail = (foodId: number) => {
+    // Find the food item to determine its type
+    const foodEntry = foodEntries.find((entry) => entry.foodId === foodId);
+    if (!foodEntry) return;
 
-    if (!foodItem) return;
+    // Here we would need to determine if it's a recipe or product
+    // For now, we'll use a simple approach by calling the service to get details
+    nutritionService
+      .getFoodById(foodId)
+      .then((food) => {
+        const route =
+          food.type === "recette"
+            ? `/user/nutrition/recipes/${foodId}`
+            : `/user/nutrition/products/${foodId}`;
 
-    // Determine the route based on the food type
-    const route =
-      foodItem.type === "recette"
-        ? `/user/nutrition/recipes/${foodId}`
-        : `/user/nutrition/products/${foodId}`;
-
-    router.push(route as any);
+        router.push(route as any);
+      })
+      .catch((error) => {
+        console.error("Error fetching food details:", error);
+        // Fallback to products route
+        router.push(`/user/nutrition/products/${foodId}` as any);
+      });
   };
 
   // Food entry component
   const FoodItem = ({ item }: { item: FoodEntry }) => {
-    const imageSource = getImageSource(item.image);
-
-    // The foodId is now directly stored in the item, simplifying the lookup
-    const foodId = item.foodId;
-
-    // Find the original food item to get its type
-    const originalFood = foodId
-      ? tempData.aliments.find((a) => a.id_aliment === foodId)
-      : null;
+    // Déterminer l'unité à afficher selon le type
+    const getUnitText = () => {
+      if (item.type === "recette") {
+        return item.quantity > 1 ? "portions" : "portion";
+      }
+      return "g";
+    };
 
     return (
       <Card
         style={styles.foodCard}
-        onPress={() =>
-          foodId &&
-          navigateToFoodDetail(foodId, originalFood?.type || "produit")
-        }
+        onPress={() => navigateToFoodDetail(item.foodId)}
       >
         <View style={styles.foodRow}>
           <View style={styles.foodImageContainer}>
-            {imageSource ? (
+            {item.image ? (
               <Image
-                source={imageSource}
+                source={{ uri: item.image }}
                 style={styles.foodImage}
                 resizeMode="cover"
               />
@@ -341,15 +296,43 @@ export default function NutritionMonitoring() {
           </View>
 
           <View style={styles.foodInfo}>
-            <Text style={styles.foodName}>{item.name}</Text>
+            <Text style={styles.foodName}>{item.name.split(" - ")[0]}</Text>
             <Text style={styles.foodMeal}>{getMealLabel(item.meal)}</Text>
           </View>
 
-          <View style={styles.foodCalories}>
-            <Text style={styles.caloriesText}>
-              {item.calories.toString()} cal
-            </Text>
-            <Text style={styles.quantityText}>{item.quantity.toString()}g</Text>
+          <View style={styles.foodActions}>
+            <View style={styles.foodCalories}>
+              <Text style={styles.caloriesText}>{item.calories} cal</Text>
+              <Text style={styles.quantityText}>
+                {item.quantity} {getUnitText()}
+              </Text>
+            </View>
+
+            {/* Delete button */}
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => {
+                Alert.alert(
+                  "Confirmer la suppression",
+                  "Voulez-vous vraiment supprimer cet aliment de votre suivi ?",
+                  [
+                    { text: "Annuler", style: "cancel" },
+                    {
+                      text: "Supprimer",
+                      onPress: () => deleteFoodEntry(item.id),
+                      style: "destructive",
+                    },
+                  ]
+                );
+              }}
+              disabled={deleteInProgress === item.id}
+            >
+              {deleteInProgress === item.id ? (
+                <ActivityIndicator size="small" color={Colors.error} />
+              ) : (
+                <Ionicons name="trash-outline" size={20} color={Colors.error} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </Card>
@@ -358,26 +341,86 @@ export default function NutritionMonitoring() {
 
   // Progress bar component
   const CalorieProgressBar = () => {
-    const percentage = Math.min(
-      (summary.consumedCalories / summary.totalCalories) * 100,
-      100
-    );
+    if (!summary) return null;
+
+    const percentage = Math.min(summary.percentCompleted, 100);
+    const isOverLimit = summary.caloriesConsumed > summary.calorieGoal;
+    const barColor = isOverLimit ? Colors.error : Colors.brandBlue[0];
 
     return (
       <View style={styles.progressContainer}>
         <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: `${percentage}%` }]} />
+          <View
+            style={[
+              styles.progressBar,
+              {
+                width: `${percentage}%`,
+                backgroundColor: barColor,
+              },
+            ]}
+          />
         </View>
         <View style={styles.progressLabels}>
           <Text style={styles.progressText}>
-            {summary.consumedCalories.toString()} calories absorbées
+            {summary.caloriesConsumed} calories absorbées
           </Text>
           <Text style={styles.progressText}>
-            Objectif : {summary.totalCalories.toString()}
+            Objectif : {summary.calorieGoal}
           </Text>
         </View>
       </View>
     );
+  };
+
+  // Helper to translate meal types
+  const getMealLabel = (mealType: string): string => {
+    const mealLabels: Record<string, string> = {
+      "petit-dejeuner": "Petit-déjeuner",
+      dejeuner: "Déjeuner",
+      diner: "Dîner",
+      collation: "Collation",
+    };
+    return mealLabels[mealType] || mealType;
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Header
+          title="Suivi nutritionnel"
+          showBackButton
+          onBackPress={() => router.back()}
+          style={{ marginTop: Layout.spacing.md }}
+          rightIconName="calendar-outline"
+          onRightIconPress={navigateToHistory}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+          <Text style={styles.loadingText}>
+            Chargement du suivi nutritionnel...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Determine text color for remaining calories
+  const getRemainingCaloriesColor = () => {
+    if (!summary) return Colors.brandBlue[0];
+    return summary.caloriesRemaining < 0 ? Colors.error : Colors.brandBlue[0];
+  };
+
+  // Get appropriate text for calories status
+  const getCaloriesStatusText = () => {
+    if (!summary) return "Chargement des calories...";
+
+    if (summary.caloriesRemaining < 0) {
+      return `Vous avez dépassé de ${Math.abs(
+        summary.caloriesRemaining
+      )} Calories`;
+    }
+
+    return `Vous pouvez encore manger ${summary.caloriesRemaining} Calories`;
   };
 
   return (
@@ -387,6 +430,8 @@ export default function NutritionMonitoring() {
         showBackButton
         onBackPress={() => router.back()}
         style={{ marginTop: Layout.spacing.md }}
+        rightIconName="calendar-outline"
+        onRightIconPress={navigateToHistory}
       />
 
       <ScrollView
@@ -400,52 +445,76 @@ export default function NutritionMonitoring() {
           />
         }
       >
-        <View style={styles.summarySection}>
-          <Text style={styles.remainingText}>
-            Vous pouvez encore manger{" "}
-            <Text style={styles.highlightText}>
-              {summary.remainingCalories.toString()}
-            </Text>{" "}
-            Calories
-          </Text>
+        {summary && (
+          <View style={styles.summarySection}>
+            <Text
+              style={[
+                styles.remainingText,
+                { color: getRemainingCaloriesColor() },
+              ]}
+            >
+              {getCaloriesStatusText()}
+            </Text>
 
-          <CalorieProgressBar />
+            <CalorieProgressBar />
 
-          <View style={styles.macrosContainer}>
-            <MacroCircle
-              title="Glucides"
-              percentage={summary.macros.carbs.percentage}
-              consumed={summary.macros.carbs.consumed}
-              remaining={summary.macros.carbs.remaining}
-              color={Colors.secondary[0]}
-            />
+            <View style={styles.macrosContainer}>
+              <MacroCircle
+                title="Glucides"
+                percentage={summary.macronutrients.carbs.percentCompleted}
+                consumed={summary.macronutrients.carbs.consumed}
+                remaining={summary.macronutrients.carbs.remaining}
+                color={Colors.secondary[0]}
+              />
 
-            <MacroCircle
-              title="Protéines"
-              percentage={summary.macros.proteins.percentage}
-              consumed={summary.macros.proteins.consumed}
-              remaining={summary.macros.proteins.remaining}
-              color={Colors.brandBlue[0]}
-            />
+              <MacroCircle
+                title="Protéines"
+                percentage={summary.macronutrients.proteins.percentCompleted}
+                consumed={summary.macronutrients.proteins.consumed}
+                remaining={summary.macronutrients.proteins.remaining}
+                color={Colors.brandBlue[0]}
+              />
 
-            <MacroCircle
-              title="Graisses"
-              percentage={summary.macros.fats.percentage}
-              consumed={summary.macros.fats.consumed}
-              remaining={summary.macros.fats.remaining}
-              color={Colors.plan.cardio.primary}
-            />
+              <MacroCircle
+                title="Graisses"
+                percentage={summary.macronutrients.fats.percentCompleted}
+                consumed={summary.macronutrients.fats.consumed}
+                remaining={summary.macronutrients.fats.remaining}
+                color={Colors.plan.cardio.primary}
+              />
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.foodsSection}>
-          <Text style={styles.sectionTitle}>
-            Aliments consommés aujourd'hui
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              Aliments consommés aujourd'hui
+            </Text>
+          </View>
 
-          {foodEntries.map((entry) => (
-            <FoodItem key={entry.id} item={entry} />
-          ))}
+          {foodEntries.length > 0 ? (
+            foodEntries.map((entry) => <FoodItem key={entry.id} item={entry} />)
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Ionicons
+                name="restaurant-outline"
+                size={48}
+                color={Colors.gray.light}
+              />
+              <Text style={styles.emptyStateText}>
+                Vous n'avez pas encore ajouté d'aliments aujourd'hui.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={navigateToDiscover}
+              >
+                <Text style={styles.emptyStateButtonText}>
+                  Ajouter des aliments
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -469,6 +538,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    ...TextStyles.body,
+    color: Colors.gray.dark,
+    marginTop: Layout.spacing.md,
+  },
   summarySection: {
     padding: Layout.spacing.lg,
     backgroundColor: Colors.white,
@@ -478,6 +557,7 @@ const styles = StyleSheet.create({
   remainingText: {
     ...TextStyles.bodyLarge,
     marginBottom: Layout.spacing.md,
+    fontWeight: "600",
   },
   highlightText: {
     color: Colors.brandBlue[0],
@@ -538,13 +618,26 @@ const styles = StyleSheet.create({
   foodsSection: {
     padding: Layout.spacing.lg,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Layout.spacing.md,
+  },
   sectionTitle: {
     ...TextStyles.h4,
-    marginBottom: Layout.spacing.md,
+    flex: 1, // Pour que le titre prenne l'espace disponible
   },
   foodCard: {
     marginBottom: Layout.spacing.md,
     padding: Layout.spacing.md,
+    borderWidth: 1, // Ajout d'une bordure
+    borderColor: Colors.gray.ultraLight, // Couleur de la bordure
+    shadowColor: "#000", // Amélioration de l'ombre
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   foodRow: {
     flexDirection: "row",
@@ -578,6 +671,9 @@ const styles = StyleSheet.create({
     ...TextStyles.caption,
     color: Colors.gray.dark,
   },
+  foodActions: {
+    alignItems: "flex-end",
+  },
   foodCalories: {
     alignItems: "flex-end",
   },
@@ -588,6 +684,33 @@ const styles = StyleSheet.create({
   quantityText: {
     ...TextStyles.caption,
     color: Colors.gray.dark,
+  },
+  deleteButton: {
+    marginTop: Layout.spacing.sm,
+    padding: Layout.spacing.xs,
+  },
+  emptyStateContainer: {
+    padding: Layout.spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyStateText: {
+    ...TextStyles.body,
+    color: Colors.gray.dark,
+    textAlign: "center",
+    marginTop: Layout.spacing.md,
+    marginBottom: Layout.spacing.lg,
+  },
+  emptyStateButton: {
+    backgroundColor: Colors.brandBlue[0],
+    paddingVertical: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.lg,
+    borderRadius: Layout.borderRadius.pill,
+  },
+  emptyStateButtonText: {
+    ...TextStyles.body,
+    color: Colors.white,
+    fontWeight: "600",
   },
   // Floating Action Button styles
   fab: {
