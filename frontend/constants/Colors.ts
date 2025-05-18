@@ -7,6 +7,8 @@ const Colors = {
   // Couleurs de base
   black: "#1D1617",
   white: "#FFFFFF",
+  red: "#FF5252",
+  green: "#4CAF50",
 
   // Nuances de gris
   gray: {

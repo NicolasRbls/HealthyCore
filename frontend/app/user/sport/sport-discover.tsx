@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
   container: {
     padding: Layout.spacing.lg,
     paddingBottom: -10,
+    marginTop: -5,
   },
   section: {
     marginBottom: Layout.spacing.xl,
