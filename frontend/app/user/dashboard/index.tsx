@@ -81,13 +81,42 @@ export default function Dashboard() {
       const profileData = await authService.getProfile();
       setUserName(profileData.user.firstName);
 
-      // 2. Charger les préférences utilisateur
-      const preferencesData = await dataService.getUserPreferences();
+      // 2. Charger les données nutritionnelles en utilisant le service de nutrition
+      try {
+        // Utiliser la fonction correcte du service nutrition importé
+        const { nutritionService } = await import(
+          "../../../services/nutrition.service"
+        );
+        const nutritionData = await nutritionService.getNutritionSummary();
 
-      // Récupérer l'objectif calorique quotidien pour le calcul de pourcentage
-      const totalCalorieGoal = parseFloat(
-        preferencesData.preferences.calories_quotidiennes
-      );
+        if (nutritionData && nutritionData.calorieGoal) {
+          // Format de la réponse attendue du service nutrition
+          const consumedCalories = nutritionData.caloriesConsumed || 0;
+          const totalCalories = nutritionData.calorieGoal || 0;
+          const percentage = nutritionData.percentCompleted || 0;
+
+          setNutritionSummary({
+            consumedCalories,
+            totalCalories,
+            percentage,
+          });
+        } else {
+          // Fallback si la structure n'est pas celle attendue
+          const preferencesData = await dataService.getUserPreferences();
+          const totalCalorieGoal = parseFloat(
+            preferencesData.preferences.calories_quotidiennes
+          );
+          mockNutritionalData(totalCalorieGoal);
+        }
+      } catch (error) {
+        console.error("Error loading nutrition data:", error);
+        // Fallback aux données mockées en cas d'erreur
+        const preferencesData = await dataService.getUserPreferences();
+        const totalCalorieGoal = parseFloat(
+          preferencesData.preferences.calories_quotidiennes
+        );
+        mockNutritionalData(totalCalorieGoal);
+      }
 
       // 3. Charger les objectifs quotidiens
       try {
@@ -152,10 +181,6 @@ export default function Dashboard() {
         // Fallback sur les données mockées
         mockTodaySession();
       }
-
-      // 5. Pour les données nutritionnelles, utiliser des données mockées
-      // IMPORTANT: Dans la vraie vie, vous feriez un appel à une API
-      mockNutritionalData(totalCalorieGoal);
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       // Fallback complet sur les données mockées
@@ -312,10 +337,10 @@ export default function Dashboard() {
               <Text style={styles.userName}>{userName || "Utilisateur"}</Text>
             </View>
             <TouchableOpacity
-              style={styles.starButton}
+              style={styles.badgeButton}
               onPress={() => router.push("/user/dashboard/badge-monitoring")}
             >
-              <Ionicons name="star" size={24} color="#FFD700" />
+              <Ionicons name="trophy" size={24} color="#A091FF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -351,8 +376,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  starButton: {
+  badgeButton: {
     padding: Layout.spacing.xs,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Layout.elevation.xs,
   },
   greeting: {
     ...TextStyles.bodyLarge,
@@ -396,6 +428,7 @@ const styles = StyleSheet.create({
   calorieValue: {
     ...TextStyles.h4,
     color: Colors.brandBlue[0],
+    fontSize: 22,
     marginBottom: Layout.spacing.xs,
   },
   circleContainer: {
@@ -413,12 +446,13 @@ const styles = StyleSheet.create({
   circleText: {
     ...TextStyles.bodyLarge,
     color: Colors.white,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 24,
   },
   circleSubtext: {
     ...TextStyles.caption,
     color: Colors.white,
-    fontSize: 8,
+    fontSize: 10,
     textAlign: "center",
   },
   workoutContent: {
