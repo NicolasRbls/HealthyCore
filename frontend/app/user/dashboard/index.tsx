@@ -20,6 +20,7 @@ import authService from "../../../services/auth.service";
 import dataService from "../../../services/data.service";
 import apiService from "../../../services/api.service";
 import objectivesService from "../../../services/objectives.service";
+import { nutritionService } from "../../../services/nutrition.service";
 
 // Type definitions
 interface NutritionSummary {
@@ -84,9 +85,7 @@ export default function Dashboard() {
       // 2. Charger les données nutritionnelles en utilisant le service de nutrition
       try {
         // Utiliser la fonction correcte du service nutrition importé
-        const { nutritionService } = await import(
-          "../../../services/nutrition.service"
-        );
+
         const nutritionData = await nutritionService.getNutritionSummary();
 
         if (nutritionData && nutritionData.calorieGoal) {
@@ -384,7 +383,7 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-    ...Layout.elevation.xs,
+    ...Layout.elevation.lg,
   },
   greeting: {
     ...TextStyles.bodyLarge,

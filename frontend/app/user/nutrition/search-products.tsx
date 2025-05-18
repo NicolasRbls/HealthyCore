@@ -414,11 +414,7 @@ export default function SearchProductsScreen() {
               </View>
             ) : hasCameraPermission === false ? (
               <View style={styles.scannerPlaceholder}>
-                <Ionicons
-                  name="camera-off"
-                  size={120}
-                  color={Colors.gray.light}
-                />
+                <Ionicons name="camera" size={120} color={Colors.gray.light} />
                 <Text style={styles.scannerText}>Accès à la caméra refusé</Text>
                 <TouchableOpacity
                   style={[
