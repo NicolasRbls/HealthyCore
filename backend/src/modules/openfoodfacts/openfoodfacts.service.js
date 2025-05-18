@@ -240,8 +240,8 @@ const OpenFoodFactsService = {
       const fats = parseFloat(nutrients.fat_100g || 0).toFixed(1);
 
       // Définir les tailles maximales des colonnes (à ajuster selon votre schéma de base de données)
-      const MAX_NAME_LENGTH = 500;
-      const MAX_IMAGE_URL_LENGTH = 500;
+      const MAX_NAME_LENGTH = 1000;
+      const MAX_IMAGE_URL_LENGTH = 3000;
       const MAX_INGREDIENTS_LENGTH = 2000;
       const MAX_DESCRIPTION_LENGTH = 1000;
 
