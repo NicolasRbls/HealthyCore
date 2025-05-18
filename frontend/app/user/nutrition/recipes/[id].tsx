@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,31 +20,538 @@ import { TextStyles } from "../../../../constants/Fonts";
 import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
 import imageMapping from "../../../../constants/imageMapping";
-
-// Import temp data
-import tempData from "../../../../assets/temp.json";
+import { useAuth } from "../../../../context/AuthContext";
+import { nutritionService } from "../../../../services/nutrition.service";
 
 // Type definitions
 interface Tag {
-  id_tag: number;
-  nom: string;
-  type: string;
+  id: number;
+  name: string;
 }
 
 interface Recipe {
-  id_aliment: number;
-  nom: string;
-  image: string;
+  id: number;
+  name: string;
+  image: string | null;
   type: string;
   source: string;
   calories: number;
-  proteines: number;
-  glucides: number;
-  lipides: number;
+  proteins: number;
+  carbs: number;
+  fats: number;
   ingredients: string;
   description: string;
-  temps_preparation: number;
-  tags: number[];
+  preparationTime: number;
+  tags: Tag[];
+}
+
+export default function RecipeDetailScreen() {
+  const { user } = useAuth();
+  const params = useLocalSearchParams();
+  const recipeId = Number(params.id);
+
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [portions, setPortions] = useState("1");
+  const [selectedMeal, setSelectedMeal] = useState<string>("dejeuner");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Fetch recipe details
+    fetchRecipeDetails();
+  }, [recipeId]);
+
+  const fetchRecipeDetails = async () => {
+    setIsLoading(true);
+    try {
+      // Get recipe by ID
+      const response = await nutritionService.getFoodById(recipeId);
+
+      if (response) {
+        setRecipe(response);
+      } else {
+        Alert.alert("Erreur", "Recette introuvable");
+      }
+    } catch (error) {
+      console.error("Error fetching recipe details:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de récupérer les détails de la recette. Veuillez réessayer plus tard."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get recipe image
+  const getRecipeImage = () => {
+    if (!recipe) return null;
+
+    // Check if the image path is an HTTP or HTTPS URL
+    if (
+      recipe.image &&
+      (recipe.image.startsWith("http://") ||
+        recipe.image.startsWith("https://"))
+    ) {
+      return { uri: recipe.image };
+    }
+
+    // Map product IDs to the imageMapping
+    const mappedId = 200 + recipe.id;
+
+    return (
+      imageMapping[mappedId] || {
+        uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
+          recipe.name
+        )}`,
+      }
+    );
+  };
+
+  // Format ingredients list from string
+  const formatIngredients = (ingredientsStr?: string) => {
+    if (!ingredientsStr) return [];
+
+    // Split by | character which separates ingredients in our data
+    return ingredientsStr.split("|").map((ingredient) => ingredient.trim());
+  };
+
+  // Format recipe instructions from string
+  const formatInstructions = (description?: string) => {
+    if (!description) return [];
+
+    // Split by | character which separates steps in our data
+    return description.split("|").map((step) => step.trim());
+  };
+
+  // Calculate percentage for nutrition bars
+  const calculatePercentage = (value: number, total: number) => {
+    return Math.min(100, (value / total) * 100);
+  };
+
+  const handleAddToTracking = async () => {
+    // Validate portions
+    const parsedPortions = parseInt(portions);
+    if (isNaN(parsedPortions) || parsedPortions <= 0) {
+      Alert.alert("Erreur", "Veuillez entrer un nombre de portions valide");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (!recipe) {
+        throw new Error("Recette introuvable");
+      }
+
+      await nutritionService.logNutrition(
+        recipe.id,
+        parsedPortions,
+        selectedMeal
+      );
+
+      // Fermer la modale
+      setShowAddModal(false);
+
+      // Afficher un message de succès
+      Alert.alert(
+        "Recette ajoutée",
+        `${recipe.name} (${parsedPortions} portion${
+          parsedPortions > 1 ? "s" : ""
+        }) a été ajoutée à votre suivi nutritionnel.`,
+        [{ text: "OK" }]
+      );
+    } catch (error) {
+      console.error("Error adding recipe to tracking:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible d'ajouter cette recette à votre suivi. Veuillez réessayer plus tard."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Header
+          title="Détails de la recette"
+          showBackButton
+          onBackPress={() => router.back()}
+          style={{ marginTop: Layout.spacing.md }}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!recipe) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Header
+          title="Détails de la recette"
+          showBackButton
+          onBackPress={() => router.back()}
+          style={{ marginTop: Layout.spacing.md }}
+        />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Recette non trouvée</Text>
+          <Button
+            text="Retour"
+            onPress={() => router.back()}
+            style={styles.backButton}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Format ingredients and instructions
+  const ingredients = formatIngredients(recipe.ingredients);
+  const instructions = formatInstructions(recipe.description);
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <Header
+        title="Détails de la recette"
+        showBackButton
+        onBackPress={() => router.back()}
+        style={{ marginTop: Layout.spacing.md }}
+      />
+
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.imageContainer}>
+          <Image
+            source={getRecipeImage()}
+            style={styles.recipeImage}
+            resizeMode="cover"
+          />
+        </View>
+
+        <View style={styles.contentContainer}>
+          {/* Recipe Header */}
+          <View style={styles.recipeHeader}>
+            <Text style={styles.recipeName}>{recipe.name}</Text>
+            <View style={styles.recipeMetaInfo}>
+              <View style={styles.metaItem}>
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={Colors.gray.dark}
+                />
+                <Text style={styles.metaText}>
+                  {recipe.preparationTime} min
+                </Text>
+              </View>
+              <View style={styles.metaBadge}>
+                <Text style={styles.metaBadgeText}>1 portion</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Nutritional Info */}
+          <View style={styles.nutritionCard}>
+            <Text style={styles.sectionTitle}>
+              Informations nutritionnelles
+            </Text>
+            <Text style={styles.perServingText}>Pour 1 portion</Text>
+
+            <View style={styles.mainNutritionRow}>
+              <View style={styles.nutritionCircle}>
+                <Text style={styles.nutritionValue}>{recipe.calories}</Text>
+                <Text style={styles.nutritionLabel}>Calories</Text>
+              </View>
+            </View>
+
+            <View style={styles.nutritionDetails}>
+              {/* Carbs */}
+              <View style={styles.nutrientRow}>
+                <View style={styles.nutrientLabelContainer}>
+                  <Text style={styles.nutrientLabel}>Glucides</Text>
+                  <Text style={styles.nutrientValue}>{recipe.carbs}g</Text>
+                </View>
+                <View style={styles.nutrientBarContainer}>
+                  <View
+                    style={[
+                      styles.nutrientBar,
+                      styles.carbsBar,
+                      {
+                        width: `${calculatePercentage(recipe.carbs, 100)}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* Proteins */}
+              <View style={styles.nutrientRow}>
+                <View style={styles.nutrientLabelContainer}>
+                  <Text style={styles.nutrientLabel}>Protéines</Text>
+                  <Text style={styles.nutrientValue}>{recipe.proteins}g</Text>
+                </View>
+                <View style={styles.nutrientBarContainer}>
+                  <View
+                    style={[
+                      styles.nutrientBar,
+                      styles.proteinsBar,
+                      {
+                        width: `${calculatePercentage(recipe.proteins, 50)}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* Fats */}
+              <View style={styles.nutrientRow}>
+                <View style={styles.nutrientLabelContainer}>
+                  <Text style={styles.nutrientLabel}>Lipides</Text>
+                  <Text style={styles.nutrientValue}>{recipe.fats}g</Text>
+                </View>
+                <View style={styles.nutrientBarContainer}>
+                  <View
+                    style={[
+                      styles.nutrientBar,
+                      styles.fatsBar,
+                      { width: `${calculatePercentage(recipe.fats, 50)}%` },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Ingredients */}
+          <View style={styles.ingredientsCard}>
+            <Text style={styles.sectionTitle}>Ingrédients</Text>
+            {ingredients.map((ingredient, index) => (
+              <View key={index} style={styles.ingredientItem}>
+                <View style={styles.bulletPoint} />
+                <Text style={styles.ingredientText}>{ingredient}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Instructions */}
+          <View style={styles.instructionsCard}>
+            <Text style={styles.sectionTitle}>Préparation</Text>
+            {instructions.map((step, index) => (
+              <View key={index} style={styles.instructionItem}>
+                <View style={styles.instructionNumberContainer}>
+                  <Text style={styles.instructionNumber}>{index + 1}</Text>
+                </View>
+                <Text style={styles.instructionText}>{step}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Tags */}
+          {recipe.tags && recipe.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              <Text style={styles.tagsTitle}>Catégories :</Text>
+              <View style={styles.tagsList}>
+                {recipe.tags.map((tag) => (
+                  <View key={tag.id} style={styles.tagChip}>
+                    <Text style={styles.tagText}>
+                      {tag.name.charAt(0).toUpperCase() +
+                        tag.name.slice(1).replace(/-/g, " ")}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Add to Tracking Button */}
+      <View style={styles.addButtonContainer}>
+        <Button
+          text="Ajouter au suivi"
+          onPress={() => setShowAddModal(true)}
+          fullWidth
+          style={styles.addButton}
+        />
+      </View>
+
+      {/* Add to Tracking Modal */}
+      <Modal
+        visible={showAddModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Ajouter {recipe.name}</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Ionicons
+                  name="close-outline"
+                  size={24}
+                  color={Colors.gray.dark}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Nombre de portions</Text>
+              <TextInput
+                style={styles.quantityInput}
+                value={portions}
+                onChangeText={setPortions}
+                keyboardType="numeric"
+                placeholder="1"
+              />
+
+              <Text style={styles.modalLabel}>Repas</Text>
+              <View style={styles.mealSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.mealOption,
+                    selectedMeal === "petit-dejeuner" &&
+                      styles.selectedMealOption,
+                  ]}
+                  onPress={() => setSelectedMeal("petit-dejeuner")}
+                >
+                  <Ionicons
+                    name="sunny-outline"
+                    size={20}
+                    color={
+                      selectedMeal === "petit-dejeuner"
+                        ? Colors.white
+                        : Colors.gray.dark
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.mealOptionText,
+                      selectedMeal === "petit-dejeuner" &&
+                        styles.selectedMealOptionText,
+                    ]}
+                  >
+                    Petit-déj.
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.mealOption,
+                    selectedMeal === "dejeuner" && styles.selectedMealOption,
+                  ]}
+                  onPress={() => setSelectedMeal("dejeuner")}
+                >
+                  <Ionicons
+                    name="restaurant-outline"
+                    size={20}
+                    color={
+                      selectedMeal === "dejeuner"
+                        ? Colors.white
+                        : Colors.gray.dark
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.mealOptionText,
+                      selectedMeal === "dejeuner" &&
+                        styles.selectedMealOptionText,
+                    ]}
+                  >
+                    Déjeuner
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.mealOption,
+                    selectedMeal === "collation" && styles.selectedMealOption,
+                  ]}
+                  onPress={() => setSelectedMeal("collation")}
+                >
+                  <Ionicons
+                    name="cafe-outline"
+                    size={20}
+                    color={
+                      selectedMeal === "collation"
+                        ? Colors.white
+                        : Colors.gray.dark
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.mealOptionText,
+                      selectedMeal === "collation" &&
+                        styles.selectedMealOptionText,
+                    ]}
+                  >
+                    Collation
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.mealOption,
+                    selectedMeal === "diner" && styles.selectedMealOption,
+                  ]}
+                  onPress={() => setSelectedMeal("diner")}
+                >
+                  <Ionicons
+                    name="moon-outline"
+                    size={20}
+                    color={
+                      selectedMeal === "diner" ? Colors.white : Colors.gray.dark
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.mealOptionText,
+                      selectedMeal === "diner" && styles.selectedMealOptionText,
+                    ]}
+                  >
+                    Dîner
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.nutritionSummary}>
+                <Text style={styles.summaryLabel}>
+                  Calories pour {portions} portion
+                  {parseInt(portions) > 1 ? "s" : ""} :
+                </Text>
+                <Text style={styles.summaryValue}>
+                  {isNaN(parseInt(portions))
+                    ? "0"
+                    : Math.round(recipe.calories * parseInt(portions))}{" "}
+                  cal
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalFooter}>
+              <Button
+                text="Annuler"
+                variant="outline"
+                onPress={() => setShowAddModal(false)}
+                style={styles.modalButton}
+                disabled={isSubmitting}
+              />
+              <Button
+                text={isSubmitting ? "Ajout en cours..." : "Ajouter"}
+                onPress={handleAddToTracking}
+                style={styles.modalButton}
+                disabled={isSubmitting}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -323,6 +831,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: Layout.spacing.md,
   },
+  mealSelector: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: Layout.spacing.md,
+  },
+  mealOption: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.xs,
+    borderRadius: Layout.borderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.gray.light,
+    width: "23%",
+  },
+  selectedMealOption: {
+    backgroundColor: Colors.brandBlue[0],
+    borderColor: Colors.brandBlue[0],
+  },
+  mealOptionText: {
+    ...TextStyles.caption,
+    color: Colors.gray.dark,
+    marginTop: 4,
+  },
+  selectedMealOptionText: {
+    color: Colors.white,
+  },
   nutritionSummary: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -350,387 +885,3 @@ const styles = StyleSheet.create({
     marginHorizontal: Layout.spacing.xs,
   },
 });
-
-export default function RecipeDetailScreen() {
-  const params = useLocalSearchParams();
-  const recipeId = Number(params.id);
-
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [recipeTags, setRecipeTags] = useState<Tag[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [portions, setPortions] = useState("1");
-
-  useEffect(() => {
-    // Fetch recipe details
-    fetchRecipeDetails();
-  }, [recipeId]);
-
-  const fetchRecipeDetails = () => {
-    setIsLoading(true);
-    try {
-      // Get data from temp.json
-      const foodData = tempData.aliments as Recipe[];
-      const tagsData = tempData.tags as Tag[];
-
-      // Find the recipe by ID
-      const foundRecipe = foodData.find(
-        (r) => r.id_aliment === recipeId && r.type === "recette"
-      );
-
-      if (foundRecipe) {
-        setRecipe(foundRecipe);
-
-        // Filter tags to only include food-related tags
-        const foodTags = tagsData.filter((tag) => tag.type === "aliment");
-        setAllTags(foodTags);
-
-        // Get recipe's tags
-        if (foundRecipe.tags && foundRecipe.tags.length > 0) {
-          const recipeTagsData = foodTags.filter((tag) =>
-            foundRecipe.tags.includes(tag.id_tag)
-          );
-          setRecipeTags(recipeTagsData);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching recipe details:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Get recipe image
-  const getRecipeImage = () => {
-    if (!recipe) return null;
-
-    // Check if the image path is an HTTP or HTTPS URL
-    if (
-      recipe.image &&
-      (recipe.image.startsWith("http://") ||
-        recipe.image.startsWith("https://"))
-    ) {
-      return { uri: recipe.image };
-    }
-
-    // Map product IDs to the imageMapping
-    const mappedId = 200 + recipe.id_aliment;
-
-    return (
-      imageMapping[mappedId] || {
-        uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
-          recipe.nom
-        )}`,
-      }
-    );
-  };
-
-  // Format ingredients list from string
-  const formatIngredients = (ingredientsStr?: string) => {
-    if (!ingredientsStr) return [];
-
-    // Split by | character which separates ingredients in our data
-    return ingredientsStr.split("|").map((ingredient) => ingredient.trim());
-  };
-
-  // Format recipe instructions from string
-  const formatInstructions = (description?: string) => {
-    if (!description) return [];
-
-    // Split by | character which separates steps in our data
-    return description.split("|").map((step) => step.trim());
-  };
-
-  // Calculate percentage for nutrition bars
-  const calculatePercentage = (value: number, total: number) => {
-    return Math.min(100, (value / total) * 100);
-  };
-
-  const handleAddToTracking = () => {
-    // Validate portions
-    const parsedPortions = parseInt(portions);
-    if (isNaN(parsedPortions) || parsedPortions <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer un nombre de portions valide");
-      return;
-    }
-
-    // In a real app, this would call an API to add the food to user's tracking
-    // For now, just show a success message
-    Alert.alert(
-      "Recette ajoutée",
-      `${recipe?.nom} (${parsedPortions} portion${
-        parsedPortions > 1 ? "s" : ""
-      }) a été ajoutée à votre suivi nutritionnel.`,
-      [{ text: "OK", onPress: () => setShowAddModal(false) }]
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header
-          title="Détails de la recette"
-          showBackButton
-          onBackPress={() => router.back()}
-          style={{ marginTop: Layout.spacing.md }}
-        />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chargement...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!recipe) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header
-          title="Détails de la recette"
-          showBackButton
-          onBackPress={() => router.back()}
-          style={{ marginTop: Layout.spacing.md }}
-        />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Recette non trouvée</Text>
-          <Button
-            text="Retour"
-            onPress={() => router.back()}
-            style={styles.backButton}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Format ingredients and instructions
-  const ingredients = formatIngredients(recipe.ingredients);
-  const instructions = formatInstructions(recipe.description);
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <Header
-        title="Détails de la recette"
-        showBackButton
-        onBackPress={() => router.back()}
-        style={{ marginTop: Layout.spacing.md }}
-      />
-
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.imageContainer}>
-          <Image
-            source={getRecipeImage()}
-            style={styles.recipeImage}
-            resizeMode="cover"
-          />
-        </View>
-
-        <View style={styles.contentContainer}>
-          {/* Recipe Header */}
-          <View style={styles.recipeHeader}>
-            <Text style={styles.recipeName}>{recipe.nom}</Text>
-            <View style={styles.recipeMetaInfo}>
-              <View style={styles.metaItem}>
-                <Ionicons
-                  name="time-outline"
-                  size={16}
-                  color={Colors.gray.dark}
-                />
-                <Text style={styles.metaText}>
-                  {recipe.temps_preparation} min
-                </Text>
-              </View>
-              <View style={styles.metaBadge}>
-                <Text style={styles.metaBadgeText}>1 portion</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Nutritional Info */}
-          <View style={styles.nutritionCard}>
-            <Text style={styles.sectionTitle}>
-              Informations nutritionnelles
-            </Text>
-            <Text style={styles.perServingText}>Pour 1 portion</Text>
-
-            <View style={styles.mainNutritionRow}>
-              <View style={styles.nutritionCircle}>
-                <Text style={styles.nutritionValue}>{recipe.calories}</Text>
-                <Text style={styles.nutritionLabel}>Calories</Text>
-              </View>
-            </View>
-
-            <View style={styles.nutritionDetails}>
-              {/* Carbs */}
-              <View style={styles.nutrientRow}>
-                <View style={styles.nutrientLabelContainer}>
-                  <Text style={styles.nutrientLabel}>Glucides</Text>
-                  <Text style={styles.nutrientValue}>{recipe.glucides}g</Text>
-                </View>
-                <View style={styles.nutrientBarContainer}>
-                  <View
-                    style={[
-                      styles.nutrientBar,
-                      styles.carbsBar,
-                      {
-                        width: `${calculatePercentage(recipe.glucides, 100)}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              {/* Proteins */}
-              <View style={styles.nutrientRow}>
-                <View style={styles.nutrientLabelContainer}>
-                  <Text style={styles.nutrientLabel}>Protéines</Text>
-                  <Text style={styles.nutrientValue}>{recipe.proteines}g</Text>
-                </View>
-                <View style={styles.nutrientBarContainer}>
-                  <View
-                    style={[
-                      styles.nutrientBar,
-                      styles.proteinsBar,
-                      {
-                        width: `${calculatePercentage(recipe.proteines, 50)}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              {/* Fats */}
-              <View style={styles.nutrientRow}>
-                <View style={styles.nutrientLabelContainer}>
-                  <Text style={styles.nutrientLabel}>Lipides</Text>
-                  <Text style={styles.nutrientValue}>{recipe.lipides}g</Text>
-                </View>
-                <View style={styles.nutrientBarContainer}>
-                  <View
-                    style={[
-                      styles.nutrientBar,
-                      styles.fatsBar,
-                      { width: `${calculatePercentage(recipe.lipides, 50)}%` },
-                    ]}
-                  />
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Ingredients */}
-          <View style={styles.ingredientsCard}>
-            <Text style={styles.sectionTitle}>Ingrédients</Text>
-            {ingredients.map((ingredient, index) => (
-              <View key={index} style={styles.ingredientItem}>
-                <View style={styles.bulletPoint} />
-                <Text style={styles.ingredientText}>{ingredient}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Instructions */}
-          <View style={styles.instructionsCard}>
-            <Text style={styles.sectionTitle}>Préparation</Text>
-            {instructions.map((step, index) => (
-              <View key={index} style={styles.instructionItem}>
-                <View style={styles.instructionNumberContainer}>
-                  <Text style={styles.instructionNumber}>{index + 1}</Text>
-                </View>
-                <Text style={styles.instructionText}>{step}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Tags */}
-          {recipeTags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              <Text style={styles.tagsTitle}>Catégories :</Text>
-              <View style={styles.tagsList}>
-                {recipeTags.map((tag) => (
-                  <View key={tag.id_tag} style={styles.tagChip}>
-                    <Text style={styles.tagText}>
-                      {tag.nom.charAt(0).toUpperCase() +
-                        tag.nom.slice(1).replace(/-/g, " ")}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Add to Tracking Button */}
-      <View style={styles.addButtonContainer}>
-        <Button
-          text="Ajouter au suivi"
-          onPress={() => setShowAddModal(true)}
-          fullWidth
-          style={styles.addButton}
-        />
-      </View>
-
-      {/* Add to Tracking Modal */}
-      <Modal
-        visible={showAddModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ajouter {recipe.nom}</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons
-                  name="close-outline"
-                  size={24}
-                  color={Colors.gray.dark}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.modalLabel}>Nombre de portions</Text>
-              <TextInput
-                style={styles.quantityInput}
-                value={portions}
-                onChangeText={setPortions}
-                keyboardType="numeric"
-                placeholder="1"
-              />
-
-              <View style={styles.nutritionSummary}>
-                <Text style={styles.summaryLabel}>
-                  Calories pour {portions} portion
-                  {parseInt(portions) > 1 ? "s" : ""} :
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {isNaN(parseInt(portions))
-                    ? "0"
-                    : Math.round(recipe.calories * parseInt(portions))}{" "}
-                  cal
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.modalFooter}>
-              <Button
-                text="Annuler"
-                variant="outline"
-                onPress={() => setShowAddModal(false)}
-                style={styles.modalButton}
-              />
-              <Button
-                text="Ajouter"
-                onPress={handleAddToTracking}
-                style={styles.modalButton}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
-  );
-}
