@@ -1,6 +1,7 @@
 const express = require("express");
 const adminUserController = require("./admin.user.controller");
 const { isAdmin } = require("../../auth/auth.middleware");
+const { checkAuth } = require("../../auth/auth.middleware");
 
 const router = express.Router();
 
@@ -9,27 +10,27 @@ const router = express.Router();
  * @desc Récupérer le nombre total d'utilisateurs
  * @access Private (Admin)
  */
-router.get("/count", isAdmin, adminUserController.getTotalUserCount);
+router.get("/count", checkAuth, isAdmin, adminUserController.getTotalUserCount);
 
 /**
- * @route GET /api/admin/users 
+ * @route GET /api/admin/users
  * @desc Récupérer tous les utilisateurs avec pagination
  * @access Private (Admin)
  */
-router.get("/", isAdmin, adminUserController.getAllUsers);
+router.get("/", checkAuth, isAdmin, adminUserController.getAllUsers);
 
 /**
  * @route GET /api/admin/users/:id
  * @desc Récupérer un utilisateur par son ID
  * @access Private (Admin)
  */
-router.get("/:id", isAdmin, adminUserController.getUserById);
+router.get("/:id", checkAuth, isAdmin, adminUserController.getUserById);
 
 /**
  * @route DELETE /api/admin/users/:id
  * @desc Supprimer un utilisateur par son ID
  * @access Private (Admin)
  */
-router.delete("/:id", isAdmin, adminUserController.deleteUser);
+router.delete("/:id", checkAuth, isAdmin, adminUserController.deleteUser);
 
 module.exports = router;

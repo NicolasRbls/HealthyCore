@@ -1,17 +1,50 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const { comparePassword } = require("../../../password.utils");
-
+const { comparePassword } = require("../../../utils/password.utils");
 
 // Récupérer le nombre total d'utilisateurs
 const getUserCount = async () => {
-    return await prisma.users.count({
+  return await prisma.users.count({
     where: { role: { not: "admin" } },
+  });
+};
+
+const getUserProfile = async (userId) => {
+  return await prisma.users.findUnique({
+    where: { id_user: userId },
+    select: {
+      id_user: true,
+      prenom: true,
+      nom: true,
+      email: true,
+      sexe: true,
+      date_de_naissance: true,
+      role: true,
+      cree_a: true,
+      mis_a_jour_a: true,
+    },
+  });
+};
+
+const getLatestEvolution = async (userId) => {
+  return await prisma.evolutions.findFirst({
+    where: { id_user: userId },
+    orderBy: { date: "desc" },
+  });
+};
+
+const getUserPreferences = async (userId) => {
+  return await prisma.preferences.findFirst({
+    where: { id_user: userId },
   });
 };
 
 // Récupérer la liste paginée de tous les utilisateurs
 const getPaginatedUsers = async ({ page, limit, search }) => {
+  // Convert to numbers
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = parseInt(limit, 10) || 10;
+
   const searchFilter = search
     ? {
         OR: [
@@ -26,8 +59,8 @@ const getPaginatedUsers = async ({ page, limit, search }) => {
       role: { not: "admin" },
       ...searchFilter,
     },
-    skip: (page - 1) * limit,
-    take: limit,
+    skip: (pageNum - 1) * limitNum,
+    take: limitNum,
     select: {
       id_user: true,
       prenom: true,
@@ -35,7 +68,7 @@ const getPaginatedUsers = async ({ page, limit, search }) => {
       email: true,
       sexe: true,
       cree_a: true,
-      mis_a_jour_a: true
+      mis_a_jour_a: true,
     },
   });
 
@@ -65,7 +98,7 @@ const checkAdminPassword = async (id, password) => {
   }
 
   return true;
-}
+};
 
 const deleteUser = async (id) => {
   const user = await prisma.users.delete({
@@ -73,10 +106,14 @@ const deleteUser = async (id) => {
   });
 
   return user;
-}
+};
 
 module.exports = {
-    getUserCount, // Récupérer le nombre total d'utilisateurs
-    getPaginatedUsers, // Récupérer la liste paginée des utilisateurs
-    deleteUser
+  getUserCount,
+  getPaginatedUsers,
+  deleteUser,
+  getUserProfile,
+  checkAdminPassword,
+  getLatestEvolution,
+  getUserPreferences,
 };
