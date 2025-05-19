@@ -16,6 +16,9 @@ import {
   Mail,
   Cake,
   Clock,
+  Heart,
+  Dumbbell,
+  Info,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -34,17 +37,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import userService from "@/services/userService";
-import { UserDetail } from "@/types/user";
+import { UserDetail, NewUserDetail } from "@/types/user";
 
 export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
   const userId = Number(params.id);
 
-  const [user, setUser] = useState<UserDetail | null>(null);
+  const [user, setUser] = useState<NewUserDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -54,20 +58,16 @@ export default function UserDetailPage() {
 
   const loadUserDetails = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await userService.getUserById(userId);
-      setUser({
-        ...response.data.user,
-        evolution: response.data.evolution,
-        nutritionSummary: response.data.nutritionSummary,
-        exerciseSummary: response.data.exerciseSummary,
-        badgeCount: response.data.badgeCount,
-      });
+      setUser(response.data);
     } catch (error) {
       console.error(
         "Erreur lors du chargement des détails de l'utilisateur:",
         error
       );
+      setError("Impossible de charger les détails de l'utilisateur.");
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +85,32 @@ export default function UserDetailPage() {
       router.push("/dashboard/users");
     } catch (error) {
       console.error("Erreur lors de la suppression de l'utilisateur:", error);
+      setError("Erreur lors de la suppression de l'utilisateur.");
     }
+  };
+
+  // Fonction pour obtenir le nom du régime alimentaire
+  const getDietName = (id) => {
+    const diets = {
+      1: "Aucun",
+      2: "Végétarien",
+      3: "Végétalien",
+      4: "Sans gluten",
+      5: "Sans lactose",
+    };
+    return diets[id] || "Non spécifié";
+  };
+
+  // Fonction pour obtenir le nom du niveau de sédentarité
+  const getSedentaryLevelName = (id) => {
+    const levels = {
+      1: "Très sédentaire",
+      2: "Sédentaire",
+      3: "Modérément actif",
+      4: "Actif",
+      5: "Très actif",
+    };
+    return levels[id] || "Non spécifié";
   };
 
   if (isLoading) {
@@ -99,6 +124,28 @@ export default function UserDetailPage() {
               <p className="text-gray-600">
                 Chargement des détails de l'utilisateur...
               </p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Header title="Erreur" />
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard/users")}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Retour à la liste
+              </Button>
             </div>
           </div>
         </div>
@@ -129,9 +176,14 @@ export default function UserDetailPage() {
     );
   }
 
+  // Utiliser des valeurs par défaut si les données sont indéfinies
+  const displayName =
+    `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+    "Utilisateur sans nom";
+
   return (
     <>
-      <Header title={`${user.prenom} ${user.nom}`} />
+      <Header title={displayName} />
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -151,7 +203,10 @@ export default function UserDetailPage() {
         {/* Informations de base */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Informations personnelles</CardTitle>
+            <CardTitle className="flex items-center">
+              <UserCircle className="h-5 w-5 mr-2" />
+              Informations personnelles
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -162,63 +217,56 @@ export default function UserDetailPage() {
                     Nom complet :
                   </span>
                   <span className="font-medium">
-                    {user.prenom} {user.nom}
+                    {user.firstName || "Non spécifié"} {user.lastName || ""}
                   </span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 mr-2 text-gray-400" />
                   <span className="text-sm text-gray-500 w-32">Email :</span>
-                  <span className="font-medium">{user.email}</span>
+                  <span className="font-medium">
+                    {user.email || "Non spécifié"}
+                  </span>
                 </div>
                 <div className="flex items-center">
-                  <Badge variant="outline" className="mr-2">
-                    {user.sexe === "H"
+                  <span className="text-sm text-gray-500 w-36">Genre :</span>
+                  <Badge
+                    variant="outline"
+                    className={`mr-2 ${
+                      user.gender === "H"
+                        ? "bg-blue-50 text-blue-600 border-blue-200"
+                        : user.gender === "F"
+                        ? "bg-pink-50 text-pink-600 border-pink-200"
+                        : ""
+                    }`}
+                  >
+                    {user.gender === "H"
                       ? "Homme"
-                      : user.sexe === "F"
+                      : user.gender === "F"
                       ? "Femme"
                       : "Non spécifié"}
                   </Badge>
-                  <span className="text-sm text-gray-500 w-32">Genre:</span>
-                  <span className="font-medium">
-                    {user.sexe === "H"
-                      ? "Homme"
-                      : user.sexe === "F"
-                      ? "Femme"
-                      : "Non spécifié"}
-                  </span>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center">
-                  <Cake className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-500 w-32">
+                  <Calendar className="h-5 w-5 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-500 w-36">
                     Date de naissance :
-                  </span>
+                  </span>{" "}
                   <span className="font-medium">
-                    {format(new Date(user.date_de_naissance), "dd MMMM yyyy", {
-                      locale: fr,
-                    })}
+                    {user.birthDate
+                      ? format(new Date(user.birthDate), "dd MMMM yyyy", {
+                          locale: fr,
+                        })
+                      : "Non spécifié"}
                   </span>
                 </div>
                 <div className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-500 w-32">
-                    Inscrit le:
-                  </span>
+                  <Cake className="h-5 w-5 mr-2 text-gray-400" />
+                  <span className="text-sm text-gray-500 w-36">Âge :</span>{" "}
                   <span className="font-medium">
-                    {format(new Date(user.cree_a), "dd MMMM yyyy", {
-                      locale: fr,
-                    })}
+                    {user.age > 0 ? `${user.age} ans` : "Non spécifié"}
                   </span>
-                </div>
-                <div className="flex items-center">
-                  <Activity className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-500 w-32">Rôle :</span>
-                  <Badge
-                    variant={user.role === "admin" ? "destructive" : "default"}
-                  >
-                    {user.role === "admin" ? "Admin" : "Utilisateur"}
-                  </Badge>
                 </div>
               </div>
             </div>
@@ -230,20 +278,25 @@ export default function UserDetailPage() {
           {/* Évolution */}
           <Card>
             <CardHeader>
-              <CardTitle>Évolution physique</CardTitle>
+              <CardTitle className="flex items-center">
+                <Activity className="h-5 w-5 mr-2" />
+                Informations physiques
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {user.evolution ? (
+              {user.metrics ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Weight className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Poids actuel:
+                        Poids actuel :
                       </span>
                     </div>
                     <span className="font-medium">
-                      {user.evolution.currentWeight} kg
+                      {user.metrics.currentWeight > 0
+                        ? `${user.metrics.currentWeight} kg`
+                        : "Non défini"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -252,7 +305,9 @@ export default function UserDetailPage() {
                       <span className="text-sm text-gray-500">Taille :</span>
                     </div>
                     <span className="font-medium">
-                      {user.evolution.currentHeight} cm
+                      {user.metrics.currentHeight > 0
+                        ? `${user.metrics.currentHeight} cm`
+                        : "Non défini"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -260,82 +315,81 @@ export default function UserDetailPage() {
                       <Activity className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">IMC :</span>
                     </div>
-                    <span className="font-medium">
-                      {user.evolution.currentBMI}
-                    </span>
+                    <Badge
+                      className={
+                        user.metrics.bmi < 18.5
+                          ? "bg-blue-100 text-blue-800"
+                          : user.metrics.bmi < 25
+                          ? "bg-green-100 text-green-800"
+                          : user.metrics.bmi < 30
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }
+                    >
+                      {user.metrics.bmi > 0 ? user.metrics.bmi : "Non défini"}
+                    </Badge>
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Weight className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Poids initial :
+                        Poids cible :
                       </span>
                     </div>
                     <span className="font-medium">
-                      {user.evolution.startWeight} kg
+                      {user.metrics.targetWeight > 0
+                        ? `${user.metrics.targetWeight} kg`
+                        : "Non défini"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Activity className="h-5 w-5 mr-2 text-gray-400" />
+                      <Utensils className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Variation de poids :
-                      </span>
-                    </div>
-                    <Badge
-                      variant={
-                        user.evolution.weightChange < 0
-                          ? "destructive"
-                          : "default"
-                      }
-                      className={
-                        user.evolution.weightChange < 0 ? "bg-green-500" : ""
-                      }
-                    >
-                      {user.evolution.weightChange > 0 ? "+" : ""}
-                      {user.evolution.weightChange} kg
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Clock className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        Durée d'utilisation :
+                        Calories quotidiennes :
                       </span>
                     </div>
                     <span className="font-medium">
-                      {user.evolution.timeOnPlatform}
+                      {user.metrics.dailyCalories > 0
+                        ? `${user.metrics.dailyCalories} kcal`
+                        : "Non défini"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Dumbbell className="h-5 w-5 mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        Séances par semaine :
+                      </span>
+                    </div>
+                    <span className="font-medium">
+                      {user.metrics.sessionsPerWeek > 0
+                        ? user.metrics.sessionsPerWeek
+                        : "Non défini"}
                     </span>
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-500 italic">
+                <p className="text-gray-500 italic flex items-center">
+                  <Info className="h-4 w-4 mr-2" />
                   Pas de données d'évolution disponibles.
                 </p>
               )}
             </CardContent>
           </Card>
 
-          {/* Suivi nutritionnel */}
+          {/* Préférences */}
           <Card>
             <CardHeader>
-              <CardTitle>Suivi nutritionnel</CardTitle>
+              <CardTitle className="flex items-center">
+                <Heart className="h-5 w-5 mr-2" />
+                Préférences
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {user.nutritionSummary ? (
+              {user.preferences ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Utensils className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        Objectif calorique :
-                      </span>
-                    </div>
-                    <span className="font-medium">
-                      {user.nutritionSummary.caloriesGoal} kcal/jour
-                    </span>
-                  </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Utensils className="h-5 w-5 mr-2 text-gray-400" />
@@ -343,150 +397,83 @@ export default function UserDetailPage() {
                         Régime alimentaire :
                       </span>
                     </div>
-                    <Badge variant="outline">
-                      {user.nutritionSummary.diet}
-                    </Badge>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-500">
-                        Répartition des macronutriments :
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="p-2 bg-gray-50 rounded-lg text-center">
-                        <div className="text-xs text-gray-500">Glucides</div>
-                        <div className="font-medium">
-                          {user.nutritionSummary.macroDistribution.carbs} %
-                        </div>
-                      </div>
-                      <div className="p-2 bg-gray-50 rounded-lg text-center">
-                        <div className="text-xs text-gray-500">Protéines</div>
-                        <div className="font-medium">
-                          {user.nutritionSummary.macroDistribution.protein} %
-                        </div>
-                      </div>
-                      <div className="p-2 bg-gray-50 rounded-lg text-center">
-                        <div className="text-xs text-gray-500">Lipides</div>
-                        <div className="font-medium">
-                          {user.nutritionSummary.macroDistribution.fat} %
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Utensils className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        Entrées enregistrées :
-                      </span>
-                    </div>
                     <span className="font-medium">
-                      {user.nutritionSummary.entriesCount}
+                      {getDietName(user.preferences.id_regime_alimentaire)}
                     </span>
                   </div>
-                </div>
-              ) : (
-                <p className="text-gray-500 italic">
-                  Pas de données nutritionnelles disponibles.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Suivi sportif et badges */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Suivi sportif */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Suivi sportif</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {user.exerciseSummary ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        Objectif hebdomadaire :
-                      </span>
-                    </div>
-                    <span className="font-medium">
-                      {user.exerciseSummary.weeklyGoal} séances
-                    </span>
-                  </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <Activity className="h-5 w-5 mr-2 text-gray-400" />
                       <span className="text-sm text-gray-500">
-                        Séances réalisées :
+                        Niveau d'activité :
                       </span>
                     </div>
                     <span className="font-medium">
-                      {user.exerciseSummary.completedSessions}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Activity className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        Activité favorite :
-                      </span>
-                    </div>
-                    <Badge variant="outline">
-                      {user.exerciseSummary.favoriteActivity}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        Dernière séance :
-                      </span>
-                    </div>
-                    <span className="font-medium">
-                      {format(
-                        new Date(user.exerciseSummary.lastSessionDate),
-                        "dd MMM yyyy",
-                        { locale: fr }
+                      {getSedentaryLevelName(
+                        user.preferences.id_niveau_sedentarite
                       )}
                     </span>
                   </div>
-                </div>
-              ) : (
-                <p className="text-gray-500 italic">
-                  Pas de données sportives disponibles.
-                </p>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Badges */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Badges et récompenses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {user.badgeCount ? (
-                <div className="text-center p-6">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                    <Award className="h-8 w-8 text-yellow-500" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Clock className="h-5 w-5 mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        Durée objectif :
+                      </span>
+                    </div>
+                    <span className="font-medium">
+                      {user.preferences.duree_objectif_semaines
+                        ? `${user.preferences.duree_objectif_semaines} semaines`
+                        : "Non défini"}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">
-                    {user.badgeCount} badge{user.badgeCount > 1 ? "s" : ""}{" "}
-                    obtenu{user.badgeCount > 1 ? "s" : ""}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Cet utilisateur a obtenu {user.badgeCount} badge
-                    {user.badgeCount > 1 ? "s" : ""} en réalisant ses objectifs
-                    et en utilisant régulièrement l'application.
-                  </p>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Activity className="h-5 w-5 mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">BMR :</span>
+                    </div>
+                    <span className="font-medium">
+                      {user.preferences.bmr} kcal
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Activity className="h-5 w-5 mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">TDEE :</span>
+                    </div>
+                    <span className="font-medium">
+                      {user.preferences.tdee} kcal
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Activity className="h-5 w-5 mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        Déficit/Surplus :
+                      </span>
+                    </div>
+                    <Badge
+                      className={
+                        Number(user.preferences.deficit_surplus_calorique) < 0
+                          ? "bg-green-100 text-green-800"
+                          : "bg-blue-100 text-blue-800"
+                      }
+                    >
+                      {user.preferences.deficit_surplus_calorique} kcal
+                    </Badge>
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-500 italic text-center p-6">
-                  Cet utilisateur n'a pas encore obtenu de badges.
+                <p className="text-gray-500 italic flex items-center">
+                  <Info className="h-4 w-4 mr-2" />
+                  Pas de préférences définies.
                 </p>
               )}
             </CardContent>
@@ -502,7 +489,7 @@ export default function UserDetailPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Cette action est irréversible. Toutes les données associées à{" "}
-              {user.prenom} {user.nom}
+              {user.firstName} {user.lastName}
               seront définitivement supprimées.
             </AlertDialogDescription>
           </AlertDialogHeader>

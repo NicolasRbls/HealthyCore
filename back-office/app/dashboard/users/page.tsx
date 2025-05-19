@@ -38,6 +38,7 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -45,21 +46,41 @@ export default function UsersPage() {
 
   const loadUsers = async (search = searchTerm) => {
     setIsLoading(true);
+    setError(null);
+
     try {
       const response = await userService.getUsers(
         pagination.currentPage,
         pagination.limit,
         search
       );
-      setUsers(response.data.users);
+
+      // Vérifier la structure de la réponse
+      if (
+        !response.data?.users?.users ||
+        !Array.isArray(response.data.users.users)
+      ) {
+        throw new Error("Format de réponse inattendu");
+      }
+
+      // Extraire correctement le tableau d'utilisateurs depuis la structure imbriquée
+      const usersList = response.data.users.users;
+      setUsers(usersList);
+
+      // Extraire et convertir les données de pagination en nombres
+      const paginationData = response.data.pagination;
       setPagination({
-        currentPage: response.data.pagination.currentPage,
-        totalPages: response.data.pagination.totalPages,
-        total: response.data.pagination.total,
-        limit: response.data.pagination.limit,
+        currentPage: parseInt(String(paginationData.currentPage)) || 1,
+        totalPages: parseInt(String(paginationData.totalPages)) || 1,
+        total: parseInt(String(paginationData.total)) || 0,
+        limit:
+          parseInt(String(paginationData.perPage || paginationData.limit)) ||
+          10,
       });
     } catch (error) {
       console.error("Erreur lors du chargement des utilisateurs:", error);
+      setError("Impossible de charger la liste des utilisateurs");
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }
@@ -88,15 +109,23 @@ export default function UsersPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || !confirmPassword) return;
 
     try {
       await userService.deleteUser(selectedUser.id_user, confirmPassword);
       setDeleteDialogOpen(false);
       setConfirmPassword("");
+
+      // Recharger la liste après suppression
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la suppression de l'utilisateur:", error);
+
+      // Afficher un message d'erreur spécifique si disponible
+      const errorMessage =
+        error.response?.data?.message ||
+        "Erreur lors de la suppression de l'utilisateur";
+      alert(errorMessage);
     }
   };
 
@@ -189,6 +218,36 @@ export default function UsersPage() {
           }`}
         />
 
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+            {error}
+            <Button
+              variant="link"
+              className="ml-2 text-red-600"
+              onClick={() => loadUsers()}
+            >
+              Réessayer
+            </Button>
+          </div>
+        )}
+
+        <div className="mb-6">
+          <div className="flex">
+            <div className="relative flex-1">
+              <Input
+                placeholder="Rechercher un utilisateur..."
+                className="w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+            </div>
+            <Button className="ml-2 brand-gradient" onClick={handleSearch}>
+              Rechercher
+            </Button>
+          </div>
+        </div>
+
         <DataTable
           data={users}
           columns={columns}
@@ -199,11 +258,8 @@ export default function UsersPage() {
             onPageChange: handlePageChange,
             onPageSizeChange: handlePageSizeChange,
           }}
-          searchable
-          onSearch={(query) => {
-            setSearchTerm(query);
-            handleSearch();
-          }}
+          searchable={false} // Désactivé car nous utilisons notre propre système de recherche
+          isLoading={isLoading}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -214,7 +270,13 @@ export default function UsersPage() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Cette action est irréversible. Toutes les données associées à
-                cet utilisateur seront définitivement supprimées.
+                {selectedUser && (
+                  <strong>
+                    {" "}
+                    {selectedUser.prenom} {selectedUser.nom}{" "}
+                  </strong>
+                )}
+                seront définitivement supprimées.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4">
@@ -229,7 +291,9 @@ export default function UsersPage() {
               />
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setConfirmPassword("")}>
+                Annuler
+              </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-red-500 hover:bg-red-600"
                 onClick={handleConfirmDelete}
