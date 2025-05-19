@@ -35,3 +35,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+backend/coverage
+backend/.env.test
