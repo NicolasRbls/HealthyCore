@@ -166,12 +166,12 @@ export default function SessionsPage() {
   }[] = [
     {
       header: "ID",
-      accessorKey: "id_seance",
+      accessorKey: "id",
     },
     {
       header: "Nom",
-      accessorKey: "nom",
-      cell: (item: Session) => <div className="font-medium">{item.nom}</div>,
+      accessorKey: "name",
+      cell: (item: Session) => <div className="font-medium">{item.name}</div>,
     },
     {
       header: "Exercices",
@@ -192,8 +192,8 @@ export default function SessionsPage() {
         <div className="flex flex-wrap gap-1">
           {item.tags &&
             item.tags.map((tag) => (
-              <Badge key={tag.id_tag} variant="outline" className="mr-1">
-                {tag.nom}
+              <Badge key={tag.id} variant="outline" className="mr-1">
+                {tag.name}
               </Badge>
             ))}
         </div>

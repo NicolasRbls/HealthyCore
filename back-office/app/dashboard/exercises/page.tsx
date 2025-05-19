@@ -260,27 +260,27 @@ export default function ExercisesPage() {
   }[] = [
     {
       header: "ID",
-      accessorKey: "id_exercice",
+      accessorKey: "id",
     },
     {
       header: "Nom",
-      accessorKey: "nom",
-      cell: (item: Exercise) => <div className="font-medium">{item.nom}</div>,
+      accessorKey: "name",
+      cell: (item: Exercise) => <div className="font-medium">{item.name}</div>,
     },
     {
       header: "Équipement",
-      accessorKey: "equipement",
-      cell: (item: Exercise) => <div>{item.equipement || "Aucun"}</div>,
+      accessorKey: "equipment",
+      cell: (item: Exercise) => <div>{item.equipment || "Aucun"}</div>,
     },
     {
       header: "Tags",
-      accessorKey: "id_exercice",
+      accessorKey: "id",
       cell: (item: Exercise) => (
         <div className="flex flex-wrap gap-1">
           {item.tags &&
             item.tags.map((tag) => (
-              <Badge key={tag.id_tag} variant="outline" className="mr-1">
-                {tag.nom}
+              <Badge key={tag.id} variant="outline" className="mr-1">
+                {tag.name}
               </Badge>
             ))}
         </div>

@@ -159,12 +159,12 @@ export default function ProgramsPage() {
   }[] = [
     {
       header: "ID",
-      accessorKey: "id_programme",
+      accessorKey: "id",
     },
     {
       header: "Nom",
-      accessorKey: "nom",
-      cell: (item: Program) => <div className="font-medium">{item.nom}</div>,
+      accessorKey: "name",
+      cell: (item: Program) => <div className="font-medium">{item.name}</div>,
     },
     {
       header: "Durée (jours)",
@@ -187,8 +187,8 @@ export default function ProgramsPage() {
         <div className="flex flex-wrap gap-1">
           {item.tags &&
             item.tags.map((tag) => (
-              <Badge key={tag.id_tag} variant="outline" className="mr-1">
-                {tag.nom}
+              <Badge key={tag.id} variant="outline" className="mr-1">
+                {tag.name}
               </Badge>
             ))}
         </div>
@@ -196,7 +196,7 @@ export default function ProgramsPage() {
     },
     {
       header: "Actions",
-      accessorKey: "id_programme",
+      accessorKey: "id",
       cell: (item: Program) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
