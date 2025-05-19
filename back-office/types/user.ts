@@ -10,6 +10,26 @@ export interface User {
   mis_a_jour_a: Date;
 }
 
+// Version adaptée pour le nouveau format JSON
+export interface NewUserDetail {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: string;
+  birthDate: string;
+  age: number;
+  metrics?: {
+    currentWeight: number;
+    currentHeight: number;
+    bmi: number;
+    targetWeight: number;
+    dailyCalories: number;
+    sessionsPerWeek: number;
+  };
+  preferences?: any;
+}
+
 export interface UserDetail extends User {
   evolution?: {
     currentWeight: number;
@@ -65,6 +85,13 @@ export interface UserDetailResponse {
     exerciseSummary: UserDetail["exerciseSummary"];
     badgeCount: number;
   };
+  message: string;
+}
+
+// Format de réponse adapté pour le nouveau JSON
+export interface NewUserDetailResponse {
+  status: string;
+  data: NewUserDetail;
   message: string;
 }
 

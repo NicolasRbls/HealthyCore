@@ -6,16 +6,20 @@ export interface FoodCreator {
 }
 
 export interface Food {
-  id_aliment: number;
-  nom: string;
+  id: number; // Utiliser id au lieu de id_aliment pour la cohérence
+  name: string; // Utiliser name au lieu de nom pour la cohérence
   image?: string;
-  type: string; // "produit" ou "recette"
-  source: string; // "admin", "user", "api"
+  type: string;
+  source: string;
   calories: number;
   proteins: number;
   carbs: number;
   fats: number;
-  tags?: Tag[];
+  preparationTime?: number;
+  tags?: {
+    id: number;
+    name: string;
+  }[];
 }
 
 export interface FoodWithDetails extends Food {
@@ -50,9 +54,7 @@ export interface FoodsResponse {
 
 export interface FoodResponse {
   status: string;
-  data: {
-    food: FoodWithDetails;
-  };
+  data: FoodWithDetails; // Le backend renvoie directement l'objet, pas enveloppé dans un objet food
   message: string;
 }
 
@@ -98,10 +100,12 @@ export interface CreateFoodRequest {
   description?: string;
   barcode?: string;
   tagIds: number[];
+  userId: number;
 }
 
 export interface UpdateFoodRequest {
   name?: string;
+  type?: string;
   image?: string;
   calories?: number;
   proteins?: number;
@@ -110,5 +114,6 @@ export interface UpdateFoodRequest {
   preparationTime?: number;
   ingredients?: string;
   description?: string;
+  barcode?: string;
   tagIds?: number[];
 }

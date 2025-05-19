@@ -11,9 +11,13 @@ const api = axios.create({
 // Intercepteur pour ajouter le token d'authentification
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("adminToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Vérifiez si window est défini (navigateur uniquement)
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+      }
     }
     return config;
   },
@@ -31,8 +35,8 @@ api.interceptors.response.use(
     // Si l'erreur est 401 (non autorisé), redirigez vers la page de connexion
     if (error.response && error.response.status === 401) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("adminToken");
-        window.location.href = "/login";
+        localStorage.removeItem("token");
+        window.location.href = "/auth/login";
       }
     }
     return Promise.reject(error);
