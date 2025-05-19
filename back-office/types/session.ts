@@ -1,30 +1,44 @@
 import { Tag } from "./tag";
 
-export interface ExerciseInSession {
+export interface Session {
   id: number;
-  orderInSession: number;
   name: string;
-  description: string;
+  createdBy?: {
+    id?: number;
+    name?: string;
+  };
+  exerciseCount?: number;
+  tags?: {
+    id: number;
+    name: string;
+  }[];
+}
+
+export interface SessionExercise {
+  exerciseId: number;
+  order: number;
   repetitions?: number;
   sets?: number;
   duration: number;
 }
 
-export interface SessionCreator {
+export interface SessionWithExercises {
   id: number;
-  name: string;
-}
-
-export interface Session {
-  id_seance: number;
-  nom: string;
-  createdBy?: SessionCreator;
-  exerciseCount?: number;
-  tags?: Tag[];
-}
-
-export interface SessionWithExercises extends Session {
-  exercises?: ExerciseInSession[];
+  nom: string; // Utilisation du nom de propriété backend pour compatibilité
+  createdBy?: {
+    id?: number;
+    name?: string;
+  };
+  tags?: Tag[]; // Utilisation de l'interface Tag pour compatibilité
+  exercises?: {
+    id: number;
+    orderInSession: number;
+    name: string;
+    description?: string;
+    repetitions?: number;
+    sets?: number;
+    duration: number;
+  }[];
   usageStats?: {
     programs: number;
     users: number;
@@ -53,14 +67,6 @@ export interface SessionResponse {
   message: string;
 }
 
-export interface SessionExercise {
-  exerciseId: number;
-  order: number;
-  repetitions?: number;
-  sets?: number;
-  duration: number;
-}
-
 export interface CreateSessionRequest {
   name: string;
   tagIds: number[];
@@ -68,7 +74,7 @@ export interface CreateSessionRequest {
 }
 
 export interface UpdateSessionRequest {
-  name?: string;
-  tagIds?: number[];
-  exercises?: SessionExercise[];
+  name: string;
+  tagIds: number[];
+  exercises: SessionExercise[];
 }
