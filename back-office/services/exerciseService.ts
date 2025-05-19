@@ -1,5 +1,3 @@
-// _Users_badre_Desktop_HealthyCore_back-office_services_exerciseService.ts
-
 import api from "./api";
 import {
   ExercisesResponse,

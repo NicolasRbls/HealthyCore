@@ -1,11 +1,11 @@
 import { Tag } from "./tag";
 
 export interface Exercise {
-  id_exercice: number;
-  nom: string;
+  id: number;
+  name: string;
   description: string;
   gif?: string;
-  equipement?: string;
+  equipment?: string;
   tags?: Tag[];
 }
 

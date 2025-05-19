@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Eye, Edit, Trash2, Search, Tag } from "lucide-react";
+import { Eye, Edit, Trash2, Search } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
@@ -50,7 +50,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import exerciseService from "@/services/exerciseService";
 import tagService from "@/services/tagService";
 import { Exercise, ExerciseWithUsage } from "@/types/exercise";
-import { Tag as TagType } from "@/types/tag";
+import { Tag } from "@/types/tag";
 
 // Schéma de validation pour le formulaire d'exercice
 const exerciseFormSchema = z.object({
@@ -67,7 +67,7 @@ type ExerciseFormValues = z.infer<typeof exerciseFormSchema>;
 
 export default function ExercisesPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [tags, setTags] = useState<TagType[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [selectedExercise, setSelectedExercise] =
     useState<ExerciseWithUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,7 +117,26 @@ export default function ExercisesPage() {
         search,
         tagIdParam
       );
-      setExercises(response.data.exercises);
+
+      console.log("API Response Exercises:", response.data.exercises);
+
+      // Si les exercices sont renvoyés avec les propriétés en français, adaptez-les
+      const adaptedExercises = response.data.exercises.map((ex) => ({
+        ...ex,
+        // Assurez-vous que les tags ont la bonne structure
+        tags: ex.tags
+          ? ex.tags.map((tag) => ({
+              ...tag,
+              // Si les propriétés ne sont pas là, ajoutez-les
+              id_tag: tag.id_tag || tag.id,
+              nom: tag.nom || tag.name,
+            }))
+          : [],
+      }));
+
+      console.log("Processed Exercises:", adaptedExercises);
+
+      setExercises(adaptedExercises);
       setPagination({
         currentPage: response.data.pagination.currentPage,
         totalPages: response.data.pagination.totalPages,
@@ -134,6 +153,7 @@ export default function ExercisesPage() {
   const loadTags = async () => {
     try {
       const response = await tagService.getTags(1, 100, "sport");
+      console.log("API Response Tags:", response.data.tags);
       setTags(response.data.tags);
     } catch (error) {
       console.error("Erreur lors du chargement des tags:", error);
@@ -142,6 +162,7 @@ export default function ExercisesPage() {
 
   const handleCreateExercise = async (data: ExerciseFormValues) => {
     try {
+      console.log("Creating exercise with data:", data);
       await exerciseService.createExercise({
         name: data.name,
         description: data.description,
@@ -161,7 +182,8 @@ export default function ExercisesPage() {
     if (!selectedExercise) return;
 
     try {
-      await exerciseService.updateExercise(selectedExercise.id_exercice, {
+      console.log("Updating exercise with data:", data);
+      await exerciseService.updateExercise(selectedExercise.id, {
         name: data.name,
         description: data.description,
         equipment: data.equipment,
@@ -180,7 +202,8 @@ export default function ExercisesPage() {
     if (!selectedExercise) return;
 
     try {
-      await exerciseService.deleteExercise(selectedExercise.id_exercice);
+      console.log("Deleting exercise:", selectedExercise.id);
+      await exerciseService.deleteExercise(selectedExercise.id);
       setIsDeleteDialogOpen(false);
       loadExercises();
     } catch (error) {
@@ -190,10 +213,24 @@ export default function ExercisesPage() {
 
   const handleViewExercise = async (exercise: Exercise) => {
     try {
-      const response = await exerciseService.getExerciseById(
-        exercise.id_exercice
-      );
-      setSelectedExercise(response.data.exercise);
+      console.log("Viewing exercise:", exercise.id);
+      const response = await exerciseService.getExerciseById(exercise.id);
+
+      // Adaptation si nécessaire
+      const exerciseDetail = response.data.exercise;
+      console.log("Exercise Detail Raw:", exerciseDetail);
+
+      // Adapter les tags si nécessaire
+      if (exerciseDetail.tags) {
+        exerciseDetail.tags = exerciseDetail.tags.map((tag) => ({
+          ...tag,
+          id_tag: tag.id_tag || tag.id,
+          nom: tag.nom || tag.name,
+        }));
+      }
+
+      console.log("Adapted Exercise Detail:", exerciseDetail);
+      setSelectedExercise(exerciseDetail);
       setIsViewDialogOpen(true);
     } catch (error) {
       console.error(
@@ -205,17 +242,31 @@ export default function ExercisesPage() {
 
   const handleEditClick = async (exercise: Exercise) => {
     try {
-      const response = await exerciseService.getExerciseById(
-        exercise.id_exercice
-      );
+      console.log("Editing exercise:", exercise.id);
+      const response = await exerciseService.getExerciseById(exercise.id);
+      console.log("Exercise Detail from API:", response.data.exercise);
+
       const exerciseDetail = response.data.exercise;
+      console.log("Tags in Exercise:", exerciseDetail.tags);
+
+      // Nous devons nous assurer que les tagIds sont des nombres
+      const tagIds =
+        exerciseDetail.tags?.map((tag) =>
+          typeof tag.id_tag === "number"
+            ? tag.id_tag
+            : typeof tag.id === "number"
+            ? tag.id
+            : parseInt(tag.id_tag || tag.id)
+        ) || [];
+
+      console.log("Extracted tagIds:", tagIds);
 
       editForm.reset({
-        name: exerciseDetail.nom,
+        name: exerciseDetail.name,
         description: exerciseDetail.description,
-        equipment: exerciseDetail.equipement || "",
+        equipment: exerciseDetail.equipment || "",
         gif: exerciseDetail.gif || "",
-        tagIds: exerciseDetail.tags?.map((tag) => tag.id_tag) || [],
+        tagIds: tagIds,
       });
 
       setSelectedExercise(exerciseDetail);
@@ -234,22 +285,30 @@ export default function ExercisesPage() {
   };
 
   const handleTagFilterChange = (tagId: string) => {
-    const numTagId = tagId ? parseInt(tagId) : null;
+    // Pour le backend, utilisez l'identifiant numérique pour le filtrage
+    const numTagId = tagId === "all" ? null : parseInt(tagId);
     setTagFilter(numTagId);
+
+    console.log("Tag filter changed to:", tagId, "Numeric value:", numTagId);
+
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    // Assurez-vous que le bon paramètre est envoyé au backend
     loadExercises(searchTerm, numTagId);
   };
 
   const handleSearch = () => {
+    console.log("Searching for:", searchTerm);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
     loadExercises();
   };
 
   const handlePageChange = (page: number) => {
+    console.log("Page changed to:", page);
     setPagination((prev) => ({ ...prev, currentPage: page }));
   };
 
   const handlePageSizeChange = (pageSize: number) => {
+    console.log("Page size changed to:", pageSize);
     setPagination((prev) => ({ ...prev, limit: pageSize, currentPage: 1 }));
   };
 
@@ -279,8 +338,12 @@ export default function ExercisesPage() {
         <div className="flex flex-wrap gap-1">
           {item.tags &&
             item.tags.map((tag) => (
-              <Badge key={tag.id} variant="outline" className="mr-1">
-                {tag.name}
+              <Badge
+                key={(tag as any).id_tag}
+                variant="outline"
+                className="mr-1"
+              >
+                {(tag as any).nom}
               </Badge>
             ))}
         </div>
@@ -288,7 +351,7 @@ export default function ExercisesPage() {
     },
     {
       header: "Actions",
-      accessorKey: "id_exercice",
+      accessorKey: "id",
       cell: (item: Exercise) => (
         <div className="flex space-x-2">
           <Button
@@ -317,6 +380,8 @@ export default function ExercisesPage() {
     },
   ];
 
+  console.log("Rendering Exercises:", exercises);
+
   return (
     <>
       <Header title="Gestion des exercices" />
@@ -333,7 +398,7 @@ export default function ExercisesPage() {
 
         <div className="mb-6 flex flex-wrap gap-4">
           <Select
-            value={tagFilter?.toString() || ""}
+            value={tagFilter === null ? "all" : tagFilter.toString()}
             onValueChange={handleTagFilterChange}
           >
             <SelectTrigger className="w-[220px]">
@@ -483,6 +548,15 @@ export default function ExercisesPage() {
                             control={createForm.control}
                             name="tagIds"
                             render={({ field }) => {
+                              // Déboguer les valeurs actuelles
+                              console.log(
+                                `Create form - Tag ${tag.nom} (${tag.id_tag}):`,
+                                "Current values:",
+                                field.value,
+                                "Is checked:",
+                                field.value?.includes(tag.id_tag)
+                              );
+
                               return (
                                 <FormItem
                                   key={tag.id_tag}
@@ -494,6 +568,11 @@ export default function ExercisesPage() {
                                         tag.id_tag
                                       )}
                                       onCheckedChange={(checked) => {
+                                        console.log(
+                                          "Create form - Checkbox changed:",
+                                          tag.id_tag,
+                                          checked
+                                        );
                                         return checked
                                           ? field.onChange([
                                               ...field.value,
@@ -639,6 +718,15 @@ export default function ExercisesPage() {
                             control={editForm.control}
                             name="tagIds"
                             render={({ field }) => {
+                              // Déboguer les valeurs actuelles
+                              console.log(
+                                `Edit form - Tag ${tag.nom} (${tag.id_tag}):`,
+                                "Current values:",
+                                field.value,
+                                "Is checked:",
+                                field.value?.includes(tag.id_tag)
+                              );
+
                               return (
                                 <FormItem
                                   key={tag.id_tag}
@@ -650,6 +738,11 @@ export default function ExercisesPage() {
                                         tag.id_tag
                                       )}
                                       onCheckedChange={(checked) => {
+                                        console.log(
+                                          "Edit form - Checkbox changed:",
+                                          tag.id_tag,
+                                          checked
+                                        );
                                         return checked
                                           ? field.onChange([
                                               ...field.value,
@@ -704,24 +797,24 @@ export default function ExercisesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="text-lg font-semibold mb-2">
-                      {selectedExercise.nom}
+                      {selectedExercise.name}
                     </h3>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {selectedExercise.tags?.map((tag) => (
-                        <Badge key={tag.id_tag} variant="outline">
-                          {tag.nom}
+                        <Badge key={(tag as any).id_tag} variant="outline">
+                          {(tag as any).nom}
                         </Badge>
                       ))}
                     </div>
                     <p className="text-sm text-gray-700 mb-4">
                       {selectedExercise.description}
                     </p>
-                    {selectedExercise.equipement && (
+                    {selectedExercise.equipment && (
                       <div className="mb-4">
                         <h4 className="text-sm font-medium text-gray-500 mb-1">
                           Équipement:
                         </h4>
-                        <p>{selectedExercise.equipement}</p>
+                        <p>{selectedExercise.equipment}</p>
                       </div>
                     )}
 
@@ -752,7 +845,7 @@ export default function ExercisesPage() {
                     <div className="flex items-center justify-center border rounded-lg overflow-hidden bg-gray-50">
                       <img
                         src={selectedExercise.gif}
-                        alt={selectedExercise.nom}
+                        alt={selectedExercise.name}
                         className="max-w-full max-h-[300px] object-contain"
                       />
                     </div>
