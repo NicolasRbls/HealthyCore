@@ -151,8 +151,9 @@ export default function CreateSessionPage() {
   };
 
   const getExerciseName = (exerciseId: number) => {
-    const exercise = exercises.find((ex) => ex.id_exercice === exerciseId);
-    return exercise ? exercise.nom : "Exercice inconnu";
+    // Adapter pour utiliser la nouvelle structure d'exercice
+    const exercise = exercises.find((ex) => ex.id === exerciseId);
+    return exercise ? exercise.name : "Exercice inconnu";
   };
 
   return (
@@ -329,10 +330,10 @@ export default function CreateSessionPage() {
                                   <SelectContent>
                                     {exercises.map((exercise) => (
                                       <SelectItem
-                                        key={exercise.id_exercice}
-                                        value={exercise.id_exercice.toString()}
+                                        key={exercise.id}
+                                        value={exercise.id.toString()}
                                       >
-                                        {exercise.nom}
+                                        {exercise.name}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
