@@ -55,6 +55,7 @@ import foodService from "@/services/foodService";
 import tagService from "@/services/tagService";
 import { Food } from "@/types/food";
 import { Tag } from "@/types/tag";
+import { toast } from "@/hooks/use-toast";
 
 export default function FoodsPage() {
   const router = useRouter();
@@ -90,24 +91,50 @@ export default function FoodsPage() {
   ) => {
     setIsLoading(true);
     try {
+      // Formater les paramètres avant de les envoyer
       const tagIdParam = tagId ? tagId.toString() : "";
+      const typeParam = type || ""; // S'assurer que ce n'est pas null ou undefined
+      const sourceParam = source || ""; // S'assurer que ce n'est pas null ou undefined
+
+      // Appel au service avec tous les paramètres correctement formatés
       const response = await foodService.getFoods(
         pagination.currentPage,
         pagination.limit,
         search,
-        type,
-        tagIdParam,
-        source
+        typeParam === "all" ? "" : typeParam, // Si "all", envoyer une chaîne vide
+        tagIdParam === "all" ? "" : tagIdParam, // Si "all", envoyer une chaîne vide
+        sourceParam === "all" ? "" : sourceParam // Si "all", envoyer une chaîne vide
       );
-      setFoods(response.data.foods);
-      setPagination({
-        currentPage: response.data.pagination.currentPage,
-        totalPages: response.data.pagination.totalPages,
-        total: response.data.pagination.total,
-        limit: response.data.pagination.limit,
-      });
+
+      // Vérifier que les données sont au bon format
+      if (response.data && response.data.foods) {
+        // Mise à jour de l'état avec les aliments reçus
+        setFoods(response.data.foods);
+
+        // Mise à jour de la pagination
+        setPagination({
+          currentPage: response.data.pagination.currentPage,
+          totalPages: response.data.pagination.totalPages,
+          total: response.data.pagination.total,
+          limit: response.data.pagination.limit,
+        });
+      } else {
+        console.error("Format de réponse inattendu:", response);
+        setFoods([]);
+      }
     } catch (error) {
       console.error("Erreur lors du chargement des aliments:", error);
+      // En cas d'erreur, vider la liste des aliments
+      setFoods([]);
+      // Notification d'erreur (si vous utilisez un système de notification)
+      if (toast) {
+        toast({
+          title: "Erreur",
+          description:
+            "Impossible de charger les aliments. Veuillez réessayer.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +165,7 @@ export default function FoodsPage() {
     if (!selectedFood) return;
 
     try {
-      await foodService.deleteFood(selectedFood.id_aliment);
+      await foodService.deleteFood(selectedFood.id);
       setIsDeleteDialogOpen(false);
       loadFoods();
       loadFoodStats();
@@ -147,23 +174,22 @@ export default function FoodsPage() {
     }
   };
 
-  const handleViewFood = (food: Food) => {
-    router.push(`/dashboard/foods/${food.id_aliment}`);
+  const handleViewFood = (food: any) => {
+    router.push(`/dashboard/foods/${food.id}`);
   };
 
-  const handleEditFood = (food: Food) => {
-    router.push(`/dashboard/foods/${food.id_aliment}/edit`);
+  const handleEditFood = (food: any) => {
+    router.push(`/dashboard/foods/${food.id}/edit`);
   };
 
   const handleCreateFood = () => {
     router.push("/dashboard/foods/create");
   };
 
-  const handleDeleteClick = (food: Food) => {
+  const handleDeleteClick = (food: any) => {
     setSelectedFood(food);
     setIsDeleteDialogOpen(true);
   };
-
   const handleTagFilterChange = (tagId: string) => {
     const numTagId = tagId ? parseInt(tagId) : null;
     setTagFilter(numTagId);
@@ -204,24 +230,25 @@ export default function FoodsPage() {
   const handlePageSizeChange = (pageSize: number) => {
     setPagination((prev) => ({ ...prev, limit: pageSize, currentPage: 1 }));
   };
+
   const columns: {
     header: string;
-    accessorKey: keyof Food;
-    cell?: (item: Food) => React.ReactNode;
+    accessorKey: string;
+    cell?: (item: any) => React.ReactNode;
   }[] = [
     {
       header: "ID",
-      accessorKey: "id_aliment",
+      accessorKey: "id", // Utiliser "id" au lieu de "id_aliment"
     },
     {
       header: "Nom",
-      accessorKey: "nom",
-      cell: (item: Food) => <div className="font-medium">{item.nom}</div>,
+      accessorKey: "name", // Utiliser "name" au lieu de "nom"
+      cell: (item: any) => <div className="font-medium">{item.name}</div>,
     },
     {
       header: "Type",
       accessorKey: "type",
-      cell: (item: Food) => (
+      cell: (item: any) => (
         <Badge variant={item.type === "recette" ? "secondary" : "outline"}>
           {item.type === "recette" ? "Recette" : "Produit"}
         </Badge>
@@ -230,7 +257,7 @@ export default function FoodsPage() {
     {
       header: "Source",
       accessorKey: "source",
-      cell: (food: Food) => {
+      cell: (food: any) => {
         let variant: "default" | "secondary" | "destructive" | "outline" =
           "outline";
         if (food.source === "admin") variant = "default";
@@ -249,18 +276,22 @@ export default function FoodsPage() {
     },
     {
       header: "Calories",
-      accessorKey: "calories" as keyof Food,
-      cell: (item: Food) => <div>{item.calories} kcal</div>,
+      accessorKey: "calories",
+      cell: (item: any) => <div>{item.calories} kcal</div>,
     },
     {
       header: "Tags",
-      accessorKey: "id_aliment",
-      cell: (item: Food) => (
+      accessorKey: "id", // Utiliser un champ existant mais l'affichage dépend de item.tags
+      cell: (item: any) => (
         <div className="flex flex-wrap gap-1">
           {item.tags &&
-            item.tags.map((tag) => (
-              <Badge key={tag.id_tag} variant="outline" className="mr-1">
-                {tag.nom}
+            item.tags.map((tag: any) => (
+              <Badge
+                key={tag.id_tag || tag.id}
+                variant="outline"
+                className="mr-1"
+              >
+                {tag.nom || tag.name}
               </Badge>
             ))}
         </div>
@@ -268,8 +299,8 @@ export default function FoodsPage() {
     },
     {
       header: "Actions",
-      accessorKey: "id_aliment",
-      cell: (item: Food) => (
+      accessorKey: "id",
+      cell: (item: any) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">

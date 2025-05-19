@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Info } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,37 +34,46 @@ import foodService from "@/services/foodService";
 import tagService from "@/services/tagService";
 import { FoodWithDetails } from "@/types/food";
 import { Tag } from "@/types/tag";
+import { Badge } from "@/components/ui/badge";
 
 // Schéma de validation pour le formulaire d'aliment
-const foodFormSchema = z.object({
-  name: z.string().min(1, { message: "Le nom est requis" }),
-  image: z
-    .string()
-    .url({ message: "URL invalide" })
-    .optional()
-    .or(z.literal("")),
-  calories: z
-    .number()
-    .min(0, { message: "Les calories ne peuvent pas être négatives" }),
-  proteins: z
-    .number()
-    .min(0, { message: "Les protéines ne peuvent pas être négatives" }),
-  carbs: z
-    .number()
-    .min(0, { message: "Les glucides ne peuvent pas être négatifs" }),
-  fats: z
-    .number()
-    .min(0, { message: "Les lipides ne peuvent pas être négatifs" }),
-  preparationTime: z
-    .number()
-    .min(0, { message: "Le temps de préparation ne peut pas être négatif" })
-    .optional(),
-  ingredients: z.string().optional(),
-  description: z.string().optional(),
-  tagIds: z
-    .array(z.number())
-    .min(1, { message: "Sélectionnez au moins un tag" }),
-});
+const foodFormSchema = z
+  .object({
+    name: z.string().min(1, { message: "Le nom est requis" }),
+    type: z.string().min(1, { message: "Le type est requis" }),
+    image: z
+      .string()
+      .url({ message: "URL invalide" })
+      .optional()
+      .or(z.literal("")),
+    calories: z
+      .number()
+      .min(0, { message: "Les calories ne peuvent pas être négatives" }),
+    proteins: z
+      .number()
+      .min(0, { message: "Les protéines ne peuvent pas être négatives" }),
+    carbs: z
+      .number()
+      .min(0, { message: "Les glucides ne peuvent pas être négatifs" }),
+    fats: z
+      .number()
+      .min(0, { message: "Les lipides ne peuvent pas être négatifs" }),
+    preparationTime: z
+      .number()
+      .min(0, { message: "Le temps de préparation ne peut pas être négatif" })
+      .optional(),
+    ingredients: z.string().optional(),
+    description: z.string().optional(),
+    barcode: z.string().optional(),
+    tagIds: z
+      .array(z.number())
+      .min(1, { message: "Sélectionnez au moins un tag" }),
+  })
+  .refine((data) => {
+    // Si le type est "produit", le code-barres est requis (si nécessaire)
+    // Mais cela ne s'applique pas en édition puisque le type est déjà fixé
+    return true;
+  });
 
 type FoodFormValues = z.infer<typeof foodFormSchema>;
 
@@ -78,12 +87,14 @@ export default function EditFoodPage() {
   const [food, setFood] = useState<FoodWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string>("");
 
   // Formulaire pour modifier un aliment
   const form = useForm<FoodFormValues>({
     resolver: zodResolver(foodFormSchema),
     defaultValues: {
       name: "",
+      type: "", // Valeur par défaut pour le type
       image: "",
       calories: 0,
       proteins: 0,
@@ -92,9 +103,19 @@ export default function EditFoodPage() {
       preparationTime: 0,
       ingredients: "",
       description: "",
+      barcode: "",
       tagIds: [],
     },
   });
+
+  // Surveiller le champ d'image pour une prévisualisation
+  const watchImage = form.watch("image");
+
+  useEffect(() => {
+    if (watchImage) {
+      setPreviewImage(watchImage);
+    }
+  }, [watchImage]);
 
   useEffect(() => {
     loadTags();
@@ -105,19 +126,31 @@ export default function EditFoodPage() {
 
   useEffect(() => {
     if (food && tags.length > 0) {
-      // Préparer les données pour le formulaire
+      // Préparer et nettoyer les données pour le formulaire
+      const cleanedDescription = food.description?.replace(/\|/g, "\n") || "";
+      const cleanedIngredients = food.ingredients?.replace(/\|/g, "\n") || "";
+
+      // Convertir les IDs de tags selon le format retourné par l'API
+      const tagIds = food.tags?.map((tag) => tag.id || tag.id_tag) || [];
       form.reset({
-        name: food.nom,
-        image: food.image || "",
+        name: food.name,
+        type: food.type, // Ajout du champ type
+        image: (food.image || "").trim(),
         calories: food.calories,
         proteins: food.proteins,
         carbs: food.carbs,
         fats: food.fats,
         preparationTime: food.preparationTime || 0,
-        ingredients: food.ingredients || "",
-        description: food.description || "",
-        tagIds: food.tags?.map((tag) => tag.id_tag) || [],
+        ingredients: cleanedIngredients,
+        description: cleanedDescription,
+        barcode: food.barcode || "",
+        tagIds: tagIds,
       });
+
+      // Mettre à jour la prévisualisation de l'image
+      if (food.image) {
+        setPreviewImage(food.image.trim());
+      }
     }
   }, [food, tags, form.reset]);
 
@@ -127,6 +160,11 @@ export default function EditFoodPage() {
       setTags(response.data.tags);
     } catch (error) {
       console.error("Erreur lors du chargement des tags:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les tags",
+        variant: "destructive",
+      });
     }
   };
 
@@ -134,7 +172,7 @@ export default function EditFoodPage() {
     setIsLoading(true);
     try {
       const response = await foodService.getFoodById(foodId);
-      setFood(response.data.food);
+      setFood(response.data);
     } catch (error) {
       console.error(
         "Erreur lors du chargement des détails de l'aliment:",
@@ -153,21 +191,26 @@ export default function EditFoodPage() {
   const onSubmit = async (data: FoodFormValues) => {
     setIsSubmitting(true);
     try {
+      // Convertir le format des champs avant l'envoi
+      const formattedDescription = data.description?.replace(/\n/g, "|") || "";
+      const formattedIngredients = data.ingredients?.replace(/\n/g, "|") || "";
       await foodService.updateFood(foodId, {
         name: data.name,
+        type: data.type, // Ajout du champ type
         image: data.image,
         calories: data.calories,
         proteins: data.proteins,
         carbs: data.carbs,
         fats: data.fats,
         preparationTime: data.preparationTime,
-        ingredients: data.ingredients,
-        description: data.description,
+        ingredients: formattedIngredients,
+        description: formattedDescription,
+        barcode: data.barcode,
         tagIds: data.tagIds,
       });
 
       toast({
-        title: "Aliment mis à jour",
+        title: "Succès",
         description: "L'aliment a été mis à jour avec succès",
       });
 
@@ -228,7 +271,7 @@ export default function EditFoodPage() {
 
   return (
     <>
-      <Header title={`Modifier : ${food.nom}`} />
+      <Header title={`Modifier : ${food.name}`} />
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -244,43 +287,112 @@ export default function EditFoodPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
+              {" "}
               <CardHeader>
-                <CardTitle>Informations générales</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Informations générales
+                  <Badge
+                    variant={food.type === "recette" ? "secondary" : "outline"}
+                  >
+                    {food.type === "recette" ? "Recette" : "Produit"}
+                  </Badge>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Champ caché pour le type */}
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="type"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nom</FormLabel>
+                    <FormItem className="hidden">
                       <FormControl>
-                        <Input placeholder="Ex : Poulet grillé" {...field} />
+                        <Input type="hidden" {...field} />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nom</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex : Poulet grillé"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="image"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Image (URL)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com/image.jpg"
-                          {...field}
+                    <FormField
+                      control={form.control}
+                      name="image"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Image (URL)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="https://example.com/image.jpg"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            URL vers une image représentant l'aliment
+                            (facultatif)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {food.type === "produit" && (
+                      <FormField
+                        control={form.control}
+                        name="barcode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Code-barres</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Ex : 3760006473201"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Code-barres du produit
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center">
+                    {previewImage ? (
+                      <div className="w-full max-w-xs">
+                        <p className="text-sm font-medium mb-2">
+                          Aperçu de l'image :
+                        </p>
+                        <img
+                          src={previewImage}
+                          alt="Aperçu"
+                          className="w-full h-auto max-h-[200px] object-contain rounded-md border border-gray-200"
                         />
-                      </FormControl>
-                      <FormDescription>
-                        URL vers une image représentant l'aliment (facultatif)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      </div>
+                    ) : (
+                      <div className="w-full max-w-xs h-[200px] bg-gray-100 flex items-center justify-center rounded-md border border-gray-200">
+                        <p className="text-gray-400">Aucune image</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <FormField
                   control={form.control}
@@ -295,6 +407,10 @@ export default function EditFoodPage() {
                           rows={3}
                         />
                       </FormControl>
+                      <FormDescription>
+                        Utilisez les sauts de ligne pour structurer votre
+                        description
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -310,11 +426,14 @@ export default function EditFoodPage() {
                           <FormLabel>Ingrédients</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Liste des ingrédients"
+                              placeholder="Liste des ingrédients (un par ligne)"
                               {...field}
-                              rows={3}
+                              rows={5}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Écrivez un ingrédient par ligne
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

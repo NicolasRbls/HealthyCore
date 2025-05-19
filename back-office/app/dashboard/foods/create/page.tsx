@@ -35,37 +35,52 @@ import tagService from "@/services/tagService";
 import { Tag } from "@/types/tag";
 
 // Schéma de validation pour le formulaire d'aliment
-const foodFormSchema = z.object({
-  name: z.string().min(1, { message: "Le nom est requis" }),
-  type: z.string().min(1, { message: "Le type est requis" }),
-  image: z
-    .string()
-    .url({ message: "URL invalide" })
-    .optional()
-    .or(z.literal("")),
-  calories: z
-    .number()
-    .min(0, { message: "Les calories ne peuvent pas être négatives" }),
-  proteins: z
-    .number()
-    .min(0, { message: "Les protéines ne peuvent pas être négatives" }),
-  carbs: z
-    .number()
-    .min(0, { message: "Les glucides ne peuvent pas être négatifs" }),
-  fats: z
-    .number()
-    .min(0, { message: "Les lipides ne peuvent pas être négatifs" }),
-  preparationTime: z
-    .number()
-    .min(0, { message: "Le temps de préparation ne peut pas être négatif" })
-    .optional(),
-  ingredients: z.string().optional(),
-  description: z.string().optional(),
-  barcode: z.string().optional(),
-  tagIds: z
-    .array(z.number())
-    .min(1, { message: "Sélectionnez au moins un tag" }),
-});
+const foodFormSchema = z
+  .object({
+    name: z.string().min(1, { message: "Le nom est requis" }),
+    type: z.string().min(1, { message: "Le type est requis" }),
+    image: z
+      .string()
+      .url({ message: "URL invalide" })
+      .optional()
+      .or(z.literal("")),
+    calories: z
+      .number()
+      .min(0, { message: "Les calories ne peuvent pas être négatives" }),
+    proteins: z
+      .number()
+      .min(0, { message: "Les protéines ne peuvent pas être négatives" }),
+    carbs: z
+      .number()
+      .min(0, { message: "Les glucides ne peuvent pas être négatifs" }),
+    fats: z
+      .number()
+      .min(0, { message: "Les lipides ne peuvent pas être négatifs" }),
+    preparationTime: z
+      .number()
+      .min(0, { message: "Le temps de préparation ne peut pas être négatif" })
+      .optional(),
+    ingredients: z.string().optional(),
+    description: z.string().optional(),
+    barcode: z.string().optional(),
+    tagIds: z
+      .array(z.number())
+      .min(1, { message: "Sélectionnez au moins un tag" }),
+  })
+  .refine(
+    (data) => {
+      // Si le type est "produit", le code-barres est requis
+      if (data.type === "produit") {
+        return !!data.barcode;
+      }
+      // Sinon, le code-barres est facultatif
+      return true;
+    },
+    {
+      message: "Le code-barres est requis pour les produits",
+      path: ["barcode"], // Indique le champ concerné par l'erreur
+    }
+  );
 
 type FoodFormValues = z.infer<typeof foodFormSchema>;
 
@@ -114,19 +129,23 @@ export default function CreateFoodPage() {
   const onSubmit = async (data: FoodFormValues) => {
     setIsSubmitting(true);
     try {
-      await foodService.createFood({
+      // Assurez-vous que les données sont correctement formatées
+      const response = await foodService.createFood({
         name: data.name,
         type: data.type,
-        image: data.image,
-        calories: data.calories,
-        proteins: data.proteins,
-        carbs: data.carbs,
-        fats: data.fats,
-        preparationTime: data.preparationTime || 0,
-        ingredients: data.ingredients,
-        description: data.description,
-        barcode: data.barcode,
+        image: data.image || "",
+        calories: Number(data.calories),
+        proteins: Number(data.proteins),
+        carbs: Number(data.carbs),
+        fats: Number(data.fats),
+        preparationTime: data.preparationTime
+          ? Number(data.preparationTime)
+          : 0,
+        ingredients: data.ingredients || "",
+        description: data.description || "",
+        barcode: data.barcode || "",
         tagIds: data.tagIds,
+        userId: 1,
       });
 
       toast({
@@ -241,7 +260,7 @@ export default function CreateFoodPage() {
                           <Input placeholder="Ex : 3760006473201" {...field} />
                         </FormControl>
                         <FormDescription>
-                          Code-barres du produit (facultatif)
+                          Code-barres du produit
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
