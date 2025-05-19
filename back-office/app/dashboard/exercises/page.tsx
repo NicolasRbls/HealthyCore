@@ -122,8 +122,6 @@ export default function ExercisesPage() {
         tagIdParam
       );
 
-      console.log("API Response Exercises:", response.data.exercises);
-
       // Si les exercices sont renvoyés avec les propriétés en français, adaptez-les
       const adaptedExercises = response.data.exercises.map((ex) => ({
         ...ex,
@@ -137,8 +135,6 @@ export default function ExercisesPage() {
             }))
           : [],
       }));
-
-      console.log("Processed Exercises:", adaptedExercises);
 
       setExercises(adaptedExercises);
       setPagination({
@@ -162,7 +158,6 @@ export default function ExercisesPage() {
   const loadTags = async () => {
     try {
       const response = await tagService.getTags(1, 100, "sport");
-      console.log("API Response Tags:", response.data.tags);
       setTags(response.data.tags);
     } catch (error: any) {
       console.error("Erreur lors du chargement des tags:", error);
@@ -178,7 +173,6 @@ export default function ExercisesPage() {
   const handleCreateExercise = async (data: ExerciseFormValues) => {
     setIsSubmitting(true);
     try {
-      console.log("Creating exercise with data:", data);
       await exerciseService.createExercise({
         name: data.name,
         description: data.description,
@@ -212,7 +206,6 @@ export default function ExercisesPage() {
     setIsSubmitting(true);
 
     try {
-      console.log("Updating exercise with data:", data);
       await exerciseService.updateExercise(selectedExercise.id, {
         name: data.name,
         description: data.description,
@@ -247,7 +240,6 @@ export default function ExercisesPage() {
     setDeleteError(null);
 
     try {
-      console.log("Deleting exercise:", selectedExercise.id);
       const response = await exerciseService.deleteExercise(
         selectedExercise.id
       );
@@ -288,12 +280,10 @@ export default function ExercisesPage() {
 
   const handleViewExercise = async (exercise: Exercise) => {
     try {
-      console.log("Viewing exercise:", exercise.id);
       const response = await exerciseService.getExerciseById(exercise.id);
 
       // Adaptation si nécessaire
       const exerciseDetail = response.data.exercise;
-      console.log("Exercise Detail Raw:", exerciseDetail);
 
       // Adapter les tags si nécessaire
       if (exerciseDetail.tags) {
@@ -304,7 +294,6 @@ export default function ExercisesPage() {
         }));
       }
 
-      console.log("Adapted Exercise Detail:", exerciseDetail);
       setSelectedExercise(exerciseDetail);
       setIsViewDialogOpen(true);
     } catch (error: any) {
@@ -324,12 +313,9 @@ export default function ExercisesPage() {
 
   const handleEditClick = async (exercise: Exercise) => {
     try {
-      console.log("Editing exercise:", exercise.id);
       const response = await exerciseService.getExerciseById(exercise.id);
-      console.log("Exercise Detail from API:", response.data.exercise);
 
       const exerciseDetail = response.data.exercise;
-      console.log("Tags in Exercise:", exerciseDetail.tags);
 
       // Nous devons nous assurer que les tagIds sont des nombres
       const tagIds =
@@ -340,8 +326,6 @@ export default function ExercisesPage() {
             ? tag.id
             : parseInt(tag.id_tag || tag.id)
         ) || [];
-
-      console.log("Extracted tagIds:", tagIds);
 
       editForm.reset({
         name: exerciseDetail.name,
@@ -378,26 +362,21 @@ export default function ExercisesPage() {
     const numTagId = tagId === "all" ? null : parseInt(tagId);
     setTagFilter(numTagId);
 
-    console.log("Tag filter changed to:", tagId, "Numeric value:", numTagId);
-
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
     // Assurez-vous que le bon paramètre est envoyé au backend
     loadExercises(searchTerm, numTagId);
   };
 
   const handleSearch = () => {
-    console.log("Searching for:", searchTerm);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
     loadExercises();
   };
 
   const handlePageChange = (page: number) => {
-    console.log("Page changed to:", page);
     setPagination((prev) => ({ ...prev, currentPage: page }));
   };
 
   const handlePageSizeChange = (pageSize: number) => {
-    console.log("Page size changed to:", pageSize);
     setPagination((prev) => ({ ...prev, limit: pageSize, currentPage: 1 }));
   };
 
@@ -464,8 +443,6 @@ export default function ExercisesPage() {
       ),
     },
   ];
-
-  console.log("Rendering Exercises:", exercises);
 
   return (
     <>
@@ -633,15 +610,6 @@ export default function ExercisesPage() {
                             control={createForm.control}
                             name="tagIds"
                             render={({ field }) => {
-                              // Déboguer les valeurs actuelles
-                              console.log(
-                                `Create form - Tag ${tag.nom} (${tag.id_tag}):`,
-                                "Current values:",
-                                field.value,
-                                "Is checked:",
-                                field.value?.includes(tag.id_tag)
-                              );
-
                               return (
                                 <FormItem
                                   key={tag.id_tag}
@@ -653,11 +621,6 @@ export default function ExercisesPage() {
                                         tag.id_tag
                                       )}
                                       onCheckedChange={(checked) => {
-                                        console.log(
-                                          "Create form - Checkbox changed:",
-                                          tag.id_tag,
-                                          checked
-                                        );
                                         return checked
                                           ? field.onChange([
                                               ...field.value,
@@ -809,13 +772,6 @@ export default function ExercisesPage() {
                             name="tagIds"
                             render={({ field }) => {
                               // Déboguer les valeurs actuelles
-                              console.log(
-                                `Edit form - Tag ${tag.nom} (${tag.id_tag}):`,
-                                "Current values:",
-                                field.value,
-                                "Is checked:",
-                                field.value?.includes(tag.id_tag)
-                              );
 
                               return (
                                 <FormItem
@@ -828,11 +784,6 @@ export default function ExercisesPage() {
                                         tag.id_tag
                                       )}
                                       onCheckedChange={(checked) => {
-                                        console.log(
-                                          "Edit form - Checkbox changed:",
-                                          tag.id_tag,
-                                          checked
-                                        );
                                         return checked
                                           ? field.onChange([
                                               ...field.value,
