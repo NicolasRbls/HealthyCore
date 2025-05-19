@@ -5,6 +5,8 @@ import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
+import authService from "@/services/authService";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +22,13 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await authService.logout();
+    router.push("/auth/login");
+  };
+
   return (
     <div className="border-b bg-white py-4">
       <div className="container mx-auto px-6 flex items-center justify-between">
@@ -40,14 +49,6 @@ export function Header({ title, subtitle }: HeaderProps) {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Profil</DropdownMenuItem>
-              <DropdownMenuItem>Paramètres</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Déconnexion</DropdownMenuItem>
-            </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>

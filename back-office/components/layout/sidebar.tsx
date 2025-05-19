@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Colors } from "@/lib/constants";
+import authService from "@/services/authService";
 
 const sidebarLinks = [
   {
@@ -70,7 +71,13 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleLogout = async () => {
+    await authService.logout();
+    router.push("/auth/login");
+  };
   return (
     <div
       className={cn(
@@ -97,7 +104,6 @@ export function Sidebar({ className }: SidebarProps) {
           {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
         </Button>
       </div>
-
       <div className="flex-1 py-6 overflow-y-auto">
         <div className="space-y-1 px-3">
           {sidebarLinks.map((link) => (
@@ -134,8 +140,7 @@ export function Sidebar({ className }: SidebarProps) {
             </Link>
           ))}
         </div>
-      </div>
-
+      </div>{" "}
       <div className="p-4 border-t">
         <Button
           variant="ghost"
@@ -143,8 +148,9 @@ export function Sidebar({ className }: SidebarProps) {
             "w-full flex items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100",
             collapsed ? "justify-center" : "justify-start"
           )}
+          onClick={handleLogout}
         >
-          <LogOut size={20} className="mr-2" />
+          <LogOut size={20} className={cn(collapsed ? "" : "mr-2")} />
           {!collapsed && <span>Déconnexion</span>}
         </Button>
       </div>
