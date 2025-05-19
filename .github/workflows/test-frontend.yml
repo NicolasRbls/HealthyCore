@@ -1,0 +1,174 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, test-frontend ]
+  pull_request:
+    branches: [ main, test-frontend ]
+  workflow_dispatch:  # Permet de déclencher manuellement
+
+jobs:
+  detox_tests:
+    name: Detox E2E Tests
+    runs-on: macos-latest  # macOS runner pour une exécution plus stable des émulateurs Android
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Cache gradle dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Detox CLI
+        run: npm install -g detox-cli
+
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+        
+      - name: Prebuild Expo app
+        run: expo prebuild --platform android --clean
+
+      - name: Build for Detox
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug
+          cd ..
+
+      - name: Verify APK
+        run: |
+          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ APK not found at expected location: $APK_PATH"
+            find android -name "*.apk"
+            exit 1
+          else
+            echo "✅ APK found at: $APK_PATH"
+          fi
+
+      - name: Create and start Android emulator
+        run: |
+          echo "Creating AVD"
+          echo "no" | avdmanager create avd --force --name "Pixel_API_30" --package "system-images;android-30;google_apis;x86_64" --device "pixel"
+          echo "Starting emulator"
+          $ANDROID_HOME/emulator/emulator -avd Pixel_API_30 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+          
+          echo "Waiting for emulator to start"
+          adb wait-for-device
+          
+          echo "Waiting for emulator to complete boot"
+          adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 2; done'
+          
+          echo "Unlocking device"
+          adb shell input keyevent 82
+          
+          echo "Device ready"
+          adb devices
+
+      - name: Update Detox configuration
+        run: |
+          cat > .detoxrc.js << 'EOL'
+          module.exports = {
+            testRunner: {
+              args: {
+                '$0': 'jest',
+                config: 'e2e/jest.config.js'
+              },
+              jest: {
+                setupTimeout: 120000
+              }
+            },
+            apps: {
+              'android.debug': {
+                type: 'android.apk',
+                binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
+              },
+            },
+            devices: {
+              'android.emu': {
+                type: 'android.emulator',
+                device: {
+                  avdName: 'Pixel_API_30'
+                }
+              }
+            },
+            configurations: {
+              'android.emu.debug': {
+                device: 'android.emu',
+                app: 'android.debug'
+              }
+            }
+          };
+          EOL
+
+      - name: Run Detox tests
+        env:
+          CI: true
+        run: |
+          npx detox test -c android.emu.debug --cleanup --debug-synchronization 10000 --loglevel verbose
+        
+      - name: Capture screenshots on failure
+        if: failure()
+        run: |
+          mkdir -p artifacts/screenshots
+          adb shell screencap -p /sdcard/screenshot.png
+          adb pull /sdcard/screenshot.png artifacts/screenshots/
+          
+      - name: Capture logs on failure
+        if: failure()
+        run: |
+          mkdir -p artifacts/logs
+          adb logcat -d > artifacts/logs/logcat.txt
+          
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: detox-artifacts
+          path: artifacts
+          retention-days: 5
+
+      - name: Generate test report
+        if: always()
+        run: |
+          mkdir -p test-results
+          npx jest-merge-html-reports 'artifacts/reports/**/*.xml' --output test-results/report.html
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report
+          path: test-results
+          retention-days: 5
