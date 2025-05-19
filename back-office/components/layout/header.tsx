@@ -33,7 +33,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="/avatar.png" alt="Admin" />
+                  <AvatarImage alt="Admin" />
                   <AvatarFallback className="bg-gradient-to-r from-[#92A3FD] to-[#9DCEFF] text-white">
                     A
                   </AvatarFallback>
