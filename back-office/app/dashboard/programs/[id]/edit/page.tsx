@@ -196,11 +196,6 @@ export default function EditProgramPage() {
     });
   };
 
-  const getSessionName = (sessionId: number) => {
-    const session = allSessions.find((s) => s.id_seance === sessionId);
-    return session ? session.nom : "Séance inconnue";
-  };
-
   if (isLoading) {
     return (
       <>
@@ -469,10 +464,10 @@ export default function EditProgramPage() {
                                   <SelectContent>
                                     {allSessions.map((session) => (
                                       <SelectItem
-                                        key={session.id_seance}
-                                        value={session.id_seance.toString()}
+                                        key={session.id}
+                                        value={session.id.toString()}
                                       >
-                                        {session.nom}
+                                        {session.name}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
