@@ -160,25 +160,6 @@ const conditionHandlers = {
     return !!session;
   },
 
-  FIRST_DAY_COMPLETED: async (userId) => {
-    const today = new Date();
-
-    // Récupérer tous les objectifs disponibles pour connaître le total
-    const totalObjectives = await prisma.objectifs.count();
-
-    // Récupérer les objectifs complétés aujourd'hui
-    const completedGoals = await prisma.objectifs_utilisateurs.count({
-      where: {
-        id_user: userId,
-        date: today,
-        statut: "done",
-      },
-    });
-
-    // Vérifier que tous les objectifs du jour sont complétés
-    return completedGoals === totalObjectives;
-  },
-
   SEVEN_DAYS_COMPLETED: async (userId) => {
     // Récupérer tous les objectifs disponibles pour connaître le total par jour
     const totalObjectives = await prisma.objectifs.count();
@@ -224,7 +205,31 @@ const conditionHandlers = {
     return !!food;
   },
 
-  // Ajouter les autres badges ici a la suite !!
+  FIRST_DAY_COMPLETED: async (userId) => {
+    const today = new Date();
+
+    try {
+      // Récupérer tous les objectifs disponibles pour connaître le total
+      const totalObjectives = await prisma.objectifs.count();
+
+      // Récupérer les objectifs complétés aujourd'hui
+      const completedGoals = await prisma.objectifs_utilisateurs.count({
+        where: {
+          id_user: userId,
+          date: today,
+          statut: "done",
+        },
+      });
+      const allCompleted = completedGoals === totalObjectives;
+      return allCompleted;
+    } catch (error) {
+      console.error(
+        `[FIRST_DAY_COMPLETED] Erreur lors de la vérification :`,
+        error
+      );
+      return false;
+    }
+  },
 };
 
 /**

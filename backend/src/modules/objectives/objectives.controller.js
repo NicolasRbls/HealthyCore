@@ -9,7 +9,6 @@ const { catchAsync } = require("../../utils/catcherror.utils");
 const getUserDailyObjectives = catchAsync(async (req, res) => {
   const userId = req.user.id_user;
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   // Récupérer tous les objectifs disponibles
   const allObjectives = await prisma.objectifs.findMany();

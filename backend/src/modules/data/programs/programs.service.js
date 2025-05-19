@@ -535,7 +535,6 @@ const completeSession = async (userId, sessionId, date = null) => {
     }
 
     const completionDate = date ? new Date(date) : new Date();
-    completionDate.setHours(0, 0, 0, 0);
 
     const existingCompletion = await prisma.suivis_sportifs.findFirst({
       where: {
@@ -561,54 +560,11 @@ const completeSession = async (userId, sessionId, date = null) => {
       },
     });
 
-    let dailyObjectiveCompleted = false;
-    const sportObjective = await prisma.objectifs.findFirst({
-      where: {
-        titre: { contains: "séance de sport", mode: "insensitive" },
-      },
-    });
-
-    if (sportObjective) {
-      const existingObjective = await prisma.objectifs_utilisateurs.findFirst({
-        where: {
-          id_user: userId,
-          id_objectif: sportObjective.id_objectif,
-          date: completionDate,
-        },
-      });
-
-      if (existingObjective) {
-        if (existingObjective.statut !== "done") {
-          await prisma.objectifs_utilisateurs.update({
-            where: {
-              id_objectif_utilisateur:
-                existingObjective.id_objectif_utilisateur,
-            },
-            data: { statut: "done" },
-          });
-          dailyObjectiveCompleted = true;
-        }
-      } else {
-        await prisma.objectifs_utilisateurs.create({
-          data: {
-            id_user: userId,
-            id_objectif: sportObjective.id_objectif,
-            date: completionDate,
-            statut: "done",
-          },
-        });
-        dailyObjectiveCompleted = true;
-      }
-    }
-
     return {
       id: sportFollowUp.id_suivi_sportif,
       sessionId: sessionId,
       date: completionDate,
       sessionName: session.nom,
-      dailyObjective: {
-        completed: dailyObjectiveCompleted,
-      },
     };
   } catch (error) {
     throw error;
