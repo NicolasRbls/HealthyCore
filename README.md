@@ -113,6 +113,3 @@ Le projet utilise :
 - pgAdmin pour l'administration de la base de données
 - Prisma pour les migrations et le remplissage de la base de données
 - Expo pour le frontend React Native
-
-
-ajout du framework de test en cours.
