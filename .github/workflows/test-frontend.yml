@@ -2,7 +2,7 @@ name: E2E Tests
 
 on:
   push:
-    branches: [ main, test-frontend ]
+    branches: [ main, test-frontend ] # sur les branches main et test-frontend
   pull_request:
     branches: [ main, test-frontend ]
   workflow_dispatch:  # Permet de déclencher manuellement
@@ -15,16 +15,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '18'
           cache: 'npm'
 
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
@@ -48,7 +48,7 @@ jobs:
         run: npm install -g expo-cli
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3
         
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
@@ -153,7 +153,7 @@ jobs:
           
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: detox-artifacts
           path: artifacts
@@ -167,7 +167,7 @@ jobs:
 
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: test-results
