@@ -5,7 +5,9 @@
   "scripts": {
     "start": "node server.js",
     "test": "jest --runInBand",
+    "test:ci": "jest --runInBand --ci --coverage",
     "migrate": "prisma migrate dev",
+    "migrate:test": "prisma migrate deploy",
     "seed": "node prisma/seed.js"
   },
   "keywords": [],
