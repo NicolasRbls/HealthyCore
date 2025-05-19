@@ -1,4 +1,4 @@
-name: E2E Tests
+name: Mobile E2E Tests
 
 on:
   push:
@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, test-frontend ]
   workflow_dispatch:
+
+env:
+  PROJECT_DIR: ./frontend
 
 jobs:
   detox_tests:
@@ -16,39 +19,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          # Sans cache npm
 
-      - name: Setup Java
+      - name: Setup Java for Android
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      - name: Cache gradle dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
       - name: Install dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm install
-
-      - name: Check installed dependencies
-        run: |
-          echo "Listing installed node modules:"
-          ls -la node_modules
-          echo "Checking for Detox installation:"
-          npm list detox || true
-          echo "Checking for Expo modules:"
-          npm list expo || true
 
       - name: Install Detox CLI
         run: npm install -g detox-cli
@@ -59,183 +44,47 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         
-      - name: Accept Android SDK licenses
+      - name: Accept Android licenses
         run: yes | sdkmanager --licenses || true
-
-      - name: Create local.properties
-        run: |
-          echo "Creating local.properties..."
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          cat android/local.properties
         
-      - name: Prebuild Expo app
+      - name: Prebuild Android app
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          echo "Running expo prebuild..."
-          npx expo prebuild --platform android --clean || exit 1
-          echo "Listing Android directory:"
-          ls -la android/
-
+          if [ ! -d "android/app" ]; then
+            npx expo prebuild --platform android --clean
+          fi
+          
       - name: Build for Detox
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          cd android
-          chmod +x gradlew
-          echo "Running gradlew assembleDebug assembleAndroidTest..."
-          ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug
-          cd ..
+          cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug
 
-      - name: Verify APK
+      - name: Create emulator
         run: |
-          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
-          if [ ! -f "$APK_PATH" ]; then
-            echo "❌ APK not found at expected location: $APK_PATH"
-            find android -name "*.apk"
-            exit 1
-          else
-            echo "✅ APK found at: $APK_PATH"
-            ls -la "$APK_PATH"
-          fi
-
-      - name: Create and start Android emulator
+          echo "no" | avdmanager create avd --force --name Pixel_3a_API_30 --package "system-images;android-30;google_apis;x86_64" --device "pixel_3a"
+          
+      - name: Start emulator and run tests
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          echo "Installing emulator package..."
-          sdkmanager --install "emulator"
+          # Start emulator in background
+          $ANDROID_HOME/emulator/emulator -avd Pixel_3a_API_30 -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
           
-          echo "Installing system images..."
-          sdkmanager --install "system-images;android-30;google_apis;x86_64"
+          # Wait for emulator to boot
+          $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
           
-          echo "Creating AVD..."
-          echo "no" | avdmanager create avd --force --name "Pixel_API_30" --package "system-images;android-30;google_apis;x86_64" --device "pixel"
+          # Show connected devices
+          $ANDROID_HOME/platform-tools/adb devices
           
-          echo "Starting emulator..."
-          $ANDROID_HOME/emulator/emulator -avd Pixel_API_30 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+          # Create artifacts directory
+          mkdir -p artifacts
           
-          echo "Waiting for emulator to start (may take a few minutes)..."
-          adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
-          
-          echo "Unlocking device..."
-          adb shell input keyevent 82
-          
-          echo "Device status:"
-          adb devices -l
-
-      - name: Update Detox configuration
-        run: |
-          cat > .detoxrc.js << 'EOL'
-          module.exports = {
-            testRunner: {
-              args: {
-                '$0': 'jest',
-                config: 'e2e/jest.config.js'
-              },
-              jest: {
-                setupTimeout: 120000
-              }
-            },
-            apps: {
-              'android.debug': {
-                type: 'android.apk',
-                binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
-                testBinaryPath: 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk'
-              },
-            },
-            devices: {
-              'android.emu': {
-                type: 'android.emulator',
-                device: {
-                  avdName: 'Pixel_API_30'
-                }
-              }
-            },
-            configurations: {
-              'android.emu.debug': {
-                device: 'android.emu',
-                app: 'android.debug'
-              }
-            }
-          };
-          EOL
-          cat .detoxrc.js
-
-      - name: Create Jest config for E2E tests
-        run: |
-          mkdir -p e2e
-          cat > e2e/jest.config.js << 'EOL'
-          module.exports = {
-            testEnvironment: 'node',
-            testRunner: 'jest-circus/runner',
-            testTimeout: 120000,
-            testRegex: '\\.e2e\\.js$',
-            reporters: ['detox/runners/jest/streamlineReporter'],
-            verbose: true
-          };
-          EOL
-
-      - name: Create sample E2E test if none exists
-        run: |
-          mkdir -p e2e
-          if [ ! -f e2e/app.e2e.js ]; then
-            cat > e2e/app.e2e.js << 'EOL'
-            describe('Example', () => {
-              beforeAll(async () => {
-                await device.launchApp();
-              });
-            
-              beforeEach(async () => {
-                await device.reloadReactNative();
-              });
-            
-              it('should have welcome screen', async () => {
-                await expect(element(by.id('welcome'))).toExist();
-              });
-            });
-            EOL
-            echo "Created sample E2E test"
-          else
-            echo "Found existing E2E tests"
-            cat e2e/app.e2e.js
-          fi
-
-      - name: Run Detox tests
-        env:
-          CI: true
-        run: |
-          echo "Running Detox tests..."
-          mkdir -p artifacts/reports
-          npx detox test -c android.emu.debug --cleanup --debug-synchronization 10000 --loglevel verbose || true
+          # Run tests
+          detox test --configuration android.emu.debug --cleanup --artifacts-location ./artifacts
         
-      - name: Capture screenshots on failure
-        if: always()
-        run: |
-          mkdir -p artifacts/screenshots
-          adb shell screencap -p /sdcard/screenshot.png
-          adb pull /sdcard/screenshot.png artifacts/screenshots/ || true
-          
-      - name: Capture logs on failure
-        if: always()
-        run: |
-          mkdir -p artifacts/logs
-          adb logcat -d > artifacts/logs/logcat.txt || true
-          
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: detox-artifacts
-          path: artifacts
-          retention-days: 5
-
-      - name: Generate test report
-        if: always()
-        run: |
-          mkdir -p test-results
-          touch artifacts/reports/dummy.xml
-          npm install -g jest-merge-html-reports || true
-          npx jest-merge-html-reports 'artifacts/reports/**/*.xml' --output test-results/report.html || true
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-report
-          path: test-results
+          path: ${{ env.PROJECT_DIR }}/artifacts
           retention-days: 5
