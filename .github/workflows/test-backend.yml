@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
 
     services:
       postgres:
@@ -33,28 +36,21 @@ jobs:
       with:
         node-version: '18.x'
         
-    - name: Change to backend directory
-      run: cd backend
-        
     - name: Install dependencies
-      run: |
-        cd backend
-        npm ci
+      run: npm ci
       
     - name: Generate Prisma Client
-      run: |
-        cd backend
-        npx prisma generate
+      run: npx prisma generate
+      env:
+        DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
       
     - name: Run Prisma migrations
-      run: |
-        cd backend
-        npm run migrate:test
+      run: npm run migrate:test
+      env:
+        DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
       
     - name: Run tests
-      run: |
-        cd backend
-        npm run test:ci
+      run: npm run test:ci
       env:
         CI: true
         DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
