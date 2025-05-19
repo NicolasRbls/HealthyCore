@@ -152,8 +152,8 @@ export default function CreateProgramPage() {
   };
 
   const getSessionName = (sessionId: number) => {
-    const session = sessions.find((s) => s.id_seance === sessionId);
-    return session ? session.nom : "Séance inconnue";
+    const session = sessions.find((s) => s.id === sessionId);
+    return session ? session.name : "Séance inconnue";
   };
 
   return (
@@ -378,10 +378,10 @@ export default function CreateProgramPage() {
                                   <SelectContent>
                                     {sessions.map((session) => (
                                       <SelectItem
-                                        key={session.id_seance}
-                                        value={session.id_seance.toString()}
+                                        key={session.id}
+                                        value={session.id.toString()}
                                       >
-                                        {session.nom}
+                                        {session.name}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
