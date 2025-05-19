@@ -1,19 +1,13 @@
 import { Tag } from "./tag";
 
 export interface Session {
-  id: number;
-  name: string;
-  createdBy?: {
-    id?: number;
-    name?: string;
-  };
-  exerciseCount?: number;
-  tags?: {
-    id: number;
-    name: string;
-  }[];
+  id_seance: number;
+  nom: string;
+  id_user?: number;
+  exercices_seances?: any[];
+  id?: number;
+  name?: string;
 }
-
 export interface SessionExercise {
   exerciseId: number;
   order: number;
@@ -24,12 +18,12 @@ export interface SessionExercise {
 
 export interface SessionWithExercises {
   id: number;
-  nom: string; // Utilisation du nom de propriété backend pour compatibilité
+  nom: string;
   createdBy?: {
     id?: number;
     name?: string;
   };
-  tags?: Tag[]; // Utilisation de l'interface Tag pour compatibilité
+  tags?: Tag[];
   exercises?: {
     id: number;
     orderInSession: number;
