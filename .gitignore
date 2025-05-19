@@ -38,3 +38,5 @@ app-example
 
 backend/coverage
 backend/.env.test
+
+frontend/android/

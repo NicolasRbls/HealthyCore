@@ -1,0 +1,35 @@
+{
+  "apps": {
+    "ios.debug": {
+      "type": "ios.app",
+      "binaryPath": "/some/path/ios.app",
+      "build": "..."
+    },
+    "android.debug": {
+      "type": "android.apk",
+      "binaryPath": "/some/path/android.apk",
+      "build": "...",
+      "launchArgs": {}
+    }
+  },
+  "devices": {
+    "ios.simulator": {
+      "type": "ios.simulator",
+      "device": { "type": "iPhone 12" }
+    },
+    "android.emulator": {
+      "type": "android.apk",
+      "device": { "avdName": "Pixel_30_API" }
+    }
+  },
+  "configurations": {
+    "ios.sim.debug": {
+      "device": "ios.simulator",
+      "app": "ios.debug"
+    },
+    "android.emu.debug": {
+      "device": "android.emulator",
+      "app": "android.debug"
+    }
+  }
+}
