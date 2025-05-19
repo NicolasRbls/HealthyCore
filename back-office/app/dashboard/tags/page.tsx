@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast"; // Ajout de l'import pour les toasts
 import {
   Dialog,
   DialogContent,
@@ -57,15 +58,16 @@ const tagFormSchema = z.object({
 type TagFormValues = z.infer<typeof tagFormSchema>;
 
 export default function TagsPage() {
+  const { toast } = useToast();
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTag, setSelectedTag] = useState<TagWithUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -109,12 +111,18 @@ export default function TagsPage() {
       });
     } catch (error) {
       console.error("Erreur lors du chargement des tags:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les tags",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCreateTag = async (data: TagFormValues) => {
+    setIsSubmitting(true);
     try {
       await tagService.createTag({
         name: data.name,
@@ -123,13 +131,25 @@ export default function TagsPage() {
       setIsCreateDialogOpen(false);
       createForm.reset();
       loadTags();
+      toast({
+        title: "Tag créé",
+        description: "Le tag a été créé avec succès",
+      });
     } catch (error) {
       console.error("Erreur lors de la création du tag:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la création du tag",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditTag = async (data: TagFormValues) => {
     if (!selectedTag) return;
+    setIsSubmitting(true);
 
     try {
       await tagService.updateTag(selectedTag.id_tag, {
@@ -139,20 +159,57 @@ export default function TagsPage() {
       setIsEditDialogOpen(false);
       editForm.reset();
       loadTags();
+      toast({
+        title: "Tag modifié",
+        description: "Le tag a été modifié avec succès",
+      });
     } catch (error) {
       console.error("Erreur lors de la modification du tag:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la modification du tag",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteTag = async () => {
     if (!selectedTag) return;
+    setIsSubmitting(true);
 
     try {
       await tagService.deleteTag(selectedTag.id_tag);
       setIsDeleteDialogOpen(false);
       loadTags();
+      toast({
+        title: "Tag supprimé",
+        description: "Le tag a été supprimé avec succès",
+      });
     } catch (error) {
       console.error("Erreur lors de la suppression du tag:", error);
+
+      let errorMessage =
+        "Une erreur est survenue lors de la suppression du tag";
+
+      // Si l'erreur est due à un tag utilisé
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.code === "TAG_IN_USE"
+      ) {
+        errorMessage =
+          "Ce tag est utilisé dans l'application et ne peut pas être supprimé";
+      }
+
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -166,6 +223,11 @@ export default function TagsPage() {
         "Erreur lors de la récupération des détails du tag:",
         error
       );
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer les détails du tag",
+        variant: "destructive",
+      });
     }
   };
 
@@ -287,12 +349,6 @@ export default function TagsPage() {
             onPageChange: handlePageChange,
             onPageSizeChange: handlePageSizeChange,
           }}
-          searchable
-          onSearch={(query) => {
-            setSearchTerm(query);
-            // Note: l'API doit supporter la recherche
-            // Pour l'instant, elle n'est pas implémentée dans les mocks
-          }}
         />
 
         {/* Dialog pour créer un tag */}
@@ -352,11 +408,16 @@ export default function TagsPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
+                    disabled={isSubmitting}
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" className="brand-gradient">
-                    Créer
+                  <Button
+                    type="submit"
+                    className="brand-gradient"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Création en cours..." : "Créer"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -420,11 +481,16 @@ export default function TagsPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsEditDialogOpen(false)}
+                    disabled={isSubmitting}
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" className="brand-gradient">
-                    Enregistrer
+                  <Button
+                    type="submit"
+                    className="brand-gradient"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Modification en cours..." : "Enregistrer"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -528,12 +594,15 @@ export default function TagsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogCancel disabled={isSubmitting}>
+                Annuler
+              </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-red-500 hover:bg-red-600"
                 onClick={handleDeleteTag}
+                disabled={isSubmitting}
               >
-                Supprimer
+                {isSubmitting ? "Suppression..." : "Supprimer"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
