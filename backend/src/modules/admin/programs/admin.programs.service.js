@@ -4,16 +4,21 @@ const prisma = new PrismaClient();
 /**
  * Récupérer tous les programmes avec pagination, recherche et filtre par tag
  */
-const getAllPrograms = async ({ page = 1, limit = 20, search = '', tagId = null }) => {
+const getAllPrograms = async ({
+  page = 1,
+  limit = 20,
+  search = "",
+  tagId = null,
+}) => {
   const where = {};
 
   if (search) {
-    where.nom = { contains: search, mode: 'insensitive' };
+    where.nom = { contains: search, mode: "insensitive" };
   }
 
   if (tagId) {
     where.programmes_tags = {
-      some: { id_tag: parseInt(tagId) }
+      some: { id_tag: parseInt(tagId) },
     };
   }
 
@@ -24,7 +29,7 @@ const getAllPrograms = async ({ page = 1, limit = 20, search = '', tagId = null 
       where,
       skip,
       take: limit,
-      orderBy: { nom: 'asc' },
+      orderBy: { nom: "asc" },
       select: {
         id_programme: true,
         nom: true,
@@ -35,53 +40,56 @@ const getAllPrograms = async ({ page = 1, limit = 20, search = '', tagId = null 
           select: {
             id_user: true,
             prenom: true,
-            nom: true
-          }
+            nom: true,
+          },
         },
         seances_programmes: {
-          select: { id_seance_programme: true }
+          select: { id_seance_programme: true },
         },
         programmes_tags: {
           select: {
             tags: {
               select: {
                 id_tag: true,
-                nom: true
-              }
-            }
-          }
-        }
-      }
+                nom: true,
+                type: true,
+              },
+            },
+          },
+        },
+      },
     }),
-    prisma.programmes.count({ where })
+    prisma.programmes.count({ where }),
   ]);
 
-  const formatted = programs.map(program => ({
-    id: program.id_programme,
-    name: program.nom,
+  // Format programs to match frontend expectations
+  const formatted = programs.map((program) => ({
+    id_programme: program.id_programme,
+    nom: program.nom,
     image: program.image,
     duration: program.duree,
-    createdBy: {
-      id: program.users?.id_user,
-      name: program.users ? `${program.users.prenom} ${program.users.nom}` : null
-    },
+    createdBy: program.users
+      ? {
+          id: program.users.id_user,
+          name: `${program.users.prenom} ${program.users.nom}`,
+        }
+      : undefined,
     sessionCount: program.seances_programmes.length,
-    tags: program.programmes_tags.map(pt => ({
-      id: pt.tags.id_tag,
-      name: pt.tags.nom
-    }))
+    tags: program.programmes_tags.map((pt) => ({
+      id_tag: pt.tags.id_tag,
+      nom: pt.tags.nom,
+      type: pt.tags.type,
+    })),
   }));
-
-  const totalPages = Math.ceil(total / limit);
 
   return {
     programs: formatted,
     pagination: {
       total,
-      totalPages,
+      totalPages: Math.ceil(total / limit),
       currentPage: page,
-      limit
-    }
+      limit,
+    },
   };
 };
 
@@ -98,172 +106,211 @@ const getProgramById = async (id) => {
         select: {
           id_user: true,
           prenom: true,
-          nom: true
-        }
+          nom: true,
+        },
       },
       seances_programmes: {
+        orderBy: { ordre_seance: "asc" },
         select: {
-            id_seance_programme: true,
-            id_seance: true,
-            ordre_seance: true,
-        }
+          id_seance_programme: true,
+          id_seance: true,
+          ordre_seance: true,
+          seances: {
+            select: {
+              id_seance: true,
+              nom: true,
+              exercices_seances: {
+                select: { id_exercice_seance: true },
+              },
+            },
+          },
+        },
       },
       programmes_tags: {
         select: {
           tags: {
             select: {
               id_tag: true,
-              nom: true
-            }
-          }
-        }
-      }
-    }
+              nom: true,
+              type: true,
+            },
+          },
+        },
+      },
+      programmes_utilisateurs: {
+        select: { id_programme_utilisateur: true },
+      },
+    },
   });
 
-  return program;
-}
+  if (!program) return null;
 
-const createProgram = async (userId, { name, image, duration, tagIds, sessions }) => {
+  // Format to match frontend expectations
+  return {
+    program: {
+      id_programme: program.id_programme,
+      nom: program.nom,
+      image: program.image,
+      duration: program.duree,
+      createdBy: program.users
+        ? {
+            id: program.users.id_user,
+            name: `${program.users.prenom} ${program.users.nom}`,
+          }
+        : undefined,
+      sessions: program.seances_programmes.map((sp) => ({
+        id: sp.seances.id_seance,
+        orderInProgram: sp.ordre_seance,
+        name: sp.seances.nom,
+        exerciseCount: sp.seances.exercices_seances.length,
+      })),
+      tags: program.programmes_tags.map((pt) => ({
+        id_tag: pt.tags.id_tag,
+        nom: pt.tags.nom,
+        type: pt.tags.type,
+      })),
+      usageStats: {
+        users: program.programmes_utilisateurs.length,
+      },
+    },
+  };
+};
+
+const createProgram = async (
+  userId,
+  { name, image, duration, tagIds, sessions }
+) => {
   // 1. Créer le programme
   const program = await prisma.programmes.create({
     data: {
       nom: name,
       image,
       duree: duration,
-      id_user: userId
-    }
+      id_user: userId,
+    },
   });
 
   // 2. Associer les tags
   if (Array.isArray(tagIds) && tagIds.length > 0) {
     await prisma.programmes_tags.createMany({
-      data: tagIds.map(id_tag => ({
+      data: tagIds.map((id_tag) => ({
         id_programme: program.id_programme,
-        id_tag
-      }))
+        id_tag,
+      })),
     });
   }
-  
-  const sessionIds = sessions.map(sess => sess.sessionId);
+
+  // 3. Vérifier que toutes les séances existent
+  const sessionIds = sessions.map((sess) => sess.sessionId);
   const existingSessions = await prisma.seances.findMany({
     where: { id_seance: { in: sessionIds } },
-    select: { id_seance: true }
+    select: { id_seance: true },
   });
+
   if (existingSessions.length !== sessionIds.length) {
     throw new Error("Une ou plusieurs séances n'existent pas");
   }
 
-  // 3. Associer les séances au programme
+  // 4. Associer les séances au programme
   if (Array.isArray(sessions) && sessions.length > 0) {
     await prisma.seances_programmes.createMany({
-      data: sessions.map(sess => ({
+      data: sessions.map((sess) => ({
         id_programme: program.id_programme,
         id_seance: sess.sessionId,
-        ordre_seance: sess.order
-      }))
+        ordre_seance: sess.order,
+      })),
     });
   }
 
-  // 4. Récupérer le programme complet pour le retour
-  const createdProgram = await prisma.programmes.findUnique({
-    where: { id_programme: program.id_programme },
-    include: {
-      programmes_tags: {
-        select: {
-          tags: { select: { id_tag: true, nom: true } }
-        }
-      },
-      seances_programmes: {
-        orderBy: { ordre_seance: 'asc' },
-        include: {
-          seances: {
-            select: {
-              id_seance: true,
-              nom: true,
-              exercices_seances: { select: { id_exercice_seance: true } }
-            }
-          }
-        }
-      }
-    }
-  });
-
-  return {
-    id: createdProgram.id_programme,
-    name: createdProgram.nom,
-    image: createdProgram.image,
-    duration: createdProgram.duree,
-    tags: createdProgram.programmes_tags.map(pt => ({
-      id: pt.tags.id_tag,
-      name: pt.tags.nom
-    })),
-    sessions: createdProgram.seances_programmes.map(sp => ({
-      id: sp.seances.id_seance,
-      orderInProgram: sp.ordre_seance,
-      name: sp.seances.nom,
-      exerciseCount: sp.seances.exercices_seances.length
-    }))
-  };
+  // 5. Récupérer le programme créé avec ses relations
+  return await getProgramById(program.id_programme);
 };
 
-const updateProgram = async (id, data) => {
-  const { name, image, duration, tagIds, sessions } = data;
+const updateProgram = async (
+  id,
+  { name, image, duration, tagIds, sessions }
+) => {
+  const programId = parseInt(id);
 
-  // Update the program
-  const updatedProgram = await prisma.programmes.update({
-    where: { id_programme: parseInt(id) },
+  // 1. Vérifier que le programme existe
+  const existingProgram = await prisma.programmes.findUnique({
+    where: { id_programme: programId },
+  });
+
+  if (!existingProgram) {
+    return null;
+  }
+
+  // 2. Mise à jour du programme
+  await prisma.programmes.update({
+    where: { id_programme: programId },
     data: {
       nom: name,
       image,
-      duree: duration
-    }
+      duree: duration,
+    },
   });
 
-    if (Array.isArray(tagIds) && tagIds.length > 0) {
-        await prisma.programmes_tags.deleteMany({
-        where: { id_programme: updatedProgram.id_programme }
-        });
-    
-        await prisma.programmes_tags.createMany({
-        data: tagIds.map(id_tag => ({
-            id_programme: updatedProgram.id_programme,
-            id_tag
-        }))
-        });
-    }
+  // 3. Mise à jour des tags
+  if (Array.isArray(tagIds)) {
+    // Supprimer les associations existantes
+    await prisma.programmes_tags.deleteMany({
+      where: { id_programme: programId },
+    });
 
-    if (Array.isArray(sessions) && sessions.length > 0) {
-        await prisma.seances_programmes.deleteMany({
-        where: { id_programme: updatedProgram.id_programme }
-        });
-    
-        await prisma.seances_programmes.createMany({
-        data: sessions.map(sess => ({
-            id_programme: updatedProgram.id_programme,
-            id_seance: sess.sessionId,
-            ordre_seance: sess.order
-        }))
-        });
+    // Créer les nouvelles associations
+    if (tagIds.length > 0) {
+      await prisma.programmes_tags.createMany({
+        data: tagIds.map((id_tag) => ({
+          id_programme: programId,
+          id_tag,
+        })),
+      });
     }
+  }
 
-  return updatedProgram;
+  // 4. Mise à jour des séances
+  if (Array.isArray(sessions)) {
+    // Supprimer les associations existantes
+    await prisma.seances_programmes.deleteMany({
+      where: { id_programme: programId },
+    });
+
+    // Créer les nouvelles associations
+    if (sessions.length > 0) {
+      await prisma.seances_programmes.createMany({
+        data: sessions.map((sess) => ({
+          id_programme: programId,
+          id_seance: sess.sessionId,
+          ordre_seance: sess.order,
+        })),
+      });
+    }
+  }
+
+  // 5. Récupérer le programme mis à jour avec ses relations
+  return await getProgramById(programId);
 };
 
 const deleteProgram = async (id) => {
+  const programId = parseInt(id);
 
-  await prisma.seances_programmes.deleteMany({
-    where: { id_programme: parseInt(id) }
-  });
-  await prisma.programmes_tags.deleteMany({
-    where: { id_programme: parseInt(id) }
-  });
-  await prisma.programmes_utilisateurs.deleteMany({
-    where: { id_programme: parseInt(id) }
-  });
+  // Supprimer toutes les associations avant de supprimer le programme
+  await prisma.$transaction([
+    prisma.seances_programmes.deleteMany({
+      where: { id_programme: programId },
+    }),
+    prisma.programmes_tags.deleteMany({
+      where: { id_programme: programId },
+    }),
+    prisma.programmes_utilisateurs.deleteMany({
+      where: { id_programme: programId },
+    }),
+  ]);
 
+  // Supprimer le programme
   const deletedProgram = await prisma.programmes.delete({
-    where: { id_programme: parseInt(id) }
+    where: { id_programme: programId },
   });
 
   return deletedProgram;
@@ -274,5 +321,5 @@ module.exports = {
   getProgramById,
   createProgram,
   updateProgram,
-  deleteProgram
+  deleteProgram,
 };
