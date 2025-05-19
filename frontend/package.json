@@ -70,8 +70,7 @@
     "jest": "^29.7.0",
     "jest-expo": "~52.0.5",
     "react-test-renderer": "18.3.1",
-    "typescript": "^5.3.3",
-    "jest-merge-html-reports": "^3.1.0"
+    "typescript": "^5.3.3"
   },
   "private": true
 }
