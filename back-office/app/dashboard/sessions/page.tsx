@@ -114,7 +114,7 @@ export default function SessionsPage() {
     if (!selectedSession) return;
 
     try {
-      await sessionService.deleteSession(selectedSession.id_seance);
+      await sessionService.deleteSession(selectedSession.id);
       setIsDeleteDialogOpen(false);
       loadSessions();
     } catch (error) {
@@ -123,11 +123,11 @@ export default function SessionsPage() {
   };
 
   const handleViewSession = (session: Session) => {
-    router.push(`/dashboard/sessions/${session.id_seance}`);
+    router.push(`/dashboard/sessions/${session.id}`);
   };
 
   const handleEditSession = (session: Session) => {
-    router.push(`/dashboard/sessions/${session.id_seance}/edit`);
+    router.push(`/dashboard/sessions/${session.id}/edit`);
   };
 
   const handleCreateSession = () => {
@@ -140,7 +140,8 @@ export default function SessionsPage() {
   };
 
   const handleTagFilterChange = (tagId: string) => {
-    const numTagId = tagId ? parseInt(tagId) : null;
+    // Si l'option 'all' est sélectionnée, on réinitialise le filtre
+    const numTagId = tagId === "all" ? null : parseInt(tagId);
     setTagFilter(numTagId);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
     loadSessions(searchTerm, numTagId);
@@ -175,19 +176,17 @@ export default function SessionsPage() {
     },
     {
       header: "Exercices",
-      accessorKey: "id_seance",
-      cell: (item: Session) => (
-        <div>{(item as any).exerciseCount || 0} exercices</div>
-      ),
+      accessorKey: "id",
+      cell: (item: Session) => <div>{item.exerciseCount || 0} exercices</div>,
     },
     {
       header: "Créée par",
-      accessorKey: "id_seance",
+      accessorKey: "id",
       cell: (item: Session) => <div>{item.createdBy?.name || "Admin"}</div>,
     },
     {
       header: "Tags",
-      accessorKey: "id_seance",
+      accessorKey: "id",
       cell: (item: Session) => (
         <div className="flex flex-wrap gap-1">
           {item.tags &&
@@ -201,7 +200,7 @@ export default function SessionsPage() {
     },
     {
       header: "Actions",
-      accessorKey: "id_seance",
+      accessorKey: "id",
       cell: (item: Session) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -249,7 +248,7 @@ export default function SessionsPage() {
 
         <div className="mb-6 flex flex-wrap gap-4">
           <Select
-            value={tagFilter?.toString() || ""}
+            value={tagFilter?.toString() || "all"}
             onValueChange={handleTagFilterChange}
           >
             <SelectTrigger className="w-[220px]">

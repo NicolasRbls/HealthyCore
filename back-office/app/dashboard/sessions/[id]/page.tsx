@@ -245,21 +245,22 @@ export default function SessionDetailPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                      {exercise.repetitions && exercise.repetitions > 0 && (
-                        <div className="flex items-center">
-                          <Repeat className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="text-sm">
-                            <span className="text-gray-500">
-                              Répétitions :{" "}
+                      {exercise.repetitions !== undefined &&
+                        exercise.repetitions > 0 && (
+                          <div className="flex items-center">
+                            <Repeat className="h-4 w-4 mr-2 text-gray-400" />
+                            <span className="text-sm">
+                              <span className="text-gray-500">
+                                Répétitions :{" "}
+                              </span>
+                              <span className="font-medium">
+                                {exercise.repetitions}
+                              </span>
                             </span>
-                            <span className="font-medium">
-                              {exercise.repetitions}
-                            </span>
-                          </span>
-                        </div>
-                      )}
+                          </div>
+                        )}
 
-                      {exercise.sets && exercise.sets > 0 && (
+                      {exercise.sets !== undefined && exercise.sets > 0 && (
                         <div className="flex items-center">
                           <Clock className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="text-sm">
