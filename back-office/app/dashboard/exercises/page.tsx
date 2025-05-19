@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast"; // Ajout de l'import pour les toasts
 import {
   Dialog,
   DialogContent,
@@ -66,6 +67,7 @@ const exerciseFormSchema = z.object({
 type ExerciseFormValues = z.infer<typeof exerciseFormSchema>;
 
 export default function ExercisesPage() {
+  const { toast } = useToast(); // Initialisation du hook toast
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedExercise, setSelectedExercise] =
@@ -77,6 +79,8 @@ export default function ExercisesPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Ajout d'un état pour le chargement
+  const [deleteError, setDeleteError] = useState<string | null>(null); // Pour stocker l'erreur de suppression
 
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -145,6 +149,11 @@ export default function ExercisesPage() {
       });
     } catch (error) {
       console.error("Erreur lors du chargement des exercices:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les exercices",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -155,12 +164,19 @@ export default function ExercisesPage() {
       const response = await tagService.getTags(1, 100, "sport");
       console.log("API Response Tags:", response.data.tags);
       setTags(response.data.tags);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors du chargement des tags:", error);
+      toast({
+        title: "Erreur",
+        description:
+          error.response?.data?.message || "Impossible de charger les tags",
+        variant: "destructive",
+      });
     }
   };
 
   const handleCreateExercise = async (data: ExerciseFormValues) => {
+    setIsSubmitting(true);
     try {
       console.log("Creating exercise with data:", data);
       await exerciseService.createExercise({
@@ -173,13 +189,27 @@ export default function ExercisesPage() {
       setIsCreateDialogOpen(false);
       createForm.reset();
       loadExercises();
-    } catch (error) {
+      toast({
+        title: "Exercice créé",
+        description: "L'exercice a été créé avec succès",
+      });
+    } catch (error: any) {
       console.error("Erreur lors de la création de l'exercice:", error);
+      toast({
+        title: "Erreur",
+        description:
+          error.response?.data?.message ||
+          "Une erreur est survenue lors de la création de l'exercice",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditExercise = async (data: ExerciseFormValues) => {
     if (!selectedExercise) return;
+    setIsSubmitting(true);
 
     try {
       console.log("Updating exercise with data:", data);
@@ -193,21 +223,66 @@ export default function ExercisesPage() {
       setIsEditDialogOpen(false);
       editForm.reset();
       loadExercises();
-    } catch (error) {
+      toast({
+        title: "Exercice modifié",
+        description: "L'exercice a été modifié avec succès",
+      });
+    } catch (error: any) {
       console.error("Erreur lors de la modification de l'exercice:", error);
+      toast({
+        title: "Erreur",
+        description:
+          error.response?.data?.message ||
+          "Une erreur est survenue lors de la modification de l'exercice",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteExercise = async () => {
     if (!selectedExercise) return;
+    setIsSubmitting(true);
+    setDeleteError(null);
 
     try {
       console.log("Deleting exercise:", selectedExercise.id);
-      await exerciseService.deleteExercise(selectedExercise.id);
+      const response = await exerciseService.deleteExercise(
+        selectedExercise.id
+      );
       setIsDeleteDialogOpen(false);
       loadExercises();
-    } catch (error) {
+      toast({
+        title: "Exercice supprimé",
+        description: "L'exercice a été supprimé avec succès",
+      });
+    } catch (error: any) {
       console.error("Erreur lors de la suppression de l'exercice:", error);
+
+      let errorMessage =
+        "Une erreur est survenue lors de la suppression de l'exercice";
+
+      // Si l'erreur est due à un exercice utilisé
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.error === "EXERCISE_IN_USE"
+      ) {
+        errorMessage =
+          "Cet exercice est utilisé dans des séances ou des programmes et ne peut pas être supprimé";
+        setDeleteError(errorMessage);
+      } else {
+        setIsDeleteDialogOpen(false);
+      }
+
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -222,7 +297,7 @@ export default function ExercisesPage() {
 
       // Adapter les tags si nécessaire
       if (exerciseDetail.tags) {
-        exerciseDetail.tags = exerciseDetail.tags.map((tag) => ({
+        exerciseDetail.tags = exerciseDetail.tags.map((tag: any) => ({
           ...tag,
           id_tag: tag.id_tag || tag.id,
           nom: tag.nom || tag.name,
@@ -232,11 +307,18 @@ export default function ExercisesPage() {
       console.log("Adapted Exercise Detail:", exerciseDetail);
       setSelectedExercise(exerciseDetail);
       setIsViewDialogOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         "Erreur lors de la récupération des détails de l'exercice:",
         error
       );
+      toast({
+        title: "Erreur",
+        description:
+          error.response?.data?.message ||
+          "Impossible de récupérer les détails de l'exercice",
+        variant: "destructive",
+      });
     }
   };
 
@@ -251,7 +333,7 @@ export default function ExercisesPage() {
 
       // Nous devons nous assurer que les tagIds sont des nombres
       const tagIds =
-        exerciseDetail.tags?.map((tag) =>
+        exerciseDetail.tags?.map((tag: any) =>
           typeof tag.id_tag === "number"
             ? tag.id_tag
             : typeof tag.id === "number"
@@ -271,11 +353,18 @@ export default function ExercisesPage() {
 
       setSelectedExercise(exerciseDetail);
       setIsEditDialogOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         "Erreur lors de la récupération des détails de l'exercice:",
         error
       );
+      toast({
+        title: "Erreur",
+        description:
+          error.response?.data?.message ||
+          "Impossible de récupérer les détails de l'exercice pour modification",
+        variant: "destructive",
+      });
     }
   };
 
@@ -337,13 +426,9 @@ export default function ExercisesPage() {
       cell: (item: Exercise) => (
         <div className="flex flex-wrap gap-1">
           {item.tags &&
-            item.tags.map((tag) => (
-              <Badge
-                key={(tag as any).id_tag}
-                variant="outline"
-                className="mr-1"
-              >
-                {(tag as any).nom}
+            item.tags.map((tag: any) => (
+              <Badge key={tag.id_tag} variant="outline" className="mr-1">
+                {tag.nom}
               </Badge>
             ))}
         </div>
@@ -604,11 +689,16 @@ export default function ExercisesPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
+                    disabled={isSubmitting}
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" className="brand-gradient">
-                    Créer
+                  <Button
+                    type="submit"
+                    className="brand-gradient"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Création en cours..." : "Créer"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -774,11 +864,16 @@ export default function ExercisesPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsEditDialogOpen(false)}
+                    disabled={isSubmitting}
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" className="brand-gradient">
-                    Enregistrer
+                  <Button
+                    type="submit"
+                    className="brand-gradient"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Modification en cours..." : "Enregistrer"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -800,9 +895,9 @@ export default function ExercisesPage() {
                       {selectedExercise.name}
                     </h3>
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {selectedExercise.tags?.map((tag) => (
-                        <Badge key={(tag as any).id_tag} variant="outline">
-                          {(tag as any).nom}
+                      {selectedExercise.tags?.map((tag: any) => (
+                        <Badge key={tag.id_tag} variant="outline">
+                          {tag.nom}
                         </Badge>
                       ))}
                     </div>
@@ -884,12 +979,15 @@ export default function ExercisesPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogCancel disabled={isSubmitting}>
+                Annuler
+              </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-red-500 hover:bg-red-600"
                 onClick={handleDeleteExercise}
+                disabled={isSubmitting}
               >
-                Supprimer
+                {isSubmitting ? "Suppression..." : "Supprimer"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
