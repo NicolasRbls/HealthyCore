@@ -33,17 +33,28 @@ jobs:
       with:
         node-version: '18.x'
         
+    - name: Change to backend directory
+      run: cd backend
+        
     - name: Install dependencies
-      run: npm ci
+      run: |
+        cd backend
+        npm ci
       
     - name: Generate Prisma Client
-      run: npx prisma generate
+      run: |
+        cd backend
+        npx prisma generate
       
     - name: Run Prisma migrations
-      run: npm run migrate:test
+      run: |
+        cd backend
+        npm run migrate:test
       
     - name: Run tests
-      run: npm run test:ci
+      run: |
+        cd backend
+        npm run test:ci
       env:
         CI: true
         DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
@@ -54,7 +65,7 @@ jobs:
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        directory: ./coverage
+        directory: ./backend/coverage
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: true
