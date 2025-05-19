@@ -133,7 +133,7 @@ export default function ProgramsPage() {
   };
 
   const handleTagFilterChange = (tagId: string) => {
-    const numTagId = tagId ? parseInt(tagId) : null;
+    const numTagId = tagId === "all" ? null : parseInt(tagId);
     setTagFilter(numTagId);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
     loadPrograms(searchTerm, numTagId);
@@ -159,12 +159,12 @@ export default function ProgramsPage() {
   }[] = [
     {
       header: "ID",
-      accessorKey: "id",
+      accessorKey: "id_programme",
     },
     {
       header: "Nom",
-      accessorKey: "name",
-      cell: (item: Program) => <div className="font-medium">{item.name}</div>,
+      accessorKey: "nom",
+      cell: (item: Program) => <div className="font-medium">{item.nom}</div>,
     },
     {
       header: "Durée (jours)",
@@ -187,8 +187,8 @@ export default function ProgramsPage() {
         <div className="flex flex-wrap gap-1">
           {item.tags &&
             item.tags.map((tag) => (
-              <Badge key={tag.id} variant="outline" className="mr-1">
-                {tag.name}
+              <Badge key={tag.id_tag} variant="outline" className="mr-1">
+                {tag.nom}
               </Badge>
             ))}
         </div>
@@ -196,7 +196,7 @@ export default function ProgramsPage() {
     },
     {
       header: "Actions",
-      accessorKey: "id",
+      accessorKey: "id_programme",
       cell: (item: Program) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -244,7 +244,7 @@ export default function ProgramsPage() {
 
         <div className="mb-6 flex flex-wrap gap-4">
           <Select
-            value={tagFilter?.toString() || ""}
+            value={tagFilter?.toString() || "all"}
             onValueChange={handleTagFilterChange}
           >
             <SelectTrigger className="w-[220px]">
