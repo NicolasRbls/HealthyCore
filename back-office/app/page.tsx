@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default function Home() {
   useEffect(() => {
     // Vérifier si l'utilisateur est déjà connecté
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("token");
 
     if (token) {
       // Si connecté, rediriger vers le dashboard
