@@ -16,6 +16,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import api from "@/services/api";
+import authService from "@/services/authService";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Adresse e-mail invalide" }),
@@ -27,6 +30,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const form = useForm<LoginFormValues>({
@@ -39,31 +43,34 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    setError(null);
 
     try {
-      // Appel API de connexion à implémenter
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(data),
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error('Erreur de connexion');
-      // }
-
-      // const result = await response.json();
-      // localStorage.setItem('adminToken', result.token);
-
-      // Simulation d'une connexion réussie pour le développement
-      console.log("Connexion avec:", data);
-      localStorage.setItem("adminToken", "fake-token-for-development");
-
+      // Utiliser le service d'authentification
+      await authService.login(data.email, data.password);
+      // Si pas d'erreur, rediriger vers le dashboard
       router.push("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur de connexion:", error);
+
+      // Gérer les différents types d'erreurs
+      if (error.response) {
+        // Erreur de réponse serveur (400, 401, etc.)
+        if (error.response.status === 401) {
+          setError("Identifiants incorrects. Veuillez réessayer.");
+        } else if (error.response.data && error.response.data.message) {
+          setError(error.response.data.message);
+        } else {
+          setError("Erreur lors de la connexion. Veuillez réessayer.");
+        }
+      } else if (error.message) {
+        // Erreur personnalisée (ex: rôle non admin)
+        setError(error.message);
+      } else {
+        setError(
+          "Erreur de connexion. Veuillez vérifier votre connexion internet et réessayer."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -79,6 +86,12 @@ export default function LoginPage() {
             </h1>
             <p className="text-gray-600 mt-2">Connexion à l'administration</p>
           </div>
+
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
