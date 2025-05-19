@@ -3,82 +3,93 @@
 import React, { useEffect, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatCard } from "@/components/ui/stat-card";
-import {
-  Users,
-  Dumbbell,
-  Calendar,
-  BookOpen,
-  Coffee,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Dumbbell, Calendar, BookOpen, Coffee } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import userService from "@/services/userService";
-import { UserCount } from "@/types/user";
+import programService from "@/services/programService";
+import sessionService from "@/services/sessionService";
+import exerciseService from "@/services/exerciseService";
+import foodService from "@/services/foodService";
 
-// Composant pour le graphique d'activité
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
-
-// Données fictives pour les graphiques
-const activityData = [
-  { name: "Jan", users: 400, sessions: 240 },
-  { name: "Fév", users: 300, sessions: 220 },
-  { name: "Mar", users: 500, sessions: 340 },
-  { name: "Avr", users: 280, sessions: 380 },
-  { name: "Mai", users: 590, sessions: 430 },
-  { name: "Juin", users: 490, sessions: 410 },
-  { name: "Juil", users: 600, sessions: 480 },
-];
-
-const pieData = [
-  { name: "Débutant", value: 45 },
-  { name: "Intermédiaire", value: 30 },
-  { name: "Avancé", value: 25 },
-];
-
-const COLORS = ["#92A3FD", "#C58BF2", "#4CAF50", "#FFC107"];
+// Composant amélioré pour les cartes de statistiques avec état de chargement
+const StatCard = ({
+  title,
+  value,
+  icon,
+  isLoading = false,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  isLoading?: boolean;
+}) => {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500">{title}</p>
+            {isLoading ? (
+              <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+            ) : (
+              <h4 className="text-2xl font-bold">
+                {value.toLocaleString("fr-FR")}
+              </h4>
+            )}
+          </div>
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     userCount: 0,
-    exerciseCount: 240,
-    sessionCount: 85,
-    programCount: 32,
-    foodCount: 425,
+    exerciseCount: 0,
+    sessionCount: 0,
+    programCount: 0,
+    foodCount: 0,
+    isLoading: true,
   });
 
   useEffect(() => {
     // Fonction pour charger les données du tableau de bord
     const loadDashboardData = async () => {
       try {
-        // Charger le nombre d'utilisateurs
-        const userCountResponse = await userService.getUserCount();
+        // Chargement parallèle de toutes les statistiques
+        const [
+          userCountResponse,
+          programsResponse,
+          sessionsResponse,
+          exercisesResponse,
+          foodsResponse,
+        ] = await Promise.all([
+          userService.getUserCount(),
+          programService.getPrograms(1, 1), // Juste pour obtenir le total
+          sessionService.getSessions(1, 1), // Juste pour obtenir le total
+          exerciseService.getExercises(1, 1), // Juste pour obtenir le total
+          foodService.getFoods(1, 1), // Juste pour obtenir le total
+        ]);
 
         // Mettre à jour les statistiques avec les données réelles
-        setStats((prevStats) => ({
-          ...prevStats,
-          userCount: userCountResponse.data.totalCount,
-        }));
+        setStats({
+          userCount: userCountResponse.data.totalCount || 0,
+          programCount: programsResponse.data.pagination?.total || 0,
+          sessionCount: sessionsResponse.data.pagination?.total || 0,
+          exerciseCount: exercisesResponse.data.pagination?.total || 0,
+          foodCount: foodsResponse.data.pagination?.total || 0,
+          isLoading: false,
+        });
       } catch (error) {
         console.error(
           "Erreur lors du chargement des données du tableau de bord:",
           error
         );
+        setStats((prev) => ({ ...prev, isLoading: false }));
       }
     };
 
@@ -95,7 +106,7 @@ export default function DashboardPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Vue d'ensemble"
-          description="Statistiques et activités de la plateforme"
+          description="Statistiques globales de la plateforme"
         />
 
         {/* Cartes de statistiques */}
@@ -103,26 +114,31 @@ export default function DashboardPage() {
           <StatCard
             title="Utilisateurs"
             value={stats.userCount}
+            isLoading={stats.isLoading}
             icon={<Users size={20} className="text-white" />}
           />
           <StatCard
             title="Exercices"
             value={stats.exerciseCount}
+            isLoading={stats.isLoading}
             icon={<Dumbbell size={20} className="text-white" />}
           />
           <StatCard
             title="Séances"
             value={stats.sessionCount}
+            isLoading={stats.isLoading}
             icon={<Calendar size={20} className="text-white" />}
           />
           <StatCard
             title="Programmes"
             value={stats.programCount}
+            isLoading={stats.isLoading}
             icon={<BookOpen size={20} className="text-white" />}
           />
           <StatCard
             title="Aliments"
             value={stats.foodCount}
+            isLoading={stats.isLoading}
             icon={<Coffee size={20} className="text-white" />}
           />
         </div>
