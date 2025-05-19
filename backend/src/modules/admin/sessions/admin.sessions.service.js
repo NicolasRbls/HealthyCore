@@ -4,16 +4,21 @@ const prisma = new PrismaClient();
 /**
  * Récupérer toutes les séances avec pagination, recherche et filtre par tag
  */
-const getAllSessions = async ({ page = 1, limit = 20, search = '', tagId = null }) => {
+const getAllSessions = async ({
+  page = 1,
+  limit = 20,
+  search = "",
+  tagId = null,
+}) => {
   const where = {};
 
   if (search) {
-    where.nom = { contains: search, mode: 'insensitive' };
+    where.nom = { contains: search, mode: "insensitive" };
   }
 
   if (tagId) {
     where.seances_tags = {
-      some: { id_tag: parseInt(tagId) }
+      some: { id_tag: parseInt(tagId) },
     };
   }
 
@@ -24,7 +29,7 @@ const getAllSessions = async ({ page = 1, limit = 20, search = '', tagId = null 
       where,
       skip,
       take: limit,
-      orderBy: { nom: 'asc' },
+      orderBy: { nom: "asc" },
       select: {
         id_seance: true,
         nom: true,
@@ -33,39 +38,39 @@ const getAllSessions = async ({ page = 1, limit = 20, search = '', tagId = null 
           select: {
             id_user: true,
             prenom: true,
-            nom: true
-          }
+            nom: true,
+          },
         },
         exercices_seances: {
-          select: { id_exercice_seance: true }
+          select: { id_exercice_seance: true },
         },
         seances_tags: {
           select: {
             tags: {
               select: {
                 id_tag: true,
-                nom: true
-              }
-            }
-          }
-        }
-      }
+                nom: true,
+              },
+            },
+          },
+        },
+      },
     }),
-    prisma.seances.count({ where })
+    prisma.seances.count({ where }),
   ]);
 
-  const formatted = sessions.map(seance => ({
+  const formatted = sessions.map((seance) => ({
     id: seance.id_seance,
     name: seance.nom,
     createdBy: {
       id: seance.users?.id_user,
-      name: seance.users ? `${seance.users.prenom}` : null
+      name: seance.users ? `${seance.users.prenom}` : null,
     },
     exerciseCount: seance.exercices_seances.length,
-    tags: seance.seances_tags.map(st => ({
+    tags: seance.seances_tags.map((st) => ({
       id: st.tags.id_tag,
-      name: st.tags.nom
-    }))
+      name: st.tags.nom,
+    })),
   }));
 
   const totalPages = Math.ceil(total / limit);
@@ -76,8 +81,8 @@ const getAllSessions = async ({ page = 1, limit = 20, search = '', tagId = null 
       total,
       totalPages,
       currentPage: page,
-      limit
-    }
+      limit,
+    },
   };
 };
 
@@ -89,8 +94,8 @@ const getSessionByIdWithExercises = async (id) => {
         select: {
           id_user: true,
           prenom: true,
-          nom: true
-        }
+          nom: true,
+        },
       },
       exercices_seances: {
         include: {
@@ -99,27 +104,60 @@ const getSessionByIdWithExercises = async (id) => {
               id_exercice: true,
               nom: true,
               description: true,
-              gif: true
-            }
-          }
-        }
+              gif: true,
+            },
+          },
+        },
+        orderBy: {
+          ordre_exercice: "asc",
+        },
       },
       seances_tags: {
         select: {
           tags: {
             select: {
               id_tag: true,
-              nom: true
-            }
-          }
-        }
-      }
-    }
+              nom: true,
+              type: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!session) return null;
 
-  return session;
+  // Transformation pour correspondre au format attendu par le frontend
+  return {
+    id: session.id_seance,
+    nom: session.nom, // Conserver le nom original pour compatibilité
+    createdBy: session.users
+      ? {
+          id: session.users.id_user,
+          name: session.users.prenom || "Admin",
+        }
+      : null,
+    tags: session.seances_tags.map((st) => ({
+      id_tag: st.tags.id_tag, // Conserver les noms de propriétés originaux
+      nom: st.tags.nom,
+      type: st.tags.type || "sport",
+    })),
+    exercises: session.exercices_seances.map((es) => ({
+      id: es.exercices.id_exercice,
+      orderInSession: es.ordre_exercice,
+      name: es.exercices.nom,
+      description: es.exercices.description,
+      repetitions: es.repetitions,
+      sets: es.series,
+      duration: es.duree,
+    })),
+    // Statistiques d'utilisation simulées
+    usageStats: {
+      programs: 0,
+      users: 0,
+    },
+  };
 };
 
 const createSession = async (userId, { name, tagIds, exercises }) => {
@@ -127,31 +165,31 @@ const createSession = async (userId, { name, tagIds, exercises }) => {
   const session = await prisma.seances.create({
     data: {
       nom: name,
-      id_user: userId
-    }
+      id_user: userId,
+    },
   });
 
   // 2. Associer les tags
   if (Array.isArray(tagIds) && tagIds.length > 0) {
     await prisma.seances_tags.createMany({
-      data: tagIds.map(id_tag => ({
+      data: tagIds.map((id_tag) => ({
         id_seance: session.id_seance,
-        id_tag
-      }))
+        id_tag,
+      })),
     });
   }
 
   // 3. Associer les exercices à la séance
   if (Array.isArray(exercises) && exercises.length > 0) {
     await prisma.exercices_seances.createMany({
-      data: exercises.map(ex => ({
+      data: exercises.map((ex) => ({
         id_seance: session.id_seance,
         id_exercice: ex.exerciseId,
         ordre_exercice: ex.order,
         repetitions: ex.repetitions,
         series: ex.sets,
-        duree: ex.duration
-      }))
+        duree: ex.duration,
+      })),
     });
   }
 
@@ -161,32 +199,32 @@ const createSession = async (userId, { name, tagIds, exercises }) => {
     include: {
       seances_tags: {
         select: {
-          tags: { select: { id_tag: true, nom: true } }
-        }
+          tags: { select: { id_tag: true, nom: true } },
+        },
       },
       exercices_seances: {
         include: {
-          exercices: { select: { id_exercice: true, nom: true } }
-        }
-      }
-    }
+          exercices: { select: { id_exercice: true, nom: true } },
+        },
+      },
+    },
   });
 
   return {
     id: createdSession.id_seance,
     name: createdSession.nom,
-    tags: createdSession.seances_tags.map(st => ({
+    tags: createdSession.seances_tags.map((st) => ({
       id: st.tags.id_tag,
-      name: st.tags.nom
+      name: st.tags.nom,
     })),
-    exercises: createdSession.exercices_seances.map(es => ({
+    exercises: createdSession.exercices_seances.map((es) => ({
       id: es.exercices.id_exercice,
       orderInSession: es.ordre_exercice,
       name: es.exercices.nom,
       repetitions: es.repetitions,
       sets: es.series,
-      duration: es.duree
-    }))
+      duration: es.duree,
+    })),
   };
 };
 
@@ -194,32 +232,34 @@ const updateSession = async (sessionId, { name, tagIds, exercises }) => {
   // 1. Mettre à jour le nom de la séance
   await prisma.seances.update({
     where: { id_seance: sessionId },
-    data: { nom: name }
+    data: { nom: name },
   });
 
   // 2. Mettre à jour les tags (supprimer puis recréer)
   await prisma.seances_tags.deleteMany({ where: { id_seance: sessionId } });
   if (Array.isArray(tagIds) && tagIds.length > 0) {
     await prisma.seances_tags.createMany({
-      data: tagIds.map(id_tag => ({
+      data: tagIds.map((id_tag) => ({
         id_seance: sessionId,
-        id_tag
-      }))
+        id_tag,
+      })),
     });
   }
 
   // 3. Mettre à jour les exercices (supprimer puis recréer)
-  await prisma.exercices_seances.deleteMany({ where: { id_seance: sessionId } });
+  await prisma.exercices_seances.deleteMany({
+    where: { id_seance: sessionId },
+  });
   if (Array.isArray(exercises) && exercises.length > 0) {
     await prisma.exercices_seances.createMany({
-      data: exercises.map(ex => ({
+      data: exercises.map((ex) => ({
         id_seance: sessionId,
         id_exercice: ex.exerciseId,
         ordre_exercice: ex.order,
         repetitions: ex.repetitions,
         series: ex.sets,
-        duree: ex.duration
-      }))
+        duree: ex.duration,
+      })),
     });
   }
 
@@ -229,54 +269,58 @@ const updateSession = async (sessionId, { name, tagIds, exercises }) => {
     include: {
       seances_tags: {
         select: {
-          tags: { select: { id_tag: true, nom: true } }
-        }
+          tags: { select: { id_tag: true, nom: true } },
+        },
       },
       exercices_seances: {
         include: {
-          exercices: { select: { id_exercice: true, nom: true } }
-        }
-      }
-    }
+          exercices: { select: { id_exercice: true, nom: true } },
+        },
+      },
+    },
   });
 
   return {
     id: updatedSession.id_seance,
     name: updatedSession.nom,
-    tags: updatedSession.seances_tags.map(st => ({
+    tags: updatedSession.seances_tags.map((st) => ({
       id: st.tags.id_tag,
-      name: st.tags.nom
+      name: st.tags.nom,
     })),
-    exercises: updatedSession.exercices_seances.map(es => ({
+    exercises: updatedSession.exercices_seances.map((es) => ({
       id: es.exercices.id_exercice,
       orderInSession: es.ordre_exercice,
       name: es.exercices.nom,
       repetitions: es.repetitions,
       sets: es.series,
-      duration: es.duree
-    }))
+      duration: es.duree,
+    })),
   };
 };
 
 const deleteSession = async (sessionId) => {
   // Supprimer les associations d'exercices
-  await prisma.exercices_seances.deleteMany({ where: { id_seance: sessionId } });
+  await prisma.exercices_seances.deleteMany({
+    where: { id_seance: sessionId },
+  });
 
-  await prisma.seances_programmes.deleteMany({ where: { id_seance: sessionId } });
-  
+  await prisma.seances_programmes.deleteMany({
+    where: { id_seance: sessionId },
+  });
+
   // Supprimer les associations de tags
   await prisma.seances_tags.deleteMany({ where: { id_seance: sessionId } });
 
   // Supprimer la séance
   await prisma.seances.delete({
-    where: { id_seance: sessionId }
+    where: { id_seance: sessionId },
   });
-}
+};
 
 module.exports = {
   getAllSessions,
   getSessionByIdWithExercises,
   createSession,
   updateSession,
-  deleteSession
+  deleteSession,
 };
