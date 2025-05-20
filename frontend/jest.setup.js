@@ -1,20 +1,6 @@
-// jest.setup.js - compliant version
+// frontend/jest.setup.js
 
-
-// 1) Mock explicite de SettingsManager manquant
-jest.mock(
-  'react-native/Libraries/Settings/SettingsManager',
-  () => ({
-    SettingsManager: {
-      settings: {},    // au moins un objet vide
-    },
-  })
-);
-
-// 2) Assurer le fallback dans NativeModules
-const { NativeModules } = require('react-native');
-NativeModules.SettingsManager = NativeModules.SettingsManager || { settings: {} };
-
+// --- Mocks tiers (expo, router, etc.) ---
 
 // Mock expo-secure-store
 jest.mock('expo-secure-store', () => ({
@@ -54,9 +40,24 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: jest.fn(() => ({ top: 0, right: 0, bottom: 0, left: 0 })),
 }));
 
-// Create a simplified mock that doesn't use React directly
+// Pour les tests d’API
+global.fetch = jest.fn();
+
+// --- Mock complet de react-native avec SettingsManager ---
+
+// On récupère l'implémentation réelle pour y greffer notre SettingsManager
+const realRN = jest.requireActual('react-native');
+
+// Assurer l’existence de NativeModules.SettingsManager
+realRN.NativeModules.SettingsManager = realRN.NativeModules.SettingsManager || { settings: {} };
+
 jest.mock('react-native', () => {
+  const RN = realRN;
+
   return {
+    ...RN,
+
+    // Mock des composants de base sans React
     TouchableOpacity: jest.fn(({ testID, onPress, children }) => ({
       type: 'TouchableOpacity',
       props: { testID, onPress },
@@ -76,16 +77,21 @@ jest.mock('react-native', () => {
       type: 'ActivityIndicator',
       props: { size, color },
     })),
+
+    // Style helper
     StyleSheet: {
       create: jest.fn(styles => styles),
     },
+
     Platform: {
       OS: 'ios',
       select: jest.fn(obj => obj.ios),
     },
+
     Alert: {
       alert: jest.fn(),
     },
+
     Dimensions: {
       get: jest.fn(dim => {
         if (dim === 'window' || dim === 'screen') {
@@ -94,6 +100,7 @@ jest.mock('react-native', () => {
         return { width: 0, height: 0 };
       }),
     },
+
     Animated: {
       View: jest.fn(({ children, style }) => ({
         type: 'Animated.View',
@@ -117,8 +124,8 @@ jest.mock('react-native', () => {
         setValue: jest.fn(),
       })),
     },
+
+    // On conserve NativeModules (contenant le SettingsManager)
+    NativeModules: RN.NativeModules,
   };
 });
-
-// For fetch mock in API tests
-global.fetch = jest.fn();
