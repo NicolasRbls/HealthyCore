@@ -51,15 +51,15 @@ jest.mock('react-native-safe-area-context', () => ({
 global.fetch = jest.fn();
 
 // --- Mock global react-native, preserving native modules and stubbing missing ones ---
+```js
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
 
   // Ensure SettingsManager stub
   RN.NativeModules = RN.NativeModules || {};
   RN.NativeModules.SettingsManager = RN.NativeModules.SettingsManager || { settings: {} };
-
-  // Stub DeviceInfo module getConstants to satisfy NativeDeviceInfo import
-  RN.NativeModules.DeviceInfo = RN.NativeModules.DeviceInfo || { getConstants: () => ({}) };
+  // Stub NativeDeviceInfo for ActivityIndicator, Dimensions, PixelRatio
+  RN.NativeModules.NativeDeviceInfo = RN.NativeModules.NativeDeviceInfo || { getConstants: () => ({}) };
 
   return {
     ...RN,
@@ -83,3 +83,4 @@ jest.mock('react-native', () => {
     NativeModules: RN.NativeModules,
   };
 });
+```
