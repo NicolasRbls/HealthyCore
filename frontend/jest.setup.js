@@ -1,10 +1,10 @@
 // frontend/jest.setup.js
 
-// Stub TurboModuleRegistry getEnforcing for SettingsManager
+// Stub TurboModuleRegistry for SettingsManager
 jest.mock(
   'react-native/Libraries/TurboModule/TurboModuleRegistry',
   () => ({
-    getEnforcing: jest.fn((name) => {
+    getEnforcing: jest.fn(name => {
       if (name === 'SettingsManager') {
         return { getConstants: () => ({ settings: {} }) };
       }
@@ -16,16 +16,14 @@ jest.mock(
 // Mock NativeSettingsManager and Settings.ios
 jest.mock(
   'react-native/Libraries/Settings/NativeSettingsManager',
-  () => ({
-    getConstants: () => ({ settings: {} }),
-  })
+  () => ({ getConstants: () => ({ settings: {} }) })
 );
 jest.mock(
   'react-native/Libraries/Settings/Settings.ios',
   () => ({ SettingsManager: { settings: {} } })
 );
 
-// --- Mocks d’Expo, router, etc. ---
+// --- Mocks for Expo and related ---
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(() => Promise.resolve('test-token')),
   setItemAsync: jest.fn(() => Promise.resolve()),
@@ -45,36 +43,36 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: jest.fn(({ children }) => children),
   SafeAreaView: jest.fn(({ children }) => children),
-  useSafeAreaInsets: jest.fn(() => ({ top:0,right:0,bottom:0,left:0 })),
+  useSafeAreaInsets: jest.fn(() => ({ top: 0, right: 0, bottom: 0, left: 0 })),
 }));
 
 global.fetch = jest.fn();
 
-// --- Mock global react-native, preserving native modules and stubbing missing ones ---
-```js
+// --- Global mock for react-native ---
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
 
-  // Ensure SettingsManager stub
+  // Ensure NativeModules and SettingsManager stub
   RN.NativeModules = RN.NativeModules || {};
   RN.NativeModules.SettingsManager = RN.NativeModules.SettingsManager || { settings: {} };
-  // Stub NativeDeviceInfo for ActivityIndicator, Dimensions, PixelRatio
+
+  // Stub NativeDeviceInfo for getConstants
   RN.NativeModules.NativeDeviceInfo = RN.NativeModules.NativeDeviceInfo || { getConstants: () => ({}) };
 
   return {
     ...RN,
     Alert: { alert: jest.fn() },
-    TouchableOpacity: jest.fn(({ testID, onPress, children }) => ({ type:'TouchableOpacity', props:{testID,onPress}, children })),
-    Text: jest.fn(({ testID, children }) => ({ type:'Text', props:{testID}, children })),
-    View: jest.fn(({ testID, children }) => ({ type:'View', props:{testID}, children })),
-    ActivityIndicator: jest.fn(({ size, color }) => ({ type:'ActivityIndicator', props:{size,color} })),
+    TouchableOpacity: jest.fn(({ testID, onPress, children }) => ({ type: 'TouchableOpacity', props: { testID, onPress }, children })),
+    Text: jest.fn(({ testID, children }) => ({ type: 'Text', props: { testID }, children })),
+    View: jest.fn(({ testID, children }) => ({ type: 'View', props: { testID }, children })),
+    ActivityIndicator: jest.fn(({ size, color }) => ({ type: 'ActivityIndicator', props: { size, color } })),
     StyleSheet: { create: jest.fn(styles => styles) },
-    Platform: { OS:'ios', select: jest.fn(obj => obj.ios) },
-    Dimensions: { get: jest.fn(dim => (dim==='window'||dim==='screen'?{width:375,height:667}:{width:0,height:0})) },
+    Platform: { OS: 'ios', select: jest.fn(obj => obj.ios) },
+    Dimensions: { get: jest.fn(dim => (dim === 'window' || dim === 'screen' ? { width: 375, height: 667 } : { width: 0, height: 0 })) },
     Animated: {
-      View: jest.fn(({ children, style }) => ({ type:'Animated.View', props:{style}, children })),
-      Text: jest.fn(({ children, style }) => ({ type:'Animated.Text', props:{style}, children })),
-      Image: jest.fn(({ source, style }) => ({ type:'Animated.Image', props:{source,style} })),
+      View: jest.fn(({ children, style }) => ({ type: 'Animated.View', props: { style }, children })),
+      Text: jest.fn(({ children, style }) => ({ type: 'Animated.Text', props: { style }, children })),
+      Image: jest.fn(({ source, style }) => ({ type: 'Animated.Image', props: { source, style } })),
       timing: jest.fn(() => ({ start: jest.fn() })),
       sequence: jest.fn(() => ({ start: jest.fn() })),
       parallel: jest.fn(() => ({ start: jest.fn() })),
@@ -83,4 +81,3 @@ jest.mock('react-native', () => {
     NativeModules: RN.NativeModules,
   };
 });
-```
