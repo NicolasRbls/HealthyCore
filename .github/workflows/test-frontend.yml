@@ -1,9 +1,9 @@
 name: Test Frontend
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, test-frontend-V2 ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 jobs:
   test:
     runs-on: ubuntu-latest
