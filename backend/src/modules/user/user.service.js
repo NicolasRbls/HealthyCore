@@ -220,7 +220,7 @@ const conditionHandlers = {
           statut: "done",
         },
       });
-      const allCompleted = completedGoals === totalObjectives;
+      const allCompleted = (completedGoals) => totalObjectives;
       return allCompleted;
     } catch (error) {
       console.error(

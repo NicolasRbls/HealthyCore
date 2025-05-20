@@ -732,8 +732,60 @@ const generateWeekSchedule = (programSessions, sportFollowUps) => {
     weekDates.push(date);
   }
 
-  // Jours d'entraînement : lundi (0), mercredi (2), vendredi (4)
-  const trainingDayIndices = [0, 2, 4]; // Lundi, Mercredi, Vendredi
+  // Nombre total de séances dans le programme
+  const totalSessions = programSessions.length;
+
+  // Déterminer les jours d'entraînement en fonction du nombre de séances
+  let trainingDayIndices = [];
+
+  switch (totalSessions) {
+    case 1:
+      // 1 séance : milieu de semaine (mercredi)
+      trainingDayIndices = [2];
+      break;
+
+    case 2:
+      // 2 séances : lundi et jeudi
+      trainingDayIndices = [0, 3];
+      break;
+
+    case 3:
+      // 3 séances : lundi, mercredi, vendredi
+      trainingDayIndices = [0, 2, 4];
+      break;
+
+    case 4:
+      // 4 séances : lundi, mardi, jeudi, vendredi
+      trainingDayIndices = [0, 1, 3, 4];
+      break;
+
+    case 5:
+      // 5 séances : lundi à vendredi (jours ouvrés)
+      trainingDayIndices = [0, 1, 2, 3, 4];
+      break;
+
+    case 6:
+      // 6 séances : tous les jours sauf dimanche
+      trainingDayIndices = [0, 1, 2, 3, 4, 5];
+      break;
+
+    case 7:
+      // 7 séances : tous les jours
+      trainingDayIndices = [0, 1, 2, 3, 4, 5, 6];
+      break;
+
+    default:
+      // Si plus de 7 séances, on distribue de façon cyclique
+      // en commençant par lundi
+      for (let i = 0; i < Math.min(totalSessions, 7); i++) {
+        trainingDayIndices.push(i);
+      }
+  }
+
+  // Trier les séances par ordre
+  const sortedProgramSessions = [...programSessions].sort(
+    (a, b) => a.ordre_seance - b.ordre_seance
+  );
 
   // Construire le weekSchedule
   const weekSchedule = [];
@@ -747,10 +799,16 @@ const generateWeekSchedule = (programSessions, sportFollowUps) => {
 
     // Déterminer si ce jour a une séance programmée
     let sessionForDay = null;
-    const sessionIndex = trainingDayIndices.indexOf(i);
 
-    if (sessionIndex !== -1 && sessionIndex < programSessions.length) {
-      const programSession = programSessions[sessionIndex];
+    // Est-ce que c'est un jour d'entraînement ?
+    const trainingDayIndexPosition = trainingDayIndices.indexOf(i);
+
+    if (
+      trainingDayIndexPosition !== -1 &&
+      trainingDayIndexPosition < sortedProgramSessions.length
+    ) {
+      // Récupérer la séance correspondante dans l'ordre des séances triées
+      const programSession = sortedProgramSessions[trainingDayIndexPosition];
 
       // Vérifier si la séance a été complétée
       const isCompleted = sportFollowUps.some((followUp) => {
