@@ -1,12 +1,27 @@
 // frontend/jest.setup.js
 
-// Mock the internal NativeDeviceInfo module that Jest complains about
+// 0) Stub NativeDeviceInfo
 jest.mock(
   'react-native/src/private/specs/modules/NativeDeviceInfo',
   () => ({ getConstants: () => ({}) })
 );
 
-// Stub TurboModuleRegistry for SettingsManager
+// 1) Stub Dimensions module BEFORE react-native loads it
+jest.mock(
+  'react-native/Libraries/Utilities/Dimensions',
+  () => ({
+    get: jest.fn(dim =>
+      dim === 'window' || dim === 'screen'
+        ? { width: 375, height: 667 }
+        : { width: 0, height: 0 }
+    ),
+    set: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  })
+);
+
+// 2) Stub TurboModuleRegistry for SettingsManager
 jest.mock(
   'react-native/Libraries/TurboModule/TurboModuleRegistry',
   () => ({
@@ -19,7 +34,7 @@ jest.mock(
   })
 );
 
-// Mock NativeSettingsManager and Settings.ios
+// 3) Mock NativeSettingsManager and Settings.ios
 jest.mock(
   'react-native/Libraries/Settings/NativeSettingsManager',
   () => ({ getConstants: () => ({ settings: {} }) })
@@ -61,24 +76,12 @@ jest.mock('react-native', () => {
   // Ensure NativeModules and SettingsManager stub
   RN.NativeModules = RN.NativeModules || {};
   RN.NativeModules.SettingsManager = RN.NativeModules.SettingsManager || { settings: {} };
-  // Stub NativeDeviceInfo for getConstants
   RN.NativeModules.NativeDeviceInfo = RN.NativeModules.NativeDeviceInfo || { getConstants: () => ({}) };
 
   return {
     ...RN,
-
-    // Stub Dimensions fully, including set and listeners
-    Dimensions: {
-      get: jest.fn(dim =>
-        dim === 'window' || dim === 'screen'
-          ? { width: 375, height: 667 }
-          : { width: 0, height: 0 }
-      ),
-      set: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    },
-
+    // re-export our stubbed Dimensions (jest.mock above took effect)
+    // stub other components
     Alert: { alert: jest.fn() },
     TouchableOpacity: jest.fn(({ testID, onPress, children }) => ({ type: 'TouchableOpacity', props: { testID, onPress }, children })),
     Text: jest.fn(({ testID, children }) => ({ type: 'Text', props: { testID }, children })),
