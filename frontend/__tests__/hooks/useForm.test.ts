@@ -3,13 +3,18 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useForm } from '../../hooks/useForm';
 
 // Mock React Native Alert
+// __tests__/hooks/useForm.test.ts
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
+  const globalRNDetails = jest.requireActual('../../../jest.setup.js'); // Manière compliquée d'accéder aux mocks globaux
+
   return {
     ...RN,
     Alert: {
       alert: jest.fn(),
     },
+    StyleSheet: { create: jest.fn(styles => styles) }, // Assurez-vous que StyleSheet est aussi mocké ici
+    // Ou essayez de fusionner avec ce que le setup global ferait
   };
 });
 
