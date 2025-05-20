@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: Layout.spacing.lg,
-    marginBottom: Layout.spacing.md,
+    paddingTop: -Layout.spacing.sm,
   },
   programBanner: {
     backgroundColor: "#6A0DAD", // Fond violet
