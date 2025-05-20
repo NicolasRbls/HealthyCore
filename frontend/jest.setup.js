@@ -2,6 +2,44 @@
 
 // --- Mocks d’Expo, router, vector-icons, etc. ---
 
+// 0) Mock de TurboModuleRegistry pour intercepter SettingsManager
+jest.mock(
+  'react-native/Libraries/TurboModule/TurboModuleRegistry',
+  () => ({
+    // toute requête getEnforcing('SettingsManager') renverra un module avec getConstants()
+    getEnforcing: jest.fn((name) => {
+      if (name === 'SettingsManager') {
+        return { getConstants: () => ({ settings: {} }) };
+      }
+      // tu peux ajouter d’autres modules si besoin
+      return {};
+    }),
+  })
+);
+
+// 1) Mock de NativeSettingsManager (au cas où)
+/* 
+   Certains chemins internes peuvent aussi importer ce module directement :
+   react-native/Libraries/Settings/NativeSettingsManager
+*/
+jest.mock(
+  'react-native/Libraries/Settings/NativeSettingsManager',
+  () => ({
+    getConstants: () => ({ settings: {} }),
+  })
+);
+
+// 2) (Optionnel) mock de Settings.ios si tu en as
+jest.mock(
+  'react-native/Libraries/Settings/Settings.ios',
+  () => ({
+    SettingsManager: { settings: {} },
+  })
+);
+
+// ... puis tout le reste de tes mocks existants
+
+
 // Mock expo-secure-store
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(() => Promise.resolve('test-token')),
