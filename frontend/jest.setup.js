@@ -6,7 +6,16 @@ jest.mock(
   () => ({ getConstants: () => ({}) })
 );
 
-// 1) Stub Dimensions module BEFORE react-native loads it
+// 1) Stub PixelRatio BEFORE anything else loads it
+jest.mock(
+  'react-native/Libraries/Utilities/PixelRatio',
+  () => ({
+    get: jest.fn(val => val),
+    roundToNearestPixel: jest.fn(val => val),
+  })
+);
+
+// 2) Stub Dimensions module BEFORE react-native loads it
 jest.mock(
   'react-native/Libraries/Utilities/Dimensions',
   () => ({
@@ -18,19 +27,6 @@ jest.mock(
     set: jest.fn(),
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
-  })
-);
-
-// 2) Stub TurboModuleRegistry for SettingsManager
-jest.mock(
-  'react-native/Libraries/TurboModule/TurboModuleRegistry',
-  () => ({
-    getEnforcing: jest.fn(name => {
-      if (name === 'SettingsManager') {
-        return { getConstants: () => ({ settings: {} }) };
-      }
-      return {};
-    }),
   })
 );
 
