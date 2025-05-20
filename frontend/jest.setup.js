@@ -1,6 +1,6 @@
 // frontend/jest.setup.js
 
-// --- Mocks tiers (expo, router, etc.) ---
+// --- Mocks d’Expo, router, vector-icons, etc. ---
 
 // Mock expo-secure-store
 jest.mock('expo-secure-store', () => ({
@@ -17,47 +17,38 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
   })),
   usePathname: jest.fn(() => '/'),
-  router: {
-    replace: jest.fn(),
-    push: jest.fn(),
-    back: jest.fn(),
-  },
-  Stack: {
-    Screen: jest.fn(),
-  },
+  router: { replace: jest.fn(), push: jest.fn(), back: jest.fn() },
+  Stack: { Screen: jest.fn() },
   Redirect: jest.fn(() => null),
 }));
 
 // Mock @expo/vector-icons
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: 'Ionicons',
-}));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
-// Mock safe area context
+// Mock safe-area-context
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: jest.fn(({ children }) => children),
-  SafeAreaView: jest.fn(({ children }) => children),
-  useSafeAreaInsets: jest.fn(() => ({ top: 0, right: 0, bottom: 0, left: 0 })),
+  SafeAreaView:    jest.fn(({ children }) => children),
+  useSafeAreaInsets: jest.fn(() => ({ top:0,right:0,bottom:0,left:0 })),
 }));
 
-// Pour les tests d’API
+// Global fetch mock pour tes tests d’API
 global.fetch = jest.fn();
 
-// --- Mock complet de react-native avec SettingsManager ---
-
-// On récupère l'implémentation réelle pour y greffer notre SettingsManager
-const realRN = jest.requireActual('react-native');
-
-// Assurer l’existence de NativeModules.SettingsManager
-realRN.NativeModules.SettingsManager = realRN.NativeModules.SettingsManager || { settings: {} };
+// --- Mock complet de react-native, y compris SettingsManager ---
 
 jest.mock('react-native', () => {
-  const RN = realRN;
+  // 1) On récupère l'implémentation réelle à l’intérieur de la factory
+  const RN = jest.requireActual('react-native');
 
+  // 2) On s’assure que NativeModules.SettingsManager existe
+  RN.NativeModules = RN.NativeModules || {};
+  RN.NativeModules.SettingsManager = RN.NativeModules.SettingsManager || { settings: {} };
+
+  // 3) On retourne l’ensemble des exports, plus nos mocks de composants
   return {
     ...RN,
 
-    // Mock des composants de base sans React
     TouchableOpacity: jest.fn(({ testID, onPress, children }) => ({
       type: 'TouchableOpacity',
       props: { testID, onPress },
@@ -78,7 +69,6 @@ jest.mock('react-native', () => {
       props: { size, color },
     })),
 
-    // Style helper
     StyleSheet: {
       create: jest.fn(styles => styles),
     },
@@ -116,16 +106,16 @@ jest.mock('react-native', () => {
         type: 'Animated.Image',
         props: { source, style },
       })),
-      timing: jest.fn(() => ({ start: jest.fn() })),
+      timing:   jest.fn(() => ({ start: jest.fn() })),
       sequence: jest.fn(() => ({ start: jest.fn() })),
       parallel: jest.fn(() => ({ start: jest.fn() })),
-      Value: jest.fn(() => ({
+      Value:    jest.fn(() => ({
         interpolate: jest.fn(),
         setValue: jest.fn(),
       })),
     },
 
-    // On conserve NativeModules (contenant le SettingsManager)
+    // On remet NativeModules à jour
     NativeModules: RN.NativeModules,
   };
 });
