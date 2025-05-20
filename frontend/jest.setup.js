@@ -1,5 +1,13 @@
 // frontend/jest.setup.js
 
+// 0) Mock du fichier « specs » que Jest appelle en erreur :
+jest.mock(
+  'react-native/src/private/specs/modules/NativeDeviceInfo',
+  () => ({
+    getConstants: () => ({})
+  })
+);
+
 // Stub TurboModuleRegistry for SettingsManager
 jest.mock(
   'react-native/Libraries/TurboModule/TurboModuleRegistry',
