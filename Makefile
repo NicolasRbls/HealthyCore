@@ -1,5 +1,6 @@
 FRONT_DIR = ./frontend
 BACK_DIR = ./backend
+ADMIN_DIR = ./back-office
 DOCKER_COMPOSE = docker-compose -f $(BACK_DIR)/docker-compose.yml
 
 # Démarre les conteneurs Docker (pgAdmin et PostgreSQL)
@@ -22,6 +23,10 @@ install-front:
 install-back:
 	cd $(BACK_DIR) && npm install
 
+# Installe les dépendances pour le back-office d'administration
+install-admin:
+	cd $(ADMIN_DIR) && npm install
+
 # Crée les tables
 migrate:
 	cd $(BACK_DIR) && npx prisma migrate dev
@@ -35,7 +40,7 @@ start-back:
 	cd $(BACK_DIR) && npm start
 
 # ATTENTION : À utiliser uniquement à la première exécution (démarrage des conteneurs, installation des dépendances, migration, insertion des données)
-first-launch: up install-front install-back migrate seed
+first-launch: up install-front install-back install-admin migrate seed
 
-# Un seul appel pour tout configurer et démarrer, sans migration ni installation
+# Prépare l'environnement de développement complet
 work: up start-back

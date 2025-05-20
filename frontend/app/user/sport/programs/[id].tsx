@@ -92,9 +92,7 @@ export default function ProgramDetailsScreen() {
   const fetchProgramDetails = async () => {
     setIsLoading(true);
     try {
-      console.log(`Fetching program details for ID: ${programId}`);
       const response = await programsService.getProgramDetails(programId);
-      console.log("Program details response:", JSON.stringify(response));
 
       // Si nous avons une réponse valide de l'API
       if (response && response.id) {
@@ -113,7 +111,6 @@ export default function ProgramDetailsScreen() {
 
   const fallbackToStaticData = () => {
     // Utiliser les données statiques comme fallback
-    console.log("Using static data as fallback");
     try {
       const programsData = tempData.programmes || [];
       const sessionsData = tempData.seances || [];
@@ -200,11 +197,9 @@ export default function ProgramDetailsScreen() {
 
     setIsStarting(true);
     try {
-      console.log(`Starting program ID: ${programId}`);
       // Appel API pour démarrer le programme
       const startDate = new Date().toISOString();
       const response = await programsService.startProgram(programId, startDate);
-      console.log("Program start response:", JSON.stringify(response));
 
       // Mettre à jour l'état local pour refléter que le programme a démarré
       setProgram({
@@ -304,11 +299,15 @@ export default function ProgramDetailsScreen() {
         <View style={styles.imageContainer}>
           <Image
             source={
-              imageMapping[program.id + 100] || {
-                uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-                  program.name
-                )}`,
-              }
+              program.image &&
+              (program.image.startsWith("http://") ||
+                program.image.startsWith("https://"))
+                ? { uri: program.image }
+                : imageMapping[program.id + 100] || {
+                    uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+                      program.name
+                    )}`,
+                  }
             }
             style={styles.coverImage}
             resizeMode="contain"

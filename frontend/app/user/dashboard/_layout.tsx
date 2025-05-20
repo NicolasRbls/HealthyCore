@@ -7,6 +7,7 @@ export default function DashboardLayout() {
       <Stack.Screen name="nutrition-monitoring" />
       <Stack.Screen name="sport-monitoring" />
       <Stack.Screen name="badge-monitoring" />
+      <Stack.Screen name="history" />
     </Stack>
   );
 }

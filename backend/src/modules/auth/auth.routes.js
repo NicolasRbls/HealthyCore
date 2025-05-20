@@ -34,4 +34,12 @@ router.get("/verify-token", checkAuth, authController.verifyToken);
  */
 router.get("/me", checkAuth, authController.getMe);
 
+/**
+ * @route POST /api/auth/logout
+ * @desc Déconnexion de l'utilisateur
+ * @access Private
+ */
+router.post("/logout", checkAuth, authController.logout);
+
+
 module.exports = router;

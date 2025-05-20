@@ -8,10 +8,10 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  TextInput,
-  Modal,
-  Dimensions,
   ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -21,216 +21,199 @@ import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
 import Card from "../../../components/ui/Card";
 import imageMapping from "../../../constants/imageMapping";
-import { Camera } from "expo-camera";
-
-// Import temp data
-import tempData from "../../../assets/temp.json";
+import { useAuth } from "../../../context/AuthContext";
+import { nutritionService } from "../../../services/nutrition.service";
 
 // Type definitions
 interface Tag {
-  id_tag: number;
-  nom: string;
-  type: string;
+  id: number;
+  name: string;
 }
 
 interface FoodProduct {
-  id_aliment: number;
-  nom: string;
+  id: number;
+  name: string;
   image: string;
   type: string;
   source: string;
   calories: number;
-  proteines: number;
-  glucides: number;
-  lipides: number;
-  tags: number[];
+  proteins: number;
+  carbs: number;
+  fats: number;
+  tags: Tag[];
+  barcode?: string;
 }
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = 170;
 
 export default function NutritionDiscoverScreen() {
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [showQRScanner, setShowQRScanner] = useState<boolean>(false);
-  const [allProducts, setAllProducts] = useState<FoodProduct[]>([]);
+  const { user } = useAuth();
   const [recipes, setRecipes] = useState<FoodProduct[]>([]);
-  const [commercialProducts, setCommercialProducts] = useState<FoodProduct[]>(
-    []
-  );
-  const [featuredItems, setFeaturedItems] = useState<FoodProduct[]>([]);
-  const [categorizedItems, setCategorizedItems] = useState<{
-    [key: string]: FoodProduct[];
-  }>({});
-  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [featuredRecipes, setFeaturedRecipes] = useState<FoodProduct[]>([]);
+  const [vegetarianRecipes, setVegetarianRecipes] = useState<FoodProduct[]>([]);
+  const [simpleRecipes, setSimpleRecipes] = useState<FoodProduct[]>([]);
+  const [sideRecipes, setSideRecipes] = useState<FoodProduct[]>([]);
+  const [allRecipes, setAllRecipes] = useState<FoodProduct[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch initial data
   useEffect(() => {
-    // In a real app, you would fetch this data with:
-    // GET /api/nutrition/discover
-    fetchNutritionData();
+    fetchRecipes();
   }, []);
 
-  const fetchNutritionData = () => {
+  // Fetch recipes from API
+  const fetchRecipes = async () => {
     setIsLoading(true);
     try {
-      // Get data from temp.json
-      const foodData = tempData.aliments as FoodProduct[];
-      const tagsData = tempData.tags as Tag[];
-
-      // Filter food tags
-      const foodTags = tagsData.filter((tag) => tag.type === "aliment");
-      setAllTags(foodTags);
-
-      // Process food data
-      setAllProducts(foodData);
-
-      // Filter recipes and products
-      const recipesData = foodData.filter((item) => item.type === "recette");
-      const productsData = foodData.filter((item) => item.type === "produit");
-
-      setRecipes(recipesData);
-      setCommercialProducts(productsData);
-
-      // Set featured items (could be random, recent, or most popular)
-      setFeaturedItems(foodData.slice(0, 5));
-
-      // Categorize by tags
-      const categories: { [key: string]: FoodProduct[] } = {};
-
-      // Get main categories from tags
-      const mainCategories = [
-        "chocolat",
-        "snack",
-        "végétarien",
-        "pâtes",
-        "riz",
-      ];
-
-      mainCategories.forEach((category) => {
-        const tagId = foodTags.find((tag) => tag.nom === category)?.id_tag;
-        if (tagId) {
-          // Find all foods with this tag
-          const foodsInCategory = foodData.filter((food) =>
-            foodData
-              .find((f) => f.id_aliment === food.id_aliment)
-              ?.tags?.includes(tagId)
-          );
-
-          if (foodsInCategory.length > 0) {
-            categories[category] = foodsInCategory;
-          }
-        }
+      // Get all recipes
+      const recipesResponse = await nutritionService.getAllFoods({
+        type: "recette",
       });
 
-      setCategorizedItems(categories);
+      // Process recipes data
+      if (recipesResponse && recipesResponse.foods) {
+        const recipesData = (recipesResponse.foods as FoodProduct[]) || [];
+
+        // Store all recipes
+        setRecipes(recipesData);
+        setAllRecipes(recipesData);
+
+        // Set featured recipes (pick 5 random)
+        const featured = [...recipesData]
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 5);
+        setFeaturedRecipes(featured);
+
+        // Filter vegetarian recipes
+        const vegetarian = recipesData.filter(
+          (recipe) =>
+            recipe.tags &&
+            recipe.tags.some(
+              (tag) =>
+                tag.name.toLowerCase().includes("vegetarien") ||
+                tag.name.toLowerCase().includes("veggie") ||
+                tag.name.toLowerCase().includes("legume")
+            )
+        );
+        setVegetarianRecipes(vegetarian);
+
+        // Filter simple cooking recipes
+        const simple = recipesData.filter(
+          (recipe) =>
+            recipe.tags &&
+            recipe.tags.some(
+              (tag) =>
+                tag.name.toLowerCase().includes("simple") ||
+                tag.name.toLowerCase().includes("rapide") ||
+                tag.name.toLowerCase().includes("facile")
+            )
+        );
+        setSimpleRecipes(simple);
+
+        // Filter side dish recipes
+        const sides = recipesData.filter(
+          (recipe) =>
+            recipe.tags &&
+            recipe.tags.some(
+              (tag) =>
+                tag.name.toLowerCase().includes("accompagnement") ||
+                tag.name.toLowerCase().includes("garniture")
+            )
+        );
+        setSideRecipes(sides);
+      }
     } catch (error) {
-      console.error("Error fetching nutrition data:", error);
+      console.error("Error fetching recipes:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de récupérer les recettes. Veuillez réessayer plus tard."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get food image based on id
+  // Handle refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchRecipes();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Get food image based on source and id
   const getFoodImage = (food: FoodProduct) => {
-    // Map aliment IDs to the imageMapping
-    const mappedId = 200 + food.id_aliment;
+    // Check if the image path is an HTTP or HTTPS URL
+    if (
+      food.image &&
+      (food.image.startsWith("http://") || food.image.startsWith("https://"))
+    ) {
+      return { uri: food.image };
+    }
+
+    // Map aliment IDs to the imageMapping for local images
+    const mappedId = 200 + food.id;
 
     return (
       imageMapping[mappedId] || {
         uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
-          food.nom
+          food.name
         )}`,
       }
     );
   };
 
-  // Handle search
-  const handleSearch = (text: string) => {
-    setSearchQuery(text);
-    // Actual search implementation would be here
+  // Navigate to search products screen
+  const navigateToSearch = () => {
+    router.push("/user/nutrition/search-products" as any);
   };
 
-  // Navigate to food detail
-  const navigateToFoodDetail = (foodId: number, type: string) => {
-    if (type === "recette") {
-      router.push(`/user/nutrition/recipes/${foodId}` as any);
-    } else {
-      router.push(`/user/nutrition/products/${foodId}` as any);
-    }
+  // Navigate to recipe detail
+  const navigateToRecipeDetail = (recipeId: number) => {
+    router.push(`/user/nutrition/recipes/${recipeId}` as any);
   };
 
-  // Food card component
-  const FoodCard = ({ food }: { food: FoodProduct }) => (
-    <TouchableOpacity
-      style={styles.foodCard}
-      onPress={() => navigateToFoodDetail(food.id_aliment, food.type)}
-      activeOpacity={0.8}
-    >
-      <Image
-        source={getFoodImage(food)}
-        style={styles.foodImage}
-        resizeMode="cover"
-      />
+  // Recipe card component
+  const FoodCard = React.memo(
+    ({ food, index }: { food: FoodProduct; index: number }) => (
+      <TouchableOpacity
+        style={styles.foodCard}
+        onPress={() => navigateToRecipeDetail(food.id)}
+        activeOpacity={0.8}
+        key={`food-${food.id}-${index}`}
+      >
+        <Image
+          source={getFoodImage(food)}
+          style={styles.foodImage}
+          resizeMode="cover"
+        />
 
-      <View style={styles.foodContent}>
-        <Text style={styles.foodTitle} numberOfLines={2}>
-          {food.nom.split(" - ")[0]}
-        </Text>
-        <Text style={styles.foodCalories}>{food.calories} cal</Text>
+        <View style={styles.foodContent}>
+          <Text style={styles.foodTitle} numberOfLines={2}>
+            {food.name.split(" - ")[0]}
+          </Text>
+          <Text style={styles.foodCalories}>{food.calories} cal</Text>
 
-        <View style={styles.macrosRow}>
-          <Text style={styles.macroText}>P: {food.proteines}g</Text>
-          <Text style={styles.macroText}>G: {food.glucides}g</Text>
-          <Text style={styles.macroText}>L: {food.lipides}g</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  // QR Scanner Modal
-  const QRScannerModal = () => (
-    <Modal
-      visible={showQRScanner}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowQRScanner(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Scanner un code-barres</Text>
-            <TouchableOpacity onPress={() => setShowQRScanner(false)}>
-              <Ionicons name="close" size={24} color={Colors.gray.dark} />
-            </TouchableOpacity>
+          <View style={styles.macrosRow}>
+            <Text style={styles.macroText}>P: {food.proteins}g</Text>
+            <Text style={styles.macroText}>G: {food.carbs}g</Text>
+            <Text style={styles.macroText}>L: {food.fats}g</Text>
           </View>
-
-          <View style={styles.scannerArea}>
-            <View style={styles.scannerPlaceholder}>
-              <Ionicons
-                name="scan-outline"
-                size={120}
-                color={Colors.gray.light}
-              />
-              <Text style={styles.scannerText}>
-                Cadrez le code-barres dans la zone de scan
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowQRScanner(false)}
-          >
-            <Text style={styles.cancelButtonText}>Annuler</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+      </TouchableOpacity>
+    )
   );
 
   // Loading placeholder
-  const PlaceholderCard = () => (
-    <View style={[styles.foodCard, styles.placeholderCard]}>
+  const PlaceholderCard = ({ index }: { index: number }) => (
+    <View
+      style={[styles.foodCard, styles.placeholderCard]}
+      key={`placeholder-${index}`}
+    >
       <View style={styles.placeholderImage} />
       <View style={styles.foodContent}>
         <View style={[styles.placeholderText, { width: "70%", height: 16 }]} />
@@ -250,157 +233,123 @@ export default function NutritionDiscoverScreen() {
     </View>
   );
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <Header title="Nutrition" style={{ marginTop: Layout.spacing.md }} />
+  // Empty state component
+  const EmptyState = ({ message }: { message: string }) => (
+    <View style={styles.emptyStateContainer}>
+      <Ionicons name="nutrition-outline" size={60} color={Colors.gray.light} />
+      <Text style={styles.emptyStateText}>{message}</Text>
+    </View>
+  );
 
-      {/* Search Bar and QR Scanner Button */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={Colors.gray.medium} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher un aliment..."
-            value={searchQuery}
-            onChangeText={handleSearch}
-            placeholderTextColor={Colors.gray.medium}
+  // Render section with food items
+  const renderSection = (title: string, items: FoodProduct[]) => {
+    if (isLoading) {
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.foodList}
+            data={[1, 2, 3]}
+            renderItem={({ item, index }) => <PlaceholderCard index={index} />}
+            keyExtractor={(_, index) => `placeholder-${title}-${index}`}
+            snapToInterval={CARD_WIDTH + Layout.spacing.md}
+            decelerationRate="fast"
           />
         </View>
+      );
+    }
+
+    if (items.length === 0) {
+      return null; // Skip empty sections
+    }
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.foodList}
+          data={items}
+          renderItem={({ item, index }) => (
+            <FoodCard food={item} index={index} />
+          )}
+          keyExtractor={(item, index) => `${title}-${item.id}-${index}`}
+          snapToInterval={CARD_WIDTH + Layout.spacing.md}
+          decelerationRate="fast"
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Aucun élément disponible</Text>
+          }
+        />
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <Header
+        title="Découvrir des recettes"
+        style={{ marginTop: Layout.spacing.md }}
+      />
+
+      {/* Search Button */}
+      <View style={styles.searchButtonContainer}>
         <TouchableOpacity
-          style={styles.qrButton}
-          onPress={() => setShowQRScanner(true)}
+          style={styles.searchButton}
+          onPress={navigateToSearch}
         >
-          <Ionicons name="barcode-outline" size={24} color={Colors.white} />
+          <Ionicons name="search" size={20} color={Colors.white} />
+          <Text style={styles.searchButtonText}>Rechercher un produit</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Featured Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>En vedette</Text>
-
-          {isLoading ? (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.foodList}
-              data={[1, 2, 3]}
-              renderItem={() => <PlaceholderCard />}
-              keyExtractor={(_, index) => `placeholder-featured-${index}`}
-              snapToInterval={CARD_WIDTH + Layout.spacing.md}
-              decelerationRate="fast"
-            />
-          ) : (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.foodList}
-              data={featuredItems}
-              renderItem={({ item }) => <FoodCard food={item} />}
-              keyExtractor={(item) => `featured-${item.id_aliment}`}
-              snapToInterval={CARD_WIDTH + Layout.spacing.md}
-              decelerationRate="fast"
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>Aucun aliment en vedette</Text>
-              }
-            />
-          )}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
+          <Text style={styles.loadingText}>Chargement des recettes...</Text>
         </View>
+      )}
 
-        {/* Recipes Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recettes</Text>
-
-          {isLoading ? (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.foodList}
-              data={[1, 2]}
-              renderItem={() => <PlaceholderCard />}
-              keyExtractor={(_, index) => `placeholder-recipe-${index}`}
-              snapToInterval={CARD_WIDTH + Layout.spacing.md}
-              decelerationRate="fast"
-            />
-          ) : (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.foodList}
-              data={recipes}
-              renderItem={({ item }) => <FoodCard food={item} />}
-              keyExtractor={(item) => `recipe-${item.id_aliment}`}
-              snapToInterval={CARD_WIDTH + Layout.spacing.md}
-              decelerationRate="fast"
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>Aucune recette disponible</Text>
-              }
-            />
+      {!isLoading && (
+        <>
+          {recipes.length === 0 && (
+            <EmptyState message="Aucune recette trouvée. Veuillez réessayer plus tard." />
           )}
-        </View>
 
-        {/* Products Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Produits</Text>
-
-          {isLoading ? (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.foodList}
-              data={[1, 2]}
-              renderItem={() => <PlaceholderCard />}
-              keyExtractor={(_, index) => `placeholder-product-${index}`}
-              snapToInterval={CARD_WIDTH + Layout.spacing.md}
-              decelerationRate="fast"
-            />
-          ) : (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.foodList}
-              data={commercialProducts}
-              renderItem={({ item }) => <FoodCard food={item} />}
-              keyExtractor={(item) => `product-${item.id_aliment}`}
-              snapToInterval={CARD_WIDTH + Layout.spacing.md}
-              decelerationRate="fast"
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>Aucun produit disponible</Text>
-              }
-            />
-          )}
-        </View>
-
-        {/* Category-based sections */}
-        {!isLoading &&
-          Object.entries(categorizedItems).map(([category, items]) => (
-            <View key={`category-${category}`} style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                {category.charAt(0).toUpperCase() +
-                  category.slice(1).replace(/-/g, " ")}
-              </Text>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.foodList}
-                data={items}
-                renderItem={({ item }) => <FoodCard food={item} />}
-                keyExtractor={(item) => `${category}-${item.id_aliment}`}
-                snapToInterval={CARD_WIDTH + Layout.spacing.md}
-                decelerationRate="fast"
-                ListEmptyComponent={
-                  <Text style={styles.emptyText}>Aucun élément disponible</Text>
-                }
+          <ScrollView
+            contentContainerStyle={styles.container}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[Colors.brandBlue[0]]}
+                tintColor={Colors.brandBlue[0]}
               />
-            </View>
-          ))}
-      </ScrollView>
+            }
+          >
+            {/* Featured Section */}
+            {renderSection("En vedette", featuredRecipes)}
 
-      {/* QR Code Scanner Modal */}
-      <QRScannerModal />
+            {/* Vegetarian Section */}
+            {renderSection("Végétarien", vegetarianRecipes)}
+
+            {/* Simple Cooking Section */}
+            {renderSection("Cuisine simple", simpleRecipes)}
+
+            {/* Side Dishes Section */}
+            {renderSection("Accompagnements", sideRecipes)}
+
+            {/* All Recipes Section */}
+            {renderSection("Toutes les recettes", allRecipes)}
+
+            {/* Spacer at bottom for better scrolling */}
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -410,40 +359,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  searchButtonContainer: {
     paddingHorizontal: Layout.spacing.lg,
     paddingBottom: Layout.spacing.md,
+    marginBottom: -Layout.spacing.md,
+    marginTop: 15,
   },
-  searchBar: {
-    flex: 1,
+  searchButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.gray.ultraLight,
-    borderRadius: Layout.borderRadius.pill,
-    paddingHorizontal: Layout.spacing.md,
-    height: 48,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: Layout.spacing.sm,
-    ...TextStyles.body,
-    color: Colors.black,
-  },
-  qrButton: {
-    marginLeft: Layout.spacing.md,
+    justifyContent: "center",
     backgroundColor: Colors.brandBlue[0],
     borderRadius: Layout.borderRadius.pill,
-    width: 48,
-    height: 48,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingVertical: Layout.spacing.md,
     ...Layout.elevation.sm,
+  },
+  searchButtonText: {
+    ...TextStyles.body,
+    color: Colors.white,
+    fontWeight: "600",
+    marginLeft: Layout.spacing.sm,
   },
   container: {
     padding: Layout.spacing.lg,
-    paddingBottom: 100, // Extra padding at bottom for the tab bar
+    marginBottom: -50,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    ...TextStyles.body,
+    color: Colors.gray.dark,
+    marginTop: Layout.spacing.md,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: Layout.spacing.xl,
+  },
+  emptyStateText: {
+    ...TextStyles.body,
+    color: Colors.gray.dark,
+    textAlign: "center",
+    marginTop: Layout.spacing.md,
   },
   section: {
     marginBottom: Layout.spacing.xl,
@@ -516,57 +477,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.lg,
     textAlign: "center",
     width: CARD_WIDTH,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: Layout.borderRadius.lg,
-    borderTopRightRadius: Layout.borderRadius.lg,
-    padding: Layout.spacing.lg,
-    height: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Layout.spacing.md,
-  },
-  modalTitle: {
-    ...TextStyles.h4,
-  },
-  scannerArea: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: Colors.gray.ultraLight,
-    borderRadius: Layout.borderRadius.md,
-    marginVertical: Layout.spacing.xl,
-  },
-  scannerPlaceholder: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: Layout.spacing.lg,
-  },
-  scannerText: {
-    ...TextStyles.body,
-    color: Colors.gray.dark,
-    textAlign: "center",
-    marginTop: Layout.spacing.md,
-  },
-  cancelButton: {
-    paddingVertical: Layout.spacing.md,
-    alignItems: "center",
-    backgroundColor: Colors.gray.ultraLight,
-    borderRadius: Layout.borderRadius.pill,
-    marginTop: Layout.spacing.lg,
-  },
-  cancelButtonText: {
-    ...TextStyles.body,
-    color: Colors.gray.dark,
-    fontWeight: "600",
   },
 });

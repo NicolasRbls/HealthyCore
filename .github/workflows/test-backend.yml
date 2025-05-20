@@ -1,0 +1,67 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [main, ajout-test, frontend]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: db_healthycore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18.x"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
+
+      - name: Run Prisma migrations
+        run: npm run migrate:test
+        env:
+          DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
+
+      - name: Run tests
+        run: npm run test:ci
+        env:
+          CI: true
+          DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
+          JWT_SECRET: healthycore_test_key_for_jwt_tokens
+          JWT_EXPIRES_IN: 1h
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./backend/coverage
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false

@@ -4,22 +4,10 @@ const { isAdmin } = require("../auth/auth.middleware");
 
 const router = express.Router();
 
-// Middleware pour vérifier si l'utilisateur est administrateur
-
-/**
- * Routes Admin
- */
-
-// Récupérer tous les utilisateurs
-router.get("/users", isAdmin, adminController.getAllUsers);
-
-// Récupérer un utilisateur par ID
-router.get("/users/:id", isAdmin, adminController.getUserById);
-
 // Mettre à jour un utilisateur
-router.put("/users/:id", isAdmin, adminController.updateUser);
+//router.put("/users/:id", adminController.updateContent);
 
 // Supprimer un utilisateur
-router.delete("/users/:id", isAdmin, adminController.deleteUser);
+//router.delete("/users/:id", adminController.deleteUser);
 
 module.exports = router;

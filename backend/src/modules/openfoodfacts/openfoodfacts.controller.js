@@ -1,41 +1,62 @@
 const OpenFoodFactsService = require("./openfoodfacts.service");
+const { catchAsync } = require("../../utils/catcherror.utils");
+const { AppError } = require("../../utils/response.utils");
 
+/**
+ * Contrôleur pour les opérations liées à OpenFoodFacts
+ */
 const OpenFoodFactsController = {
   /**
    * Récupère un produit par code-barres
    */
-  async getProduct(req, res) {
+  getProductByBarcode: catchAsync(async (req, res) => {
     const { barcode } = req.params;
 
     if (!barcode) {
-      return res.status(400).json({ error: "Code-barres requis" });
+      throw new AppError("Code-barres requis", 400, "MISSING_BARCODE");
     }
 
-    try {
-      const product = await OpenFoodFactsService.getProductByBarcode(barcode);
-      res.json(product);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    const product = await OpenFoodFactsService.getProductByBarcode(barcode);
+
+    // Si le produit n'est pas trouvé, retourner une réponse 404 appropriée
+    if (!product) {
+      return res.status(404).json({
+        status: "fail",
+        message: `Produit avec code-barres ${barcode} non trouvé`,
+        code: "PRODUCT_NOT_FOUND",
+        data: null,
+      });
     }
-  },
+
+    res.status(200).json({
+      status: "success",
+      data: product,
+      message: "Produit récupéré avec succès",
+    });
+  }),
 
   /**
-   * Recherche des produits par mot-clé
+   * Recherche des produits par terme
    */
-  async search(req, res) {
+  searchProducts: catchAsync(async (req, res) => {
     const { query } = req.query;
+    const limit = parseInt(req.query.limit) || 10;
 
     if (!query) {
-      return res.status(400).json({ error: "Requête de recherche requise" });
+      throw new AppError("Terme de recherche requis", 400, "MISSING_QUERY");
     }
 
-    try {
-      const products = await OpenFoodFactsService.searchProducts(query);
-      res.json(products);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  },
+    const products = await OpenFoodFactsService.searchProducts(query, limit);
+
+    res.status(200).json({
+      status: "success",
+      data: products,
+      message:
+        products.length > 0
+          ? "Produits trouvés avec succès"
+          : "Aucun produit trouvé pour cette recherche",
+    });
+  }),
 };
 
 module.exports = OpenFoodFactsController;

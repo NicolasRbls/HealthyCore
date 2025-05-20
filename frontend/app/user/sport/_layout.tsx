@@ -14,12 +14,12 @@ export default function SportLayout() {
   if (!isAuthenticated) {
     return <Redirect href={"/welcome" as any} />;
   }
-
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="sport-discover" />
-      <Stack.Screen name="programs/[id]" />
-      <Stack.Screen name="sessions/[id]" />
+      <Stack.Screen name="programs" />
+      <Stack.Screen name="sessions" />
+      <Stack.Screen name="index" />
     </Stack>
   );
 }

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import imageMapping from "../../../constants/imageMapping";
 import { router } from "expo-router";
@@ -44,6 +45,16 @@ export default function SportDiscoverScreen() {
   );
   const [recommendedPrograms, setRecommendedPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchPrograms();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     fetchPrograms();
@@ -52,9 +63,7 @@ export default function SportDiscoverScreen() {
   const fetchPrograms = async () => {
     setIsLoading(true);
     try {
-      console.log("Fetching programs...");
       const response = await programsService.getPrograms();
-      console.log("API response:", JSON.stringify(response));
 
       setPrograms(response.programs);
 
@@ -108,11 +117,15 @@ export default function SportDiscoverScreen() {
     >
       <Image
         source={
-          imageMapping[program.id + 100] || {
-            uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-              program.name
-            )}`,
-          }
+          program.image &&
+          (program.image.startsWith("http://") ||
+            program.image.startsWith("https://"))
+            ? { uri: program.image }
+            : imageMapping[program.id + 100] || {
+                uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+                  program.name
+                )}`,
+              }
         }
         style={styles.programImage}
         resizeMode="contain"
@@ -166,6 +179,14 @@ export default function SportDiscoverScreen() {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pour vous</Text>
@@ -274,6 +295,7 @@ const styles = StyleSheet.create({
   container: {
     padding: Layout.spacing.lg,
     paddingBottom: -10,
+    marginTop: -5,
   },
   section: {
     marginBottom: Layout.spacing.xl,

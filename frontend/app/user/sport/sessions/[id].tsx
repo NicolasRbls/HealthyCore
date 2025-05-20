@@ -64,9 +64,7 @@ export default function SessionDetailsScreen() {
   const fetchSessionDetails = async () => {
     setIsLoading(true);
     try {
-      console.log(`Fetching session details for ID: ${sessionId}`);
       const response = await programsService.getSessionDetails(sessionId);
-      console.log("Session details response:", JSON.stringify(response));
 
       // Si nous avons une réponse valide de l'API
       if (response && response.id) {
@@ -85,7 +83,6 @@ export default function SessionDetailsScreen() {
 
   const fallbackToStaticData = () => {
     // Utiliser les données statiques comme fallback
-    console.log("Using static data as fallback for session details");
     try {
       const sessionsData = tempData.seances || [];
       const exercisesData = tempData.exercices || [];
@@ -186,10 +183,8 @@ export default function SessionDetailsScreen() {
     if (!session) return;
 
     try {
-      console.log(`Marking session ID: ${sessionId} as complete`);
       const today = new Date().toISOString().split("T")[0];
       const response = await programsService.completeSession(sessionId, today);
-      console.log("Session completion response:", JSON.stringify(response));
 
       router.push("/user/dashboard/sport-monitoring");
     } catch (error) {
@@ -314,9 +309,13 @@ export default function SessionDetailsScreen() {
                     <View style={styles.gifContainer}>
                       <Image
                         source={
-                          imageMapping[exercise.id] || {
-                            uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
-                          }
+                          exercise.gif &&
+                          (exercise.gif.startsWith("http://") ||
+                            exercise.gif.startsWith("https://"))
+                            ? { uri: exercise.gif }
+                            : imageMapping[exercise.id] || {
+                                uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
+                              }
                         }
                         style={styles.exerciseGif}
                         resizeMode="contain"

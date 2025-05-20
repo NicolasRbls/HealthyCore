@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,14 +14,13 @@ import { useAuth } from "../../../context/AuthContext";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
-import * as SecureStore from "expo-secure-store";
 
 // Import services
 import authService from "../../../services/auth.service";
 import dataService from "../../../services/data.service";
-
-// Import temp data for now
-import tempData from "../../../assets/temp.json";
+import apiService from "../../../services/api.service";
+import objectivesService from "../../../services/objectives.service";
+import { nutritionService } from "../../../services/nutrition.service";
 
 // Type definitions
 interface NutritionSummary {
@@ -35,10 +35,23 @@ interface DailySession {
   description: string;
 }
 
+interface WeekDay {
+  day: string;
+  date: string;
+  session: {
+    id: number;
+    name: string;
+    order: number;
+    completed: boolean;
+  } | null;
+}
+
 interface Objective {
   id: number;
+  objectiveId: number;
   title: string;
   completed: boolean;
+  date: string;
 }
 
 export default function Dashboard() {
@@ -56,6 +69,7 @@ export default function Dashboard() {
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -66,65 +80,106 @@ export default function Dashboard() {
     try {
       // 1. Charger le profil utilisateur
       const profileData = await authService.getProfile();
-      console.log("Profile Data:", profileData);
       setUserName(profileData.user.firstName);
 
-      // 2. Charger les préférences utilisateur
-      const preferencesData = await dataService.getUserPreferences();
-      console.log("Preferences Data:", preferencesData);
-
-      // Récupérer l'objectif calorique quotidien pour le calcul de pourcentage
-      const totalCalorieGoal = parseFloat(
-        preferencesData.preferences.calories_quotidiennes
-      );
-
-      // 3. Essayer de charger la séance du jour
+      // 2. Charger les données nutritionnelles en utilisant le service de nutrition
       try {
-        const programsData = await fetch(
-          `${
-            process.env.EXPO_PUBLIC_API_URL || "http://192.168.56.1:5000/api"
-          }/data/programs/today-session`,
-          {
-            headers: {
-              Authorization: `Bearer ${await SecureStore.getItemAsync(
-                "token"
-              )}`,
-            },
-          }
-        ).then((res) => res.json());
+        // Utiliser la fonction correcte du service nutrition importé
 
-        console.log("Programs Data:", programsData);
+        const nutritionData = await nutritionService.getNutritionSummary();
 
-        if (programsData.data.todaySession) {
-          setTodaySession({
-            id: programsData.data.todaySession.id,
-            name: programsData.data.todaySession.name.split(" ")[0],
-            description: programsData.data.todaySession.exercises
-              ? `(${extractMuscleGroups(
-                  programsData.data.todaySession.exercises
-                )})`
-              : "",
+        if (nutritionData && nutritionData.calorieGoal) {
+          // Format de la réponse attendue du service nutrition
+          const consumedCalories = nutritionData.caloriesConsumed || 0;
+          const totalCalories = nutritionData.calorieGoal || 0;
+          const percentage = nutritionData.percentCompleted || 0;
+
+          setNutritionSummary({
+            consumedCalories,
+            totalCalories,
+            percentage,
           });
         } else {
-          // Si pas de séance, mettre une séance factice reconnaissable
+          // Fallback si la structure n'est pas celle attendue
+          const preferencesData = await dataService.getUserPreferences();
+          const totalCalorieGoal = parseFloat(
+            preferencesData.preferences.calories_quotidiennes
+          );
+          mockNutritionalData(totalCalorieGoal);
+        }
+      } catch (error) {
+        console.error("Error loading nutrition data:", error);
+        // Fallback aux données mockées en cas d'erreur
+        const preferencesData = await dataService.getUserPreferences();
+        const totalCalorieGoal = parseFloat(
+          preferencesData.preferences.calories_quotidiennes
+        );
+        mockNutritionalData(totalCalorieGoal);
+      }
+
+      // 3. Charger les objectifs quotidiens
+      try {
+        const objectivesResponse = await objectivesService.getDailyObjectives();
+        if (objectivesResponse && objectivesResponse.objectives) {
+          setObjectives(objectivesResponse.objectives);
+        } else {
+          // Fallback sur les objectifs mockés
+          mockObjectives();
+        }
+      } catch (error) {
+        console.error("Error loading objectives:", error);
+        mockObjectives();
+      }
+
+      // 4. Charger les données sportives à partir de sport-progress
+      try {
+        const sportProgressData = await apiService.get(
+          "/data/programs/sport-progress"
+        );
+
+        // Obtenir la date du jour pour comparer
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+
+        // Vérifier s'il y a une séance pour aujourd'hui dans le planning hebdomadaire
+        if (
+          sportProgressData.weeklySchedule &&
+          sportProgressData.weeklySchedule.length > 0
+        ) {
+          const todayScheduleItem = sportProgressData.weeklySchedule.find(
+            (day: WeekDay) => day.date === todayStr && day.session !== null
+          );
+
+          if (todayScheduleItem && todayScheduleItem.session) {
+            setTodaySession({
+              id: todayScheduleItem.session.id,
+              name: todayScheduleItem.session.name.split("(")[0],
+              description: todayScheduleItem.session.name
+                .split("(")[1]
+                .replace(")", ""),
+            });
+          } else {
+            // Si pas de séance pour aujourd'hui dans le planning
+            setTodaySession({
+              id: 0,
+              name: "Repos",
+              description: "Aucune séance prévue",
+            });
+          }
+        } else {
+          // Si aucun planning hebdomadaire
           setTodaySession({
             id: 0,
             name: "Repos",
-            description: "(Aucune séance prévue)",
+            description: "Aucune séance prévue",
           });
         }
       } catch (error) {
-        console.error("Error loading today's session:", error);
+        console.error("Error loading sport progress data:", error);
         // Fallback sur les données mockées
         mockTodaySession();
       }
-
-      // 4. Pour les données nutritionnelles, utiliser des données mockées
-      // IMPORTANT: Dans la vraie vie, vous feriez un appel à une API
-      mockNutritionalData(totalCalorieGoal);
-
-      // 5. Pour les objectifs, utiliser des données mockées
-      mockObjectives();
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       // Fallback complet sur les données mockées
@@ -134,9 +189,13 @@ export default function Dashboard() {
     }
   };
 
-  const extractMuscleGroups = (exercises) => {
-    // Fonction d'extraction de groupes musculaires
-    return "Pectoraux, Triceps, Épaules";
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const mockNutritionalData = (totalCalorieGoal) => {
@@ -168,13 +227,17 @@ export default function Dashboard() {
     setObjectives([
       {
         id: 1,
+        objectiveId: 1,
         title: "Ajouter un repas au suivi nutritionnel",
         completed: false,
+        date: new Date().toISOString().split("T")[0],
       },
       {
         id: 2,
+        objectiveId: 2,
         title: "Compléter la séance d'entraînement du jour",
         completed: false,
+        date: new Date().toISOString().split("T")[0],
       },
     ]);
   };
@@ -254,7 +317,18 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.brandBlue[0]]}
+            tintColor={Colors.brandBlue[0]}
+          />
+        }
+      >
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View>
@@ -262,10 +336,10 @@ export default function Dashboard() {
               <Text style={styles.userName}>{userName || "Utilisateur"}</Text>
             </View>
             <TouchableOpacity
-              style={styles.starButton}
+              style={styles.badgeButton}
               onPress={() => router.push("/user/dashboard/badge-monitoring")}
             >
-              <Ionicons name="star" size={24} color="#FFD700" />
+              <Ionicons name="trophy" size={24} color="#A091FF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -301,8 +375,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
-  starButton: {
+  badgeButton: {
     padding: Layout.spacing.xs,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Layout.elevation.lg,
   },
   greeting: {
     ...TextStyles.bodyLarge,
@@ -346,6 +427,7 @@ const styles = StyleSheet.create({
   calorieValue: {
     ...TextStyles.h4,
     color: Colors.brandBlue[0],
+    fontSize: 22,
     marginBottom: Layout.spacing.xs,
   },
   circleContainer: {
@@ -363,12 +445,13 @@ const styles = StyleSheet.create({
   circleText: {
     ...TextStyles.bodyLarge,
     color: Colors.white,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 24,
   },
   circleSubtext: {
     ...TextStyles.caption,
     color: Colors.white,
-    fontSize: 8,
+    fontSize: 10,
     textAlign: "center",
   },
   workoutContent: {
