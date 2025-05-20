@@ -1,11 +1,9 @@
 // frontend/jest.setup.js
 
-// 0) Mock du fichier « specs » que Jest appelle en erreur :
+// Mock the internal NativeDeviceInfo module that Jest complains about
 jest.mock(
   'react-native/src/private/specs/modules/NativeDeviceInfo',
-  () => ({
-    getConstants: () => ({})
-  })
+  () => ({ getConstants: () => ({}) })
 );
 
 // Stub TurboModuleRegistry for SettingsManager
@@ -63,12 +61,24 @@ jest.mock('react-native', () => {
   // Ensure NativeModules and SettingsManager stub
   RN.NativeModules = RN.NativeModules || {};
   RN.NativeModules.SettingsManager = RN.NativeModules.SettingsManager || { settings: {} };
-
   // Stub NativeDeviceInfo for getConstants
   RN.NativeModules.NativeDeviceInfo = RN.NativeModules.NativeDeviceInfo || { getConstants: () => ({}) };
 
   return {
     ...RN,
+
+    // Stub Dimensions fully, including set and listeners
+    Dimensions: {
+      get: jest.fn(dim =>
+        dim === 'window' || dim === 'screen'
+          ? { width: 375, height: 667 }
+          : { width: 0, height: 0 }
+      ),
+      set: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    },
+
     Alert: { alert: jest.fn() },
     TouchableOpacity: jest.fn(({ testID, onPress, children }) => ({ type: 'TouchableOpacity', props: { testID, onPress }, children })),
     Text: jest.fn(({ testID, children }) => ({ type: 'Text', props: { testID }, children })),
@@ -76,7 +86,6 @@ jest.mock('react-native', () => {
     ActivityIndicator: jest.fn(({ size, color }) => ({ type: 'ActivityIndicator', props: { size, color } })),
     StyleSheet: { create: jest.fn(styles => styles) },
     Platform: { OS: 'ios', select: jest.fn(obj => obj.ios) },
-    Dimensions: { get: jest.fn(dim => (dim === 'window' || dim === 'screen' ? { width: 375, height: 667 } : { width: 0, height: 0 })) },
     Animated: {
       View: jest.fn(({ children, style }) => ({ type: 'Animated.View', props: { style }, children })),
       Text: jest.fn(({ children, style }) => ({ type: 'Animated.Text', props: { style }, children })),
@@ -86,6 +95,7 @@ jest.mock('react-native', () => {
       parallel: jest.fn(() => ({ start: jest.fn() })),
       Value: jest.fn(() => ({ interpolate: jest.fn(), setValue: jest.fn() })),
     },
+
     NativeModules: RN.NativeModules,
   };
 });
