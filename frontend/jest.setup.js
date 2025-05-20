@@ -1,4 +1,21 @@
 // jest.setup.js - compliant version
+
+
+// 1) Mock explicite de SettingsManager manquant
+jest.mock(
+  'react-native/Libraries/Settings/SettingsManager',
+  () => ({
+    SettingsManager: {
+      settings: {},    // au moins un objet vide
+    },
+  })
+);
+
+// 2) Assurer le fallback dans NativeModules
+const { NativeModules } = require('react-native');
+NativeModules.SettingsManager = NativeModules.SettingsManager || { settings: {} };
+
+
 // Mock expo-secure-store
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(() => Promise.resolve('test-token')),
