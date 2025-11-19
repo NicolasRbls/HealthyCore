@@ -27,6 +27,12 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 5000
+      ADMIN_PRENOM: ${ADMIN_PRENOM}
+      ADMIN_NOM: ${ADMIN_NOM}
+      ADMIN_SEXE: ${ADMIN_SEXE}
+      ADMIN_DATE_DE_NAISSANCE: ${ADMIN_DATE_DE_NAISSANCE}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     depends_on:
       - postgres
     networks:
