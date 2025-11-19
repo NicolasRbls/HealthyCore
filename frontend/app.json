@@ -12,7 +12,6 @@
       "supportsTablet": true
     },
     "android": {
-      "networkSecurityConfig": "./network_security_config.xml",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -57,6 +56,14 @@
         "expo-barcode-scanner",
         {
           "cameraPermission": "Autorisez l'accès à la caméra pour scanner les codes-barres des produits."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "cleartextTrafficPermitted": true
+          }
         }
       ]
     ],
