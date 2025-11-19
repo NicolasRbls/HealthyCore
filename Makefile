@@ -1,7 +1,7 @@
 FRONT_DIR = ./frontend
 BACK_DIR = ./backend
 ADMIN_DIR = ./back-office
-DOCKER_COMPOSE = docker-compose -f $(BACK_DIR)/docker-compose.yml
+DOCKER_COMPOSE = docker compose -f $(BACK_DIR)/docker-compose.yml
 
 # Démarre les conteneurs Docker (pgAdmin et PostgreSQL)
 up:
