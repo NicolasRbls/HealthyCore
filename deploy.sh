@@ -27,6 +27,10 @@ sleep 15
 echo ">>> Applying database migrations..."
 docker compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
 
+# 6. Seed the database with initial data (admin user, sedentary levels, etc.)
+echo ">>> Seeding the database..."
+docker compose -f docker-compose.prod.yml exec backend npx prisma db seed
+
 echo "✅ Deployment finished successfully!"
 echo "HealthyCore backend is now running."
 echo "Access it via http://<your_vps_ip>:5000"
