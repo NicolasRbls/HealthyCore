@@ -62,7 +62,7 @@
         "expo-build-properties",
         {
           "android": {
-            "cleartextTrafficPermitted": true
+            "usesCleartextTraffic": true
           }
         }
       ]
