@@ -18,9 +18,6 @@ RUN npm install
 # Copier le reste du code source de l'application
 COPY . .
 
-# DEBUG: Vérifier le contenu de tsconfig.json dans le conteneur
-RUN cat tsconfig.json
-
 # Construire l'application Next.js pour la production
 # Cette commande génère le dossier .next
 RUN npm run build
