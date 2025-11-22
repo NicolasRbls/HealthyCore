@@ -39,8 +39,7 @@ RUN npm install --omit=dev
 # Copier le build de production depuis l'étape 'builder'
 COPY --from=builder /usr/src/app/.next ./.next
 
-# Copier le dossier public et le fichier de configuration de Next.js
-COPY --from=builder /usr/src/app/public ./public
+# Copier le fichier de configuration de Next.js
 COPY --from=builder /usr/src/app/next.config.mjs ./next.config.mjs
 
 # Exposer le port sur lequel Next.js s'exécute (par défaut 3000)
