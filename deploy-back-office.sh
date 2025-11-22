@@ -18,7 +18,7 @@ docker compose -f docker-compose.prod.yml down -v --remove-orphans || true
 
 # 3. Build and start the production service in detached mode
 echo ">>> Building and starting new back-office container..."
-DOCKER_BUILDKIT=0 docker compose -f docker-compose.prod.yml up --build --no-cache -d
+DOCKER_BUILDKIT=0 docker compose -f docker-compose.prod.yml up --build -d
 
 # 4. Clean up dangling images (optional but good practice)
 echo ">>> Cleaning up old images..."
