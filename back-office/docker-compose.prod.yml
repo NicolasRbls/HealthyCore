@@ -1,0 +1,21 @@
+# back-office/docker-compose.prod.yml
+# This file is specifically for the back-office production deployment.
+
+services:
+  back-office:
+    build: .
+    container_name: back_office_healthycore_prod
+    restart: always
+    ports:
+      - "3000:3000"
+    # Note: No custom network is defined. This service will run
+    # in its own default network, isolated from other docker-compose projects.
+    # Environment variables for the Next.js app should be placed in a .env.local
+    # file in the back-office directory on the production server, or managed
+    # via a secrets management system. For example:
+    # environment:
+    #   - NEXT_PUBLIC_API_URL=http://<your_vps_ip>:5000/api
+
+networks:
+  default:
+    driver: bridge
