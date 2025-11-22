@@ -13,7 +13,7 @@ WORKDIR /usr/src/app
 # Copier les fichiers de dépendances et les installer
 # On copie package-lock.json aussi pour des installations déterministes
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copier le reste du code source de l'application
 COPY . .
