@@ -3,9 +3,7 @@
 
 services:
   back-office:
-    build:
-      context: .
-      nocache: true
+    build: .
     container_name: back_office_healthycore_prod
     restart: always
     ports:
