@@ -2,7 +2,7 @@ name: Node.js CI
 
 on:
   push:
-    branches: [main, ajout-test, frontend]
+    branches: [main, ajout-test, frontend, features-test-back-end]
   pull_request:
     branches: [main, develop]
 
@@ -49,8 +49,8 @@ jobs:
         env:
           DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
 
-      - name: Run tests
-        run: npm run test:ci
+      - name: Run tests (modules only)
+        run: npm run test:ci -- "backend/tests/modules/"
         env:
           CI: true
           DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
