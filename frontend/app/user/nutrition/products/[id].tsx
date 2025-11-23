@@ -21,29 +21,7 @@ import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
 import imageMapping from "../../../../constants/imageMapping";
 import { useAuth } from "../../../../context/AuthContext";
-import { nutritionService } from "../../../../services/nutrition.service";
-
-// Type definitions
-interface Tag {
-  id: number;
-  name: string;
-}
-
-interface FoodProduct {
-  id: number;
-  name: string;
-  image: string;
-  type: string;
-  source: string;
-  calories: number;
-  proteins: number;
-  carbs: number;
-  fats: number;
-  barcode?: string;
-  ingredients?: string;
-  description?: string;
-  tags: Tag[];
-}
+import { nutritionService, FoodProduct } from "../../../../services/nutrition.service";
 
 export default function ProductDetailScreen() {
   const { user } = useAuth();
@@ -145,8 +123,7 @@ export default function ProductDetailScreen() {
       // Afficher un message de succès
       Alert.alert(
         "Aliment ajouté",
-        `${
-          product?.name.split(" - ")[0]
+        `${product?.name.split(" - ")[0]
         } (${parsedQuantity}g) a été ajouté à votre suivi nutritionnel.`,
         [{ text: "OK" }]
       );
@@ -214,6 +191,13 @@ export default function ProductDetailScreen() {
         title="Détails du produit"
         showBackButton
         onBackPress={() => router.back()}
+        rightIconName="alert-circle-outline"
+        onRightIconPress={() =>
+          router.push({
+            pathname: "/user/nutrition/report",
+            params: { id: product.id, name: product.name },
+          } as any)
+        }
         style={{ marginTop: Layout.spacing.md }}
       />
 
@@ -400,7 +384,7 @@ export default function ProductDetailScreen() {
                   style={[
                     styles.mealOption,
                     selectedMeal === "petit-dejeuner" &&
-                      styles.selectedMealOption,
+                    styles.selectedMealOption,
                   ]}
                   onPress={() => setSelectedMeal("petit-dejeuner")}
                 >
@@ -417,7 +401,7 @@ export default function ProductDetailScreen() {
                     style={[
                       styles.mealOptionText,
                       selectedMeal === "petit-dejeuner" &&
-                        styles.selectedMealOptionText,
+                      styles.selectedMealOptionText,
                     ]}
                   >
                     Petit-déj.
@@ -444,7 +428,7 @@ export default function ProductDetailScreen() {
                     style={[
                       styles.mealOptionText,
                       selectedMeal === "dejeuner" &&
-                        styles.selectedMealOptionText,
+                      styles.selectedMealOptionText,
                     ]}
                   >
                     Déjeuner
@@ -471,7 +455,7 @@ export default function ProductDetailScreen() {
                     style={[
                       styles.mealOptionText,
                       selectedMeal === "collation" &&
-                        styles.selectedMealOptionText,
+                      styles.selectedMealOptionText,
                     ]}
                   >
                     Collation
@@ -511,8 +495,8 @@ export default function ProductDetailScreen() {
                   {isNaN(parseInt(quantity))
                     ? "0"
                     : Math.round(
-                        (product.calories * parseInt(quantity)) / 100
-                      )}{" "}
+                      (product.calories * parseInt(quantity)) / 100
+                    )}{" "}
                   cal
                 </Text>
               </View>
