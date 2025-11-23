@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   Menu,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,12 @@ const sidebarLinks = [
     icon: <Coffee size={20} />,
     href: "/dashboard/foods",
     color: Colors.plan.durable.primary,
+  },
+  {
+    title: "Signalements",
+    icon: <AlertTriangle size={20} />,
+    href: "/dashboard/signalements",
+    color: Colors.error,
   },
 ];
 

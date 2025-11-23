@@ -64,6 +64,8 @@ app.use("/api/admin/sessions", adminSessionsRoutes);
 app.use("/api/admin/programs", adminProgramsRoutes);
 
 app.use("/api/objectives", objectivesRoutes);
+app.use("/api/signalements", require("./modules/signalement/signalement.routes"));
+
 
 // Error handling middleware (should be last)
 app.use(errorMiddleware);

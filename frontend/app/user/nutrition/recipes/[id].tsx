@@ -21,36 +21,14 @@ import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
 import imageMapping from "../../../../constants/imageMapping";
 import { useAuth } from "../../../../context/AuthContext";
-import { nutritionService } from "../../../../services/nutrition.service";
-
-// Type definitions
-interface Tag {
-  id: number;
-  name: string;
-}
-
-interface Recipe {
-  id: number;
-  name: string;
-  image: string | null;
-  type: string;
-  source: string;
-  calories: number;
-  proteins: number;
-  carbs: number;
-  fats: number;
-  ingredients: string;
-  description: string;
-  preparationTime: number;
-  tags: Tag[];
-}
+import { nutritionService, FoodProduct } from "../../../../services/nutrition.service";
 
 export default function RecipeDetailScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
   const recipeId = Number(params.id);
 
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [recipe, setRecipe] = useState<FoodProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [portions, setPortions] = useState("1");
@@ -157,8 +135,7 @@ export default function RecipeDetailScreen() {
       // Afficher un message de succès
       Alert.alert(
         "Recette ajoutée",
-        `${recipe.name} (${parsedPortions} portion${
-          parsedPortions > 1 ? "s" : ""
+        `${recipe.name} (${parsedPortions} portion${parsedPortions > 1 ? "s" : ""
         }) a été ajoutée à votre suivi nutritionnel.`,
         [{ text: "OK" }]
       );
@@ -221,6 +198,13 @@ export default function RecipeDetailScreen() {
         title="Détails de la recette"
         showBackButton
         onBackPress={() => router.back()}
+        rightIconName="alert-circle-outline"
+        onRightIconPress={() =>
+          router.push({
+            pathname: "/user/nutrition/report",
+            params: { id: recipe.id, name: recipe.name },
+          } as any)
+        }
         style={{ marginTop: Layout.spacing.md }}
       />
 
@@ -415,7 +399,7 @@ export default function RecipeDetailScreen() {
                   style={[
                     styles.mealOption,
                     selectedMeal === "petit-dejeuner" &&
-                      styles.selectedMealOption,
+                    styles.selectedMealOption,
                   ]}
                   onPress={() => setSelectedMeal("petit-dejeuner")}
                 >
@@ -432,7 +416,7 @@ export default function RecipeDetailScreen() {
                     style={[
                       styles.mealOptionText,
                       selectedMeal === "petit-dejeuner" &&
-                        styles.selectedMealOptionText,
+                      styles.selectedMealOptionText,
                     ]}
                   >
                     Petit-déj.
@@ -459,7 +443,7 @@ export default function RecipeDetailScreen() {
                     style={[
                       styles.mealOptionText,
                       selectedMeal === "dejeuner" &&
-                        styles.selectedMealOptionText,
+                      styles.selectedMealOptionText,
                     ]}
                   >
                     Déjeuner
@@ -486,7 +470,7 @@ export default function RecipeDetailScreen() {
                     style={[
                       styles.mealOptionText,
                       selectedMeal === "collation" &&
-                        styles.selectedMealOptionText,
+                      styles.selectedMealOptionText,
                     ]}
                   >
                     Collation
