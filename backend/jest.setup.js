@@ -2,13 +2,7 @@ const { execSync } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Configurer l'URL de la base de données pour les tests
-process.env.DATABASE_URL = 'postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public';
-
-// Configurer les autres variables d'environnement nécessaires pour les tests
-process.env.JWT_SECRET = 'test_secret_key';
-process.env.JWT_EXPIRES_IN = '1h';
-process.env.PORT = '5001'; // Port différent pour les tests
+// Les variables d'environnement sont chargées via .env.test et dotenv-cli
 
 // Avant tous les tests
 beforeAll(async () => {
@@ -39,12 +33,12 @@ async function seedTestData() {
       ],
       skipDuplicates: true
     });
-    
+
     await prisma.regimes_alimentaires.createMany({
       data: [{ nom: 'Test Régime', description: 'Pour tests' }],
       skipDuplicates: true
     });
-    
+
     await prisma.repartitions_nutritionnelles.createMany({
       data: [{
         nom: 'Test Répartition',
@@ -56,7 +50,7 @@ async function seedTestData() {
       }],
       skipDuplicates: true
     });
-    
+
     await prisma.activites.createMany({
       data: [
         { nom: 'Test Activité 1', description: 'Pour tests' },
@@ -64,7 +58,7 @@ async function seedTestData() {
       ],
       skipDuplicates: true
     });
-    
+
     await prisma.objectifs.createMany({
       data: [
         { titre: 'Ajouter un aliment à son suivi quotidien' },
@@ -72,7 +66,7 @@ async function seedTestData() {
       ],
       skipDuplicates: true
     });
-    
+
   } catch (error) {
     console.error('Seeding error:', error);
     throw error;
