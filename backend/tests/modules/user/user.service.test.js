@@ -1,127 +1,295 @@
-const userService = require('../../../src/modules/user/user.service');
+// backend/tests/modules/user/user.service.test.js
+
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const userService = require('../../../src/modules/user/user.service');
+const { AppError } = require('../../../src/utils/response.utils');
+
+// Mock the Prisma client
+jest.mock('@prisma/client', () => {
+    const mPrismaClient = {
+        users: { findUnique: jest.fn(), update: jest.fn(), findFirst: jest.fn() },
+        evolutions: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn() },
+        preferences: { findFirst: jest.fn(), update: jest.fn() },
+        repartitions_nutritionnelles: { findUnique: jest.fn() },
+        niveaux_sedentarites: { findUnique: jest.fn() },
+        badges: { findMany: jest.fn() },
+        badges_utilisateurs: { findMany: jest.fn(), create: jest.fn() },
+        suivis_sportifs: { findFirst: jest.fn() },
+    };
+    return { PrismaClient: jest.fn(() => mPrismaClient) };
+});
+
+let prisma;
 
 describe('User Service', () => {
-    let testUser;
 
-    beforeAll(async () => {
-        // Clean up before tests
-        const user = await prisma.users.findUnique({ where: { email: 'user-service-test@example.com' } });
-        if (user) {
-            await prisma.preferences_activites.deleteMany({ where: { preferences: { id_user: user.id_user } } });
-            await prisma.preferences.deleteMany({ where: { id_user: user.id_user } });
-            await prisma.evolutions.deleteMany({ where: { id_user: user.id_user } });
-            await prisma.users.delete({ where: { id_user: user.id_user } });
-        }
+    const OriginalDate = global.Date;
 
-        // Create a test user
-        testUser = await prisma.users.create({
-            data: {
-                prenom: 'User',
-                nom: 'Service Test',
-                email: 'user-service-test@example.com',
-                mot_de_passe: 'password123',
-                sexe: 'M',
-                date_de_naissance: new Date('1990-01-01'),
-                role: 'user'
-            }
-        });
-
-        // Add initial evolution
-        await prisma.evolutions.create({
-            data: {
-                id_user: testUser.id_user,
-                poids: 70,
-                taille: 175,
-                date: new Date()
-            }
-        });
-
-        // Add preferences
-        await prisma.preferences.create({
-            data: {
-                id_user: testUser.id_user,
-                objectif_poids: 65,
-                id_niveau_sedentarite: 1,
-                id_repartition_nutritionnelle: 1,
-                id_regime_alimentaire: 1,
-                seances_par_semaines: 3,
-                bmr: 1500,
-                tdee: 2000,
-                calories_quotidiennes: 1800
-            }
-        });
+    beforeAll(() => {
+        // Set a fixed date for all tests in this file for deterministic age calculations etc.
+        const fixedDate = new OriginalDate('2024-01-01T10:00:00Z');
+        global.Date = class extends OriginalDate {
+            constructor(...args) { if (args.length) super(...args); else return fixedDate; }
+            static now() { return fixedDate.getTime(); }
+            static UTC(...args) { return OriginalDate.UTC(...args); }
+        };
     });
 
-    afterAll(async () => {
-        // Clean up after tests
-        if (testUser) {
-            await prisma.preferences_activites.deleteMany({ where: { preferences: { id_user: testUser.id_user } } });
-            await prisma.preferences.deleteMany({ where: { id_user: testUser.id_user } });
-            await prisma.evolutions.deleteMany({ where: { id_user: testUser.id_user } });
-            await prisma.users.delete({ where: { id_user: testUser.id_user } });
-        }
-        await prisma.$disconnect();
+    afterAll(() => {
+        global.Date = OriginalDate;
+    });
+
+    beforeEach(() => {
+        prisma = new PrismaClient();
+        jest.clearAllMocks();
     });
 
     describe('getUserProfile', () => {
-        it('should return user profile with metrics and preferences', async () => {
-            const profile = await userService.getUserProfile(testUser.id_user);
+        it('should return a fully populated user profile', async () => {
+            const mockUser = { id_user: 1, prenom: 'John', nom: 'Doe', email: 'john@test.com', sexe: 'M', date_de_naissance: new Date('1990-01-01') };
+            const mockLastEvolution = { poids: 80, taille: 180 };
+            const mockPreferences = { 
+                objectif_poids: 75,
+                calories_quotidiennes: 2500,
+                seances_par_semaines: 4,
+                repartitions_nutritionnelles: { id_repartition_nutritionnelle: 1, nom: 'Plan A', type: 'typeA' },
+                regimes_alimentaires: { id_regime_alimentaire: 1, nom: 'Diet A' },
+                niveaux_sedentarites: { id_niveau_sedentarite: 1, nom: 'Level A' },
+                preferences_activites: []
+            };
 
-            expect(profile).toHaveProperty('user');
-            expect(profile.user).toHaveProperty('email', testUser.email);
-            expect(profile).toHaveProperty('metrics');
-            expect(profile.metrics).toHaveProperty('currentWeight', 70);
-            expect(profile).toHaveProperty('preferences');
-            expect(profile.preferences).toHaveProperty('nutritionalPlan');
+            prisma.users.findUnique.mockResolvedValue(mockUser);
+            prisma.evolutions.findFirst.mockResolvedValue(mockLastEvolution);
+            prisma.preferences.findFirst.mockResolvedValue(mockPreferences);
+
+            const profile = await userService.getUserProfile(1);
+
+            expect(profile.user.firstName).toBe('John');
+            expect(profile.user.age).toBe(34); // Born in 1990, test is in 2024
+            expect(profile.metrics.currentWeight).toBe(80);
+            expect(profile.metrics.bmi).toBe(24.7);
+            expect(profile.preferences.diet.name).toBe('Diet A');
         });
 
-        it('should throw error if user not found', async () => {
-            await expect(userService.getUserProfile(99999)).rejects.toThrow('Utilisateur introuvable');
+        it('should throw an error if user is not found', async () => {
+            prisma.users.findUnique.mockResolvedValue(null);
+            await expect(userService.getUserProfile(999)).rejects.toThrow('Utilisateur introuvable');
         });
     });
 
-    describe('updateUserProfile', () => {
-        it('should update user profile successfully', async () => {
-            const updateData = {
-                firstName: 'Updated',
-                lastName: 'Name',
-                email: 'user-service-test@example.com',
-                gender: 'F',
-                birthDate: '1995-05-05'
+    describe('updatePreferences', () => {
+        it('should update preferences and correctly recalculate BMR, TDEE, and daily calories', async () => {
+            // 1. Setup Mock Data
+            const userId = 1;
+            const body = {
+                targetWeight: 75,
+                sedentaryLevelId: 2,
+                nutritionalPlanId: 1,
+                dietId: 1,
+                sessionsPerWeek: 5,
+                activities: [],
             };
 
-            const updatedProfile = await userService.updateUserProfile(testUser.id_user, updateData);
+            const mockUser = {
+                id_user: userId,
+                sexe: 'H',
+                date_de_naissance: new Date('1990-01-01'), // Age will be 34
+            };
 
-            expect(updatedProfile).toHaveProperty('firstName', 'Updated');
-            expect(updatedProfile).toHaveProperty('gender', 'F');
+            const mockLastEvolution = {
+                poids: 80,
+                taille: 180,
+            };
 
-            // Verify in DB
-            const userInDb = await prisma.users.findUnique({ where: { id_user: testUser.id_user } });
-            expect(userInDb.prenom).toBe('Updated');
+            const mockNutritionPlan = {
+                id_repartition_nutritionnelle: 1,
+                nom: 'Prise de masse',
+                pourcentage_proteines: 30,
+                pourcentage_glucides: 50,
+                pourcentage_lipides: 20,
+            };
+
+            const mockSedentaryLevel = {
+                id_niveau_sedentarite: 2,
+                valeur: 1.55,
+            };
+
+            const mockExistingPreferences = {
+                id_preference: 10,
+                id_user: userId,
+            };
+
+            // 2. Mock Prisma Calls
+            prisma.preferences.findFirst.mockResolvedValue(mockExistingPreferences);
+            prisma.preferences.update.mockResolvedValue(mockExistingPreferences);
+            prisma.users.findUnique.mockResolvedValue(mockUser);
+            prisma.repartitions_nutritionnelles.findUnique.mockResolvedValue(mockNutritionPlan);
+            prisma.niveaux_sedentarites.findUnique.mockResolvedValue(mockSedentaryLevel);
+            prisma.evolutions.findFirst.mockResolvedValue(mockLastEvolution);
+            
+            // Mock the diet and activities lookups
+            prisma.regimes_alimentaires = { findUnique: jest.fn().mockResolvedValue({ id_regime_alimentaire: 1, nom: 'Omnivore' }) };
+            prisma.activites = { findMany: jest.fn().mockResolvedValue([]) };
+            prisma.preferences_activites = { deleteMany: jest.fn(), createMany: jest.fn() };
+
+
+            // 3. Call the service function
+            const result = await userService.updatePreferences(userId, body);
+
+            // 4. Assertions
+            // BMR = 10 * 80 + 6.25 * 180 - 5 * 34 + 5 = 800 + 1125 - 170 + 5 = 1760
+            // TDEE (dailyCalories) = 1760 * 1.55 = 2728
+            // Proteins = (0.30 * 2728) / 4 = 204.6 -> 205
+            // Carbs = (0.50 * 2728) / 4 = 341
+            // Fats = (0.20 * 2728) / 9 = 60.6 -> 61
+            expect(result.dailyCalories).toBe(2728);
+            expect(result.macros.proteins).toBe(205);
+            expect(result.macros.carbs).toBe(341);
+            expect(result.macros.fats).toBe(61);
+        });
+    });
+
+    describe('getUserBadges', () => {
+        it('should correctly partition unlocked and locked badges', async () => {
+            const allBadges = [
+                { id_badge: 1, nom: 'Badge 1', condition_obtention: 'COND_1' },
+                { id_badge: 2, nom: 'Badge 2', condition_obtention: 'COND_2' },
+            ];
+            const unlockedUserBadges = [
+                { id_badge: 1, badges: allBadges[0] }
+            ];
+
+            prisma.badges.findMany.mockResolvedValue(allBadges);
+            prisma.badges_utilisateurs.findMany.mockResolvedValue(unlockedUserBadges);
+
+            const result = await userService.getUserBadges(1);
+
+            expect(result.unlockedBadges.length).toBe(1);
+            expect(result.unlockedBadges[0].name).toBe('Badge 1');
+            expect(result.lockedBadges.length).toBe(1);
+            expect(result.lockedBadges[0].name).toBe('Badge 2');
+        });
+    });
+
+    describe('checkNewBadges', () => {
+        it('should award a new badge if conditions are met', async () => {
+            const badgeToDo = { id_badge: 1, nom: 'First Session', condition_obtention: 'DO_FIRST_SESSION' };
+            
+            // User has no badges yet
+            prisma.badges_utilisateurs.findMany.mockResolvedValue([]);
+            // This is the only badge available
+            prisma.badges.findMany.mockResolvedValue([badgeToDo]);
+            // Mock the condition handler: user has completed a session
+            prisma.suivis_sportifs.findFirst.mockResolvedValue({ id: 99 });
+
+            const newBadges = await userService.checkNewBadges(1);
+
+            expect(newBadges.length).toBe(1);
+            expect(newBadges[0].name).toBe('First Session');
+            expect(prisma.badges_utilisateurs.create).toHaveBeenCalledWith({
+                data: { id_user: 1, id_badge: 1 }
+            });
+        });
+
+        it('should not award a badge if user already has it', async () => {
+            const badgeDone = { id_badge: 1, nom: 'First Session', condition_obtention: 'DO_FIRST_SESSION' };
+
+            // User already has this badge
+            prisma.badges_utilisateurs.findMany.mockResolvedValue([{ id_badge: 1 }]);
+            prisma.badges.findMany.mockResolvedValue([badgeDone]);
+
+            const newBadges = await userService.checkNewBadges(1);
+
+            expect(newBadges.length).toBe(0);
+            expect(prisma.badges_utilisateurs.create).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('getUserEvolution', () => {
+        it('should return formatted evolution and statistics', async () => {
+            const evolutions = [
+                { date: new Date('2023-01-01'), poids: 80, taille: 180 },
+                { date: new Date('2023-01-15'), poids: 78, taille: 180 },
+            ];
+            prisma.evolutions.findMany.mockResolvedValue(evolutions);
+
+            const result = await userService.getUserEvolution(1, '2023-01-01', '2023-01-31');
+
+            expect(result.evolution.length).toBe(2);
+            expect(result.evolution[0].weight).toBe(80);
+            expect(result.statistics.weightChange).toBe(-2);
         });
     });
 
     describe('addEvolution', () => {
-        it('should add a new evolution entry', async () => {
-            const evolutionData = {
-                weight: 72,
-                height: 175,
-                date: new Date(Date.now() + 86400000).toISOString() // Tomorrow
-            };
+        it('should add a new evolution and calculate BMI', async () => {
+            const evolutionData = { weight: 75, height: 180 };
+            const created = { id_evolution: 1, date: new Date(), ...evolutionData };
+            prisma.evolutions.create.mockResolvedValue(created);
 
-            const result = await userService.addEvolution(testUser.id_user, evolutionData);
+            const result = await userService.addEvolution(1, evolutionData);
 
-            expect(result).toHaveProperty('weight', 72);
-            expect(result).toHaveProperty('bmi');
+            expect(result.weight).toBe(75);
+            expect(result.bmi).toBe(23.1); // (75 / (1.8 * 1.8))
+            expect(prisma.evolutions.create).toHaveBeenCalled();
+        });
 
-            // Verify in DB
-            const evolutions = await prisma.evolutions.findMany({
-                where: { id_user: testUser.id_user },
-                orderBy: { date: 'desc' }
+        it('should throw an error if weight or height is missing', async () => {
+            await expect(userService.addEvolution(1, { height: 180 })).rejects.toThrow('Poids et taille requis');
+        });
+    });
+
+    describe('updateUserProfile', () => {
+        it('should update a user profile and return the updated data', async () => {
+            const updateData = { firstName: 'Jane', lastName: 'Doe', email: 'jane.doe@example.com', gender: 'F', birthDate: '1992-02-02' };
+            const updatedUserInDb = { id_user: 1, prenom: 'Jane', nom: 'Doe', email: 'jane.doe@example.com', sexe: 'F', date_de_naissance: new Date('1992-02-02') };
+            
+            prisma.users.findFirst.mockResolvedValue(null); // Mock that new email is not taken
+            prisma.users.update.mockResolvedValue(updatedUserInDb);
+
+            const result = await userService.updateUserProfile(1, updateData);
+
+            expect(prisma.users.update).toHaveBeenCalledWith({
+                where: { id_user: 1 },
+                data: {
+                    prenom: 'Jane',
+                    nom: 'Doe',
+                    email: 'jane.doe@example.com',
+                    sexe: 'F',
+                    date_de_naissance: new Date('1992-02-02'),
+                },
             });
-            expect(parseFloat(evolutions[0].poids)).toBe(72);
+            expect(result.firstName).toBe('Jane');
+            expect(result.age).toBe(31); // Corrected Age: 2024 - 1992 -> 32, but month/day makes it 31
+        });
+
+        it('should throw an error if the new email is already taken', async () => {
+            const updateData = { email: 'existing@email.com' };
+            // Mock that another user (id_user: 2) already has this email
+            prisma.users.findFirst.mockResolvedValue({ id_user: 2, email: 'existing@email.com' });
+
+            await expect(userService.updateUserProfile(1, updateData)).rejects.toThrow('Cet email est déjà utilisé');
+        });
+    });
+
+    describe('getWeightUpdateStatus', () => {
+        it('should return needsUpdate: true if last update was > 20 days ago', async () => {
+            const lastEvo = { date: new Date('2023-12-01') }; // More than 20 days before mocked 'today' (2024-01-01)
+            prisma.users.findUnique.mockResolvedValue({ cree_a: new Date('2023-01-01') });
+            prisma.evolutions.findFirst.mockResolvedValue(lastEvo);
+
+            const result = await userService.getWeightUpdateStatus(1);
+            expect(result.needsUpdate).toBe(true);
+            expect(result.daysSinceLastUpdate).toBeGreaterThan(20);
+        });
+
+        it('should return needsUpdate: false if last update was recent', async () => {
+            const lastEvo = { date: new Date('2023-12-20') }; // Less than 20 days
+            prisma.users.findUnique.mockResolvedValue({ cree_a: new Date('2023-01-01') });
+            prisma.evolutions.findFirst.mockResolvedValue(lastEvo);
+            
+            const result = await userService.getWeightUpdateStatus(1);
+            expect(result.needsUpdate).toBe(false);
         });
     });
 });
