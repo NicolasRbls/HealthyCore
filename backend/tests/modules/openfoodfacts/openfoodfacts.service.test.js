@@ -77,6 +77,13 @@ describe('OpenFoodFacts Service', () => {
 
             expect(result.status).toBe('fail');
         });
+
+        it('should throw an error if the API call fails', async () => {
+            prisma.aliments.findFirst.mockResolvedValue(null);
+            axios.get.mockRejectedValue(new Error('Network Error'));
+
+            await expect(OpenFoodFactsService.getProductByBarcode('11111')).rejects.toThrow('Erreur lors de la communication avec OpenFoodFacts: Network Error');
+        });
     });
 
     describe('searchProducts', () => {
@@ -155,6 +162,30 @@ describe('OpenFoodFacts Service', () => {
             });
             // Check if tag creation was attempted
             expect(prisma.tags.create).toHaveBeenCalled();
+        });
+
+        it('should handle products with minimal data', async () => {
+            const apiProduct = {
+                code: '777',
+                product_name: 'Minimal Product',
+                nutriments: {}, // Empty nutriments
+            };
+            const expectedSavedName = 'Minimal Product';
+            const savedProduct = { id_aliment: 100, nom: expectedSavedName, code_barres: '777', aliments_tags: [] };
+
+            prisma.aliments.findFirst.mockResolvedValue(null);
+            prisma.aliments.create.mockResolvedValue(savedProduct);
+            prisma.aliments.findUnique.mockResolvedValue(savedProduct);
+
+            await OpenFoodFactsService.saveProductFromOpenFoodFacts(apiProduct);
+
+            expect(prisma.aliments.create).toHaveBeenCalledWith({
+                data: expect.objectContaining({
+                    nom: expectedSavedName,
+                    calories: 0,
+                    proteines: "0.0",
+                })
+            });
         });
     });
 
