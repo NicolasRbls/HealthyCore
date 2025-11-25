@@ -19,7 +19,7 @@ const OpenFoodFactsController = {
     const product = await OpenFoodFactsService.getProductByBarcode(barcode);
 
     // Si le produit n'est pas trouvé, retourner une réponse 404 appropriée
-    if (!product) {
+    if (!product || product.status === "fail") {
       return res.status(404).json({
         status: "fail",
         message: `Produit avec code-barres ${barcode} non trouvé`,

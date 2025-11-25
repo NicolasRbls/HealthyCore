@@ -4,8 +4,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "jest --runInBand",
-    "test:ci": "jest --runInBand --ci --coverage",
+    "test": "dotenv -e .env.test -- jest --runInBand",
+    "test:ci": "dotenv -e .env.test -- jest --runInBand --ci --coverage",
     "migrate": "prisma migrate dev",
     "migrate:test": "prisma migrate deploy",
     "seed": "node prisma/seed.js"
