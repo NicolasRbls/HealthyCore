@@ -87,6 +87,20 @@ describe('Auth Routes', () => {
             expect(res.statusCode).toEqual(409);
             expect(res.body).toHaveProperty('status', 'error');
         });
+        it('should return 400 with incomplete data', async () => {
+            const incompleteUser = {
+                firstName: 'Route',
+                // Missing email and other required fields
+                password: 'password123'
+            };
+
+            const res = await request(app)
+                .post('/api/auth/register')
+                .send(incompleteUser);
+
+            expect(res.statusCode).toEqual(400);
+            expect(res.body).toHaveProperty('status', 'error');
+        });
     });
 
     describe('POST /api/auth/login', () => {
@@ -110,6 +124,37 @@ describe('Auth Routes', () => {
                     email: 'route-test@example.com',
                     password: 'wrongpassword'
                 });
+
+            expect(res.statusCode).toEqual(401);
+            expect(res.body).toHaveProperty('status', 'error');
+        });
+    });
+
+    describe('GET /api/auth/verify-token', () => {
+        it('should verify a valid token', async () => {
+            // Login to get token
+            const loginRes = await request(app)
+                .post('/api/auth/login')
+                .send({
+                    email: 'route-test@example.com',
+                    password: 'password123'
+                });
+
+            const token = loginRes.body.data.token;
+
+            const res = await request(app)
+                .get('/api/auth/verify-token')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toHaveProperty('status', 'success');
+            expect(res.body.data).toHaveProperty('valid', true);
+        });
+
+        it('should reject an invalid token', async () => {
+            const res = await request(app)
+                .get('/api/auth/verify-token')
+                .set('Authorization', 'Bearer invalidtoken');
 
             expect(res.statusCode).toEqual(401);
             expect(res.body).toHaveProperty('status', 'error');

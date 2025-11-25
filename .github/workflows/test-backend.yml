@@ -49,8 +49,8 @@ jobs:
         env:
           DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
 
-      - name: Run tests (modules only)
-        run: npm run test:ci -- "backend/tests/modules/"
+      - name: Run all tests
+        run: npm run test:ci
         env:
           CI: true
           DATABASE_URL: "postgresql://admin:admin@localhost:5432/db_healthycore_test?schema=public"
