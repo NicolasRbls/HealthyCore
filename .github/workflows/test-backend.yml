@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, ajout-test, frontend, features-test-back-end]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, dev]
 
 jobs:
   test:
