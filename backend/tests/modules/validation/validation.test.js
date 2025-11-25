@@ -58,6 +58,16 @@ describe('Validation Middlewares', () => {
             expect(res.statusCode).toBe(400);
             expect(res.body.errors).toHaveProperty('password', 'Le mot de passe doit contenir au moins 8 caractères');
         });
+
+        it('should return 200 for valid profile data', async () => {
+            const res = await request(app).post('/test-profile').send({ 
+                firstName: 'John',
+                lastName: 'Doe',
+                email: 'john@doe.com',
+                password: 'password123'
+            });
+            expect(res.statusCode).toBe(200);
+        });
     });
 
     describe('validatePhysicalDataFuture', () => {
@@ -87,6 +97,16 @@ describe('Validation Middlewares', () => {
              });
             expect(res.statusCode).toBe(400);
             expect(res.body.errors).toHaveProperty('height', 'Taille invalide (doit être inférieure à 300cm)');
+        });
+
+        it('should return 200 for valid physical data', async () => {
+            const res = await request(app).post('/test-physical').send({ 
+                gender: 'F',
+                birthDate: '1995-05-05',
+                weight: 60,
+                height: 165
+             });
+            expect(res.statusCode).toBe(200);
         });
     });
 });
