@@ -25,9 +25,9 @@ const TestComponent = () => {
             {error && <Text>{error}</Text>}
             {isAuthenticated ? <Text>Authenticated</Text> : <Text>Not Authenticated</Text>}
             {user && <Text>User: {user.firstName}</Text>}
-            <Button title="Login" onPress={() => login('test@example.com', 'password')} />
+            <Button title="Login" onPress={() => login('test@example.com', 'password').catch(() => { })} />
             <Button title="Logout" onPress={() => logout()} />
-            <Button title="Register" onPress={() => register({ email: 'new@example.com' })} />
+            <Button title="Register" onPress={() => register({ email: 'new@example.com' }).catch(() => { })} />
         </View>
     );
 };
@@ -110,5 +110,44 @@ describe('AuthContext', () => {
         await waitFor(() => expect(getByText('Not Authenticated')).toBeTruthy());
         expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('token');
         expect(router.replace).toHaveBeenCalledWith('/welcome');
+    });
+
+    it('handles login failure', async () => {
+        (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+        (authService.login as jest.Mock).mockRejectedValue(new Error('Invalid credentials'));
+
+        const { getByText } = render(
+            <AuthProvider>
+                <TestComponent />
+            </AuthProvider>
+        );
+
+        await waitFor(() => expect(getByText('Not Authenticated')).toBeTruthy());
+
+        fireEvent.press(getByText('Login'));
+
+        await waitFor(() => expect(getByText('Invalid credentials')).toBeTruthy());
+    });
+
+    it('registers successfully', async () => {
+        (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+        (authService.register as jest.Mock).mockResolvedValue({
+            token: 'new-token',
+            user: { id: 1, firstName: 'John', role: 'user' },
+        });
+
+        const { getByText } = render(
+            <AuthProvider>
+                <TestComponent />
+            </AuthProvider>
+        );
+
+        await waitFor(() => expect(getByText('Not Authenticated')).toBeTruthy());
+
+        fireEvent.press(getByText('Register'));
+
+        await waitFor(() => expect(getByText('Authenticated')).toBeTruthy());
+        expect(SecureStore.setItemAsync).toHaveBeenCalledWith('token', 'new-token');
+        expect(router.replace).toHaveBeenCalledWith('/user/dashboard');
     });
 });

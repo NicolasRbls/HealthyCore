@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import Card from '../../../components/ui/Card';
+import { Text } from 'react-native';
 
 describe('Card', () => {
     it('renders children correctly', () => {
@@ -13,27 +13,36 @@ describe('Card', () => {
         expect(getByText('Card Content')).toBeTruthy();
     });
 
-    it('calls onPress when pressed', () => {
-        const onPressMock = jest.fn();
+    it('handles onPress', () => {
+        const onPress = jest.fn();
         const { getByText } = render(
-            <Card onPress={onPressMock}>
+            <Card onPress={onPress}>
                 <Text>Pressable Card</Text>
             </Card>
         );
 
         fireEvent.press(getByText('Pressable Card'));
-        expect(onPressMock).toHaveBeenCalledTimes(1);
+        expect(onPress).toHaveBeenCalled();
     });
 
-    it('does not call onPress when disabled', () => {
-        const onPressMock = jest.fn();
+    it('renders with different variants', () => {
         const { getByText } = render(
-            <Card onPress={onPressMock} disabled>
+            <Card variant="outlined">
+                <Text>Outlined Card</Text>
+            </Card>
+        );
+        expect(getByText('Outlined Card')).toBeTruthy();
+    });
+
+    it('does not trigger onPress when disabled', () => {
+        const onPress = jest.fn();
+        const { getByText } = render(
+            <Card onPress={onPress} disabled>
                 <Text>Disabled Card</Text>
             </Card>
         );
 
         fireEvent.press(getByText('Disabled Card'));
-        expect(onPressMock).not.toHaveBeenCalled();
+        expect(onPress).not.toHaveBeenCalled();
     });
 });

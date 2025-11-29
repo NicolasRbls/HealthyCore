@@ -112,6 +112,7 @@ const NumericInput: React.FC<NumericInputProps> = ({
         value={value}
         onChangeText={onChangeTextHandler}
         error={error || undefined}
+        touched={!!error}
       />
 
       {showControls && (
