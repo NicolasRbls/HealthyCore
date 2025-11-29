@@ -89,14 +89,14 @@ const Input: React.FC<InputProps> = ({
       borderColor: isFocused
         ? Colors.brandBlue[0]
         : error && touched
-        ? Colors.error
-        : Colors.gray.light,
+          ? Colors.error
+          : Colors.gray.light,
       borderRadius: Layout.borderRadius.md,
       backgroundColor: isFocused
         ? Colors.white
         : error && touched
-        ? Colors.error + "10"
-        : Colors.gray.ultraLight,
+          ? Colors.error + "10"
+          : Colors.gray.ultraLight,
       paddingHorizontal: Layout.spacing.md,
       height: 56,
     };
@@ -128,8 +128,8 @@ const Input: React.FC<InputProps> = ({
               isFocused
                 ? Colors.brandBlue[0]
                 : error && touched
-                ? Colors.error
-                : Colors.gray.dark
+                  ? Colors.error
+                  : Colors.gray.dark
             }
             style={styles.leftIcon}
           />
@@ -147,6 +147,7 @@ const Input: React.FC<InputProps> = ({
         {/* Affiche l'icône de mot de passe si applicable */}
         {isPassword && togglePasswordVisibility && (
           <TouchableOpacity
+            testID="password-toggle"
             onPress={togglePasswordVisibility}
             hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
           >

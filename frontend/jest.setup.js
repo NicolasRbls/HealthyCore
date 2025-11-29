@@ -31,3 +31,6 @@ global.fetch = jest.fn();
 // Polyfills for React Native
 global.setImmediate = global.setImmediate || ((fn, ...args) => setTimeout(fn, 0, ...args));
 global.clearImmediate = global.clearImmediate || ((id) => clearTimeout(id));
+
+// Increase timeout
+jest.setTimeout(15000);

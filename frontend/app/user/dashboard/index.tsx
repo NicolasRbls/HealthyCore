@@ -336,6 +336,7 @@ export default function Dashboard() {
               <Text style={styles.userName}>{userName || "Utilisateur"}</Text>
             </View>
             <TouchableOpacity
+              testID="badge-button"
               style={styles.badgeButton}
               onPress={() => router.push("/user/dashboard/badge-monitoring")}
             >
