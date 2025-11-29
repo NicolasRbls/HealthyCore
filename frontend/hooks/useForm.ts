@@ -114,8 +114,8 @@ export function useForm<T extends Record<string, any>>({
         setGlobalError(
           errorMessages.length > 0
             ? "Veuillez corriger les erreurs suivantes : " +
-                errorMessages.join("; ") +
-                "."
+            errorMessages.join("; ") +
+            "."
             : "Veuillez corriger les erreurs dans le formulaire."
         );
         return false;
@@ -132,7 +132,7 @@ export function useForm<T extends Record<string, any>>({
           // Afficher l'erreur retournée par l'API ou une erreur générique
           setGlobalError(
             error.message ||
-              "Une erreur est survenue lors de la soumission du formulaire"
+            "Une erreur est survenue lors de la soumission du formulaire"
           );
         } finally {
           setIsSubmitting(false);
