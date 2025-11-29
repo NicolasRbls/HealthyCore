@@ -34,8 +34,7 @@ export default function ProfileScreen() {
   // État pour afficher/masquer le mot de passe
   const [showPassword, setShowPassword] = React.useState(false);
 
-  // État pour accepter les conditions
-  const [termsAccepted, setTermsAccepted] = React.useState(false);
+
 
   // Utilisation du hook useForm pour la gestion du formulaire
   const {
@@ -53,6 +52,7 @@ export default function ProfileScreen() {
       lastName: data.lastName || "",
       email: data.email || "",
       password: data.password || "",
+      terms: false,
     },
     validate: (values) => {
       const errors: Record<string, string> = {};
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
         errors.password = "Le mot de passe doit contenir au moins 8 caractères";
       }
 
-      if (!termsAccepted) {
+      if (!values.terms) {
         errors.terms = "Vous devez accepter les conditions d'utilisation";
       }
 
@@ -95,7 +95,9 @@ export default function ProfileScreen() {
     onSubmit: async () => {
       try {
         // Mettre à jour le contexte avec les valeurs du formulaire
-        setFields(values);
+        // Exclude terms from context update if not needed, or keep it
+        const { terms, ...profileData } = values;
+        setFields(profileData);
 
         // Valider l'étape
         const isValid = await validateStep(1);
@@ -117,8 +119,9 @@ export default function ProfileScreen() {
 
   // Synchroniser les données du formulaire avec le contexte
   React.useEffect(() => {
+    console.log('ProfileScreen render', JSON.stringify({ errors, touched, values }));
     setFields(values);
-  }, [values]);
+  }, [values, errors, touched]);
 
   // Afficher les erreurs globales dans une alerte
   React.useEffect(() => {
@@ -145,7 +148,7 @@ export default function ProfileScreen() {
   };
 
   const toggleTermsAccepted = () => {
-    setTermsAccepted(!termsAccepted);
+    handleChange("terms", !values.terms);
   };
 
   return (
@@ -179,6 +182,7 @@ export default function ProfileScreen() {
               onChangeText={(text) => handleChange("firstName", text)}
               onBlur={() => handleBlur("firstName")}
               error={touched.firstName ? errors.firstName : undefined}
+              touched={!!touched.firstName}
             />
 
             <Input
@@ -189,6 +193,7 @@ export default function ProfileScreen() {
               onChangeText={(text) => handleChange("lastName", text)}
               onBlur={() => handleBlur("lastName")}
               error={touched.lastName ? errors.lastName : undefined}
+              touched={!!touched.lastName}
             />
 
             <Input
@@ -199,6 +204,7 @@ export default function ProfileScreen() {
               onChangeText={(text) => handleChange("email", text)}
               onBlur={() => handleBlur("email")}
               error={touched.email ? errors.email : undefined}
+              touched={!!touched.email}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -211,6 +217,7 @@ export default function ProfileScreen() {
               onChangeText={(text) => handleChange("password", text)}
               onBlur={() => handleBlur("password")}
               error={touched.password ? errors.password : undefined}
+              touched={!!touched.password}
               isPassword={true}
               showPassword={showPassword}
               togglePasswordVisibility={togglePasswordVisibility}
@@ -218,14 +225,15 @@ export default function ProfileScreen() {
 
             <View style={styles.termsContainer}>
               <TouchableOpacity
+                testID="terms-checkbox"
                 style={[
                   styles.checkbox,
-                  termsAccepted && styles.checkboxChecked,
+                  values.terms && styles.checkboxChecked,
                 ]}
                 onPress={toggleTermsAccepted}
               >
                 <View style={styles.checkboxInner}>
-                  {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+                  {values.terms && <Text style={styles.checkmark}>✓</Text>}
                 </View>
               </TouchableOpacity>
               <Text style={styles.termsText}>
@@ -237,6 +245,10 @@ export default function ProfileScreen() {
                 <Text style={styles.termsLink}>conditions d'utilisation</Text>
               </Text>
             </View>
+
+            {touched.terms && errors.terms && (
+              <Text style={styles.errorText}>{errors.terms}</Text>
+            )}
 
             <Button
               text="Suivant"
@@ -346,5 +358,11 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: Colors.brandBlue[0],
     fontWeight: "600",
+  },
+  errorText: {
+    ...TextStyles.caption,
+    color: Colors.error,
+    marginBottom: Layout.spacing.md,
+    marginLeft: Layout.spacing.xs,
   },
 });

@@ -86,6 +86,7 @@ export function useForm<T extends Record<string, any>>({
   // Soumet le formulaire
   const handleSubmit = useCallback(
     async (e?: React.FormEvent) => {
+      console.log('useForm handleSubmit called');
       if (e) {
         e.preventDefault();
       }
