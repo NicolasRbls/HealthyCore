@@ -7,10 +7,12 @@ on:
       - main
       - test-frontend-V2
       - frontend
+      - features-test-frontend
   pull_request:
     branches:
       - main
-
+      - dev
+      
 jobs:
   test:
     runs-on: ubuntu-latest
