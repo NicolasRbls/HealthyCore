@@ -69,6 +69,6 @@ describe('SportMonitoring', () => {
 
         fireEvent.press(getByText(/Today Session/));
 
-        expect(router.push).toHaveBeenCalledWith('/user/sport/sessions/1');
+        expect(router.push).toHaveBeenCalledWith('/user/sport/sessions/1?from=monitoring');
     });
 });

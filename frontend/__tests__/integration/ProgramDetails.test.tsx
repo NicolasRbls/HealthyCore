@@ -82,7 +82,7 @@ describe('ProgramDetailsScreen', () => {
 
         fireEvent.press(getByText('Session 1'));
 
-        expect(router.push).toHaveBeenCalledWith('/user/sport/sessions/1');
+        expect(router.push).toHaveBeenCalledWith('/user/sport/sessions/1?from=program');
     });
 
     it('handles program in progress', async () => {

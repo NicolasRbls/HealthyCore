@@ -188,7 +188,7 @@ export default function ProgramDetailsScreen() {
 
   // Navigate to session details
   const navigateToSession = (sessionId: number) => {
-    router.push(`/user/sport/sessions/${sessionId}`);
+    router.push(`/user/sport/sessions/${sessionId}?from=program`);
   };
 
   // Start program
@@ -300,14 +300,14 @@ export default function ProgramDetailsScreen() {
           <Image
             source={
               program.image &&
-              (program.image.startsWith("http://") ||
-                program.image.startsWith("https://"))
+                (program.image.startsWith("http://") ||
+                  program.image.startsWith("https://"))
                 ? { uri: program.image }
                 : imageMapping[program.id + 100] || {
-                    uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-                      program.name
-                    )}`,
-                  }
+                  uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+                    program.name
+                  )}`,
+                }
             }
             style={styles.coverImage}
             resizeMode="contain"
@@ -374,8 +374,8 @@ export default function ProgramDetailsScreen() {
               program.inProgress
                 ? "Programme en cours"
                 : activeProgram && activeProgram.id !== program.id
-                ? "Vous suivez déjà un programme"
-                : "Choisir ce programme"
+                  ? "Vous suivez déjà un programme"
+                  : "Choisir ce programme"
             }
             onPress={startProgram}
             disabled={

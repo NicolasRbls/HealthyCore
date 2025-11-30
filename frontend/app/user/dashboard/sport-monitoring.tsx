@@ -102,7 +102,7 @@ export default function SportMonitoring() {
                 name: day.session?.name,
                 date: formattedDate,
                 done: day.session?.completed,
-                icon: getSessionIconType(day.session.name),
+                icon: getSessionIconType(day.session?.name || ""),
                 isDaySession: isToday,
               };
             });
@@ -237,7 +237,7 @@ export default function SportMonitoring() {
 
   // Navigate to session details
   const navigateToSessionDetails = (sessionId: number) => {
-    router.push(`/user/sport/sessions/${sessionId}`);
+    router.push(`/user/sport/sessions/${sessionId}?from=monitoring`);
   };
 
   // Helper function to get icon based on session type
@@ -292,7 +292,7 @@ export default function SportMonitoring() {
             onValueChange={(value) => {
               if (!session.done && session.isDaySession) {
                 // Seulement si pas déjà complété et si c'est la séance du jour
-                toggleSessionDone(session.id, { stopPropagation: () => {} });
+                toggleSessionDone(session.id, { stopPropagation: () => { } });
               }
             }}
             trackColor={{ false: Colors.gray.light, true: Colors.secondary[0] }}
