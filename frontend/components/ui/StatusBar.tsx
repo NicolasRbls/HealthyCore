@@ -35,6 +35,7 @@ const StatusBar: React.FC<CustomStatusBarProps> = ({
       />
       {!translucent && (
         <View
+          testID="status-bar-background"
           style={[
             styles.statusBarBackground,
             { backgroundColor, height: statusBarHeight },
