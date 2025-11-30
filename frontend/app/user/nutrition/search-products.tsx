@@ -351,6 +351,7 @@ export default function SearchProductsScreen() {
         style={styles.productItem}
         onPress={() => navigateToProductDetail(product.id)}
         activeOpacity={0.8}
+        testID={`product-item-${product.id}`}
       >
         <Image
           source={getFoodImage(product)}

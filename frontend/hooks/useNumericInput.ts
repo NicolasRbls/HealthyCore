@@ -39,8 +39,8 @@ export function useNumericInput({
       const regex =
         precision > 0
           ? new RegExp(
-              `^${allowNegative ? "-?" : ""}\\d*(\\.\\d{0,${precision}})?$`
-            )
+            `^${allowNegative ? "-?" : ""}\\d*(\\.\\d{0,${precision}})?$`
+          )
           : new RegExp(`^${allowNegative ? "-?" : ""}\\d*$`);
 
       if (!regex.test(value)) {
@@ -82,8 +82,8 @@ export function useNumericInput({
       const regex =
         precision > 0
           ? new RegExp(
-              `^${allowNegative ? "-?" : ""}\\d*(\\.\\d{0,${precision}})?$`
-            )
+            `^${allowNegative ? "-?" : ""}\\d*(\\.\\d{0,${precision}})?$`
+          )
           : new RegExp(`^${allowNegative ? "-?" : ""}\\d*$`);
 
       if (regex.test(text)) {
@@ -117,7 +117,8 @@ export function useNumericInput({
 
   return {
     value: inputValue,
-    numericValue: inputValue === "" ? null : parseFloat(inputValue),
+    numericValue:
+      inputValue === "" || inputValue === "-" ? null : parseFloat(inputValue),
     error,
     handleChange,
     formattedValue,

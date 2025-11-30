@@ -232,6 +232,7 @@ export default function NutritionHistoryScreen() {
         onPress={() => setSelectedDay(item.date)}
         activeOpacity={0.7}
         key={`day-${item.date}-${index}`}
+        testID={`day-item-${item.date}`}
       >
         <Text
           style={[
@@ -285,8 +286,8 @@ export default function NutritionHistoryScreen() {
       <Card
         style={styles.foodCard}
         onPress={() => navigateToFoodDetail(item.foodId)}
-        activeOpacity={0.8}
         key={`entry-${item.id}-${index}`}
+        testID={`food-entry-${item.id}`}
       >
         <View style={styles.foodRow}>
           <View style={styles.mealTag}>
@@ -430,6 +431,7 @@ export default function NutritionHistoryScreen() {
             onPress={() =>
               router.push("/user/nutrition/nutrition-discover" as any)
             }
+            testID="empty-history-button"
           >
             <Text style={styles.emptyButtonText}>Ajouter des aliments</Text>
           </TouchableOpacity>
@@ -464,10 +466,10 @@ export default function NutritionHistoryScreen() {
           <Text style={styles.summaryValue}>
             {historyData.summary.totalDays > 0
               ? Math.round(
-                  (historyData.summary.daysCompleted /
-                    historyData.summary.totalDays) *
-                    100
-                )
+                (historyData.summary.daysCompleted /
+                  historyData.summary.totalDays) *
+                100
+              )
               : 0}
             %
           </Text>

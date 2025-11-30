@@ -162,6 +162,7 @@ const Input: React.FC<InputProps> = ({
         {/* Affiche une icône personnalisée à droite si applicable */}
         {rightIcon && !isPassword && (
           <TouchableOpacity
+            testID="right-icon-button"
             onPress={onRightIconPress}
             hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
           >
