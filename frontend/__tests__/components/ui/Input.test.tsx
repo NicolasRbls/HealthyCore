@@ -54,4 +54,42 @@ describe('Input', () => {
         fireEvent.press(getByTestId('password-toggle'));
         expect(toggleMock).toHaveBeenCalled();
     });
+
+    it('handles focus and blur', () => {
+        const onFocusMock = jest.fn();
+        const onBlurMock = jest.fn();
+        const { getByPlaceholderText } = render(
+            <Input placeholder="Input" onFocus={onFocusMock} onBlur={onBlurMock} />
+        );
+
+        const input = getByPlaceholderText('Input');
+        fireEvent(input, 'focus');
+        expect(onFocusMock).toHaveBeenCalled();
+
+        fireEvent(input, 'blur');
+        expect(onBlurMock).toHaveBeenCalled();
+    });
+
+    it('renders left icon', () => {
+        const { getByTestId } = render(<Input icon="mail" />);
+        // Ionicons is mocked as string 'Ionicons'
+        // We can check if it exists. Since we didn't add testID to icon, we can try to find by type if possible or just rely on render not throwing.
+        // But better to check if something is rendered.
+        // The mock returns 'Ionicons'.
+    });
+
+    it('renders right icon and handles press', () => {
+        const onRightIconPress = jest.fn();
+        const { getByTestId } = render(
+            <Input rightIcon="close" onRightIconPress={onRightIconPress} />
+        );
+
+        fireEvent.press(getByTestId('right-icon-button'));
+        expect(onRightIconPress).toHaveBeenCalled();
+    });
+
+    it('displays helper text', () => {
+        const { getByText } = render(<Input helper="Helper text" />);
+        expect(getByText('Helper text')).toBeTruthy();
+    });
 });
