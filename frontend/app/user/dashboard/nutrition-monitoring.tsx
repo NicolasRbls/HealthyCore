@@ -275,6 +275,7 @@ export default function NutritionMonitoring() {
       <Card
         style={styles.foodCard}
         onPress={() => navigateToFoodDetail(item.foodId)}
+        testID={`food-card-${item.id}`}
       >
         <View style={styles.foodRow}>
           <View style={styles.foodImageContainer}>
@@ -311,6 +312,7 @@ export default function NutritionMonitoring() {
             {/* Delete button */}
             <TouchableOpacity
               style={styles.deleteButton}
+              testID={`delete-button-${item.id}`}
               onPress={() => {
                 Alert.alert(
                   "Confirmer la suppression",
@@ -508,6 +510,7 @@ export default function NutritionMonitoring() {
               <TouchableOpacity
                 style={styles.emptyStateButton}
                 onPress={navigateToDiscover}
+                testID="empty-state-button"
               >
                 <Text style={styles.emptyStateButtonText}>
                   Ajouter des aliments
@@ -523,6 +526,7 @@ export default function NutritionMonitoring() {
         style={styles.fab}
         onPress={navigateToDiscover}
         activeOpacity={0.8}
+        testID="fab-add"
       >
         <Ionicons name="add" size={24} color={Colors.white} />
       </TouchableOpacity>

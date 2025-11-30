@@ -16,7 +16,15 @@ jest.mock('expo-router', () => ({
     },
     useLocalSearchParams: jest.fn(),
 }));
-jest.mock('../../components/layout/Header', () => 'Header');
+jest.mock('../../components/layout/Header', () => {
+    const React = require('react');
+    const { Text, TouchableOpacity } = require('react-native');
+    return ({ title, onRightIconPress }: any) => (
+        <TouchableOpacity onPress={onRightIconPress} testID="header-right-icon">
+            <Text>{title}</Text>
+        </TouchableOpacity>
+    );
+});
 
 describe('ProductDetailScreen', () => {
     const mockProduct = {
@@ -52,12 +60,15 @@ describe('ProductDetailScreen', () => {
         });
     });
 
-    it('handles add to tracking', async () => {
+    it('handles add to tracking with different meal', async () => {
         const { getByText, getByPlaceholderText, getAllByText } = render(<ProductDetailScreen />);
 
         await waitFor(() => expect(getAllByText('Apple').length).toBeGreaterThan(0));
 
         fireEvent.press(getByText('Ajouter au suivi'));
+
+        // Select 'Dîner'
+        fireEvent.press(getByText('Dîner'));
 
         const quantityInput = getByPlaceholderText('100');
         fireEvent.changeText(quantityInput, '200');
@@ -65,8 +76,40 @@ describe('ProductDetailScreen', () => {
         fireEvent.press(getByText('Ajouter'));
 
         await waitFor(() => {
-            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 200, 'dejeuner');
+            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 200, 'diner');
             expect(Alert.alert).toHaveBeenCalledWith('Aliment ajouté', expect.stringContaining('Apple'), expect.any(Array));
+        });
+    });
+
+    it('validates quantity input', async () => {
+        const { getByText, getByPlaceholderText, getAllByText } = render(<ProductDetailScreen />);
+
+        await waitFor(() => expect(getAllByText('Apple').length).toBeGreaterThan(0));
+
+        fireEvent.press(getByText('Ajouter au suivi'));
+
+        const quantityInput = getByPlaceholderText('100');
+        fireEvent.changeText(quantityInput, '0'); // Invalid
+
+        fireEvent.press(getByText('Ajouter'));
+
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Veuillez entrer une quantité valide');
+            expect(nutritionService.logNutrition).not.toHaveBeenCalled();
+        });
+    });
+
+    it('handles error during logging', async () => {
+        (nutritionService.logNutrition as jest.Mock).mockRejectedValue(new Error('Log failed'));
+        const { getByText, getAllByText } = render(<ProductDetailScreen />);
+
+        await waitFor(() => expect(getAllByText('Apple').length).toBeGreaterThan(0));
+
+        fireEvent.press(getByText('Ajouter au suivi'));
+        fireEvent.press(getByText('Ajouter'));
+
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', "Impossible d'ajouter cet aliment à votre suivi. Veuillez réessayer plus tard.");
         });
     });
 
@@ -90,5 +133,26 @@ describe('ProductDetailScreen', () => {
             expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Impossible de récupérer les détails du produit.');
             expect(getByText('Produit non trouvé')).toBeTruthy();
         });
+    });
+
+    it('navigates to report on right icon press', async () => {
+        const { getByTestId, getAllByText } = render(<ProductDetailScreen />);
+        await waitFor(() => expect(getAllByText('Apple').length).toBeGreaterThan(0));
+
+        fireEvent.press(getByTestId('header-right-icon'));
+
+        expect(router.push).toHaveBeenCalledWith({
+            pathname: "/user/nutrition/report",
+            params: { id: 1, name: 'Apple - Brand - 100g' },
+        });
+    });
+
+    it('handles local image', async () => {
+        const localProduct = { ...mockProduct, image: null };
+        (nutritionService.getFoodById as jest.Mock).mockResolvedValue(localProduct);
+
+        const { getAllByText } = render(<ProductDetailScreen />);
+        await waitFor(() => expect(getAllByText('Apple').length).toBeGreaterThan(0));
+        // Verify no crash
     });
 });
