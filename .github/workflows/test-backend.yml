@@ -1,8 +1,8 @@
-name: Node.js CI
+name: Test Backend
 
 on:
   push:
-    branches: [main, ajout-test, frontend, features-test-back-end]
+    branches: [main, ajout-test, frontend, features-test-frontend]
   pull_request:
     branches: [main, develop, dev]
 

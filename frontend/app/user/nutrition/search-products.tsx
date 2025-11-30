@@ -351,6 +351,7 @@ export default function SearchProductsScreen() {
         style={styles.productItem}
         onPress={() => navigateToProductDetail(product.id)}
         activeOpacity={0.8}
+        testID={`product-item-${product.id}`}
       >
         <Image
           source={getFoodImage(product)}
@@ -508,7 +509,7 @@ export default function SearchProductsScreen() {
             onSubmitEditing={handleSearch}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={resetSearch}>
+            <TouchableOpacity onPress={resetSearch} testID="clear-search-button">
               <Ionicons
                 name="close-circle"
                 size={18}
@@ -523,6 +524,7 @@ export default function SearchProductsScreen() {
             setShowQRScanner(true);
             resetCamera();
           }}
+          testID="qr-scan-button"
         >
           <Ionicons name="barcode-outline" size={24} color={Colors.white} />
         </TouchableOpacity>
@@ -535,6 +537,7 @@ export default function SearchProductsScreen() {
         </View>
       ) : !hasSearched ? (
         <FlatList
+          testID="initial-empty-list"
           contentContainerStyle={styles.emptyStateContainer}
           data={[]}
           keyExtractor={() => "empty"}
@@ -553,6 +556,7 @@ export default function SearchProductsScreen() {
         />
       ) : products.length === 0 ? (
         <FlatList
+          testID="no-results-list"
           contentContainerStyle={styles.emptyStateContainer}
           data={[]}
           keyExtractor={() => "no-results"}
@@ -571,6 +575,7 @@ export default function SearchProductsScreen() {
         />
       ) : (
         <FlatList
+          testID="products-list"
           data={products}
           renderItem={({ item }) => <ProductItem product={item} />}
           keyExtractor={(item) =>

@@ -193,13 +193,22 @@ export default function SessionDetailsScreen() {
     }
   };
 
+  // Handle back navigation based on source
+  const handleBackPress = () => {
+    if (params.from === "monitoring") {
+      router.push("/user/dashboard/sport-monitoring");
+    } else {
+      router.back();
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <Header
           title="Détails de la séance"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.loadingContainer}>
@@ -215,14 +224,14 @@ export default function SessionDetailsScreen() {
         <Header
           title="Détails de la séance"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>Séance non trouvée</Text>
           <Button
             text="Retour"
-            onPress={() => router.back()}
+            onPress={handleBackPress}
             style={styles.returnButton}
             variant="outline"
           />
@@ -236,7 +245,7 @@ export default function SessionDetailsScreen() {
       <Header
         title="Détails de la séance"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         style={{ marginTop: Layout.spacing.md }}
       />
 
@@ -310,12 +319,12 @@ export default function SessionDetailsScreen() {
                       <Image
                         source={
                           exercise.gif &&
-                          (exercise.gif.startsWith("http://") ||
-                            exercise.gif.startsWith("https://"))
+                            (exercise.gif.startsWith("http://") ||
+                              exercise.gif.startsWith("https://"))
                             ? { uri: exercise.gif }
                             : imageMapping[exercise.id] || {
-                                uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
-                              }
+                              uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${exercise.name}`,
+                            }
                         }
                         style={styles.exerciseGif}
                         resizeMode="contain"

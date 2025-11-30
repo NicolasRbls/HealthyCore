@@ -198,7 +198,7 @@ export default function Dashboard() {
     }
   };
 
-  const mockNutritionalData = (totalCalorieGoal) => {
+  const mockNutritionalData = (totalCalorieGoal: number) => {
     // Pour l'instant, créer des données factices de suivi nutritionnel
     // Vous pourriez utiliser une valeur aléatoire entre 50-90% de l'objectif
     const consumedPercentage = Math.floor(Math.random() * 40) + 50; // Entre 50 et 90%
@@ -336,6 +336,7 @@ export default function Dashboard() {
               <Text style={styles.userName}>{userName || "Utilisateur"}</Text>
             </View>
             <TouchableOpacity
+              testID="badge-button"
               style={styles.badgeButton}
               onPress={() => router.push("/user/dashboard/badge-monitoring")}
             >

@@ -189,8 +189,8 @@ export default function ProfileScreen() {
                 {userData?.user?.gender === "H"
                   ? "Homme"
                   : userData?.user?.gender === "F"
-                  ? "Femme"
-                  : "Non spécifié"}
+                    ? "Femme"
+                    : "Non spécifié"}
               </Text>
             </View>
             <View style={styles.accountItem}>
@@ -202,13 +202,13 @@ export default function ProfileScreen() {
               <Text style={styles.accountValue}>
                 {userData?.user?.birthDate
                   ? new Date(userData.user.birthDate).toLocaleDateString(
-                      "fr-FR",
-                      {
-                        day: "numeric",
-                        month: "numeric",
-                        year: "numeric",
-                      }
-                    )
+                    "fr-FR",
+                    {
+                      day: "numeric",
+                      month: "numeric",
+                      year: "numeric",
+                    }
+                  )
                   : "-"}
               </Text>
             </View>
@@ -234,8 +234,8 @@ export default function ProfileScreen() {
               <Text style={styles.goalValue}>
                 {userData?.metrics?.bmi
                   ? `${userData.metrics.bmi} (${getBmiCategory(
-                      userData.metrics.bmi
-                    )})`
+                    userData.metrics.bmi
+                  )})`
                   : "-"}
               </Text>
             </View>
@@ -327,6 +327,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.progressDetailsButton}
                 onPress={navigateToProgress}
+                testID="progress-details-button"
               >
                 <Text style={styles.progressDetailsText}>Voir les détails</Text>
                 <Ionicons
@@ -345,6 +346,7 @@ export default function ProfileScreen() {
               onPress={navigateToProgress}
               leftIcon="trending-up-outline"
               style={styles.button}
+              testID="progress-button"
             />
             <Button
               text="Mes badges"
@@ -352,6 +354,7 @@ export default function ProfileScreen() {
               leftIcon="ribbon-outline"
               variant="outline"
               style={styles.button}
+              testID="badges-button"
             />
             <Button
               text="Modifier mon profil"
@@ -359,6 +362,7 @@ export default function ProfileScreen() {
               leftIcon="create-outline"
               variant="outline"
               style={styles.button}
+              testID="edit-profile-button"
             />
             <Button
               text="Se déconnecter"
@@ -366,6 +370,7 @@ export default function ProfileScreen() {
               leftIcon="log-out-outline"
               variant="ghost"
               style={styles.button}
+              testID="logout-button"
             />
           </View>
         </View>

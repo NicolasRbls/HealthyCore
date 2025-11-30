@@ -36,6 +36,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       onPress={handlePress}
       activeOpacity={0.7}
       hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+      testID="back-button"
     >
       <Ionicons name={iconName as any} size={size} color={color} />
     </TouchableOpacity>

@@ -61,6 +61,8 @@ export default function LoginScreen() {
     },
   });
 
+
+
   const [showPassword, setShowPassword] = useState(false);
 
   const togglePasswordVisibility = () => {
@@ -113,6 +115,7 @@ export default function LoginScreen() {
               onChangeText={(text) => handleChange("email", text)}
               onBlur={() => handleBlur("email")}
               error={touched.email ? errors.email : undefined}
+              touched={touched.email}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="votre@email.com"
@@ -125,6 +128,7 @@ export default function LoginScreen() {
               onChangeText={(text) => handleChange("password", text)}
               onBlur={() => handleBlur("password")}
               error={touched.password ? errors.password : undefined}
+              touched={touched.password}
               isPassword={true}
               showPassword={showPassword}
               togglePasswordVisibility={togglePasswordVisibility}
