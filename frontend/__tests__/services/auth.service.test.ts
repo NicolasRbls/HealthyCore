@@ -58,4 +58,36 @@ describe('authService', () => {
         expect(apiService.get).toHaveBeenCalledWith('/auth/me');
         expect(result).toEqual(response);
     });
+
+    // Error handling tests
+    it('handles register error', async () => {
+        (apiService.post as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(authService.register({})).rejects.toThrow('Error');
+    });
+
+    it('handles login error', async () => {
+        (apiService.post as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(authService.login('email', 'password')).rejects.toThrow('Error');
+    });
+
+    it('handles logout error gracefully', async () => {
+        (apiService.post as jest.Mock).mockRejectedValue(new Error('Error'));
+        jest.spyOn(console, 'error').mockImplementation(() => { });
+
+        await authService.logout();
+
+        expect(apiService.post).toHaveBeenCalledWith('/auth/logout', {});
+        expect(console.error).toHaveBeenCalled();
+        (console.error as jest.Mock).mockRestore();
+    });
+
+    it('handles verifyToken error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(authService.verifyToken()).rejects.toThrow('Error');
+    });
+
+    it('handles getProfile error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(authService.getProfile()).rejects.toThrow('Error');
+    });
 });

@@ -77,6 +77,54 @@ describe('nutritionService', () => {
         expect(apiService.get).toHaveBeenCalledWith('/nutrition/user/history?startDate=2023-01-01&endDate=2023-01-07');
         expect(result).toEqual(response);
     });
+    it('handles getAllFoods error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.getAllFoods()).rejects.toThrow('Error');
+    });
+
+    it('handles getFoodById error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.getFoodById(1)).rejects.toThrow('Error');
+    });
+
+    it('handles getNutritionSummary error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.getNutritionSummary()).rejects.toThrow('Error');
+    });
+
+    it('handles getTodayNutrition error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.getTodayNutrition()).rejects.toThrow('Error');
+    });
+
+    it('handles logNutrition error', async () => {
+        (apiService.post as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.logNutrition(1, 100, 'breakfast')).rejects.toThrow('Error');
+    });
+
+    it('handles deleteNutritionEntry error', async () => {
+        (apiService.delete as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.deleteNutritionEntry(1)).rejects.toThrow('Error');
+    });
+
+    it('handles getNutritionHistory error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(nutritionService.getNutritionHistory()).rejects.toThrow('Error');
+    });
+
+    it('buildQueryString handles empty params', async () => {
+        // Indirectly testing buildQueryString via public methods
+        (apiService.get as jest.Mock).mockResolvedValue({});
+        await nutritionService.getAllFoods({});
+        expect(apiService.get).toHaveBeenCalledWith('/nutrition');
+    });
+
+    it('buildQueryString handles null/undefined params', async () => {
+        (apiService.get as jest.Mock).mockResolvedValue({});
+        // @ts-ignore
+        await nutritionService.getAllFoods({ search: null, page: undefined, limit: 10 });
+        expect(apiService.get).toHaveBeenCalledWith('/nutrition?limit=10');
+    });
 });
 
 describe('openFoodFactsService', () => {
@@ -94,6 +142,11 @@ describe('openFoodFactsService', () => {
         expect(result).toEqual(response);
     });
 
+    it('handles getProductByBarcode error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(openFoodFactsService.getProductByBarcode('123')).rejects.toThrow('Error');
+    });
+
     it('searches products', async () => {
         const response = [{ name: 'Product' }];
         (apiService.get as jest.Mock).mockResolvedValue(response);
@@ -102,5 +155,10 @@ describe('openFoodFactsService', () => {
 
         expect(apiService.get).toHaveBeenCalledWith('/openfoodfacts/search?query=query&limit=10');
         expect(result).toEqual(response);
+    });
+
+    it('handles searchProducts error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(openFoodFactsService.searchProducts('query')).rejects.toThrow('Error');
     });
 });

@@ -101,4 +101,85 @@ describe('userService', () => {
         expect(apiService.get).toHaveBeenCalledWith('/user/weight-update-status');
         expect(result).toEqual(response);
     });
+    it('gets user evolution with start date', async () => {
+        const response = { evolution: [], statistics: {} };
+        (apiService.get as jest.Mock).mockResolvedValue(response);
+
+        await userService.getUserEvolution('2023-01-01');
+
+        expect(apiService.get).toHaveBeenCalledWith('/user/evolution?startDate=2023-01-01');
+    });
+
+    it('gets user evolution with end date', async () => {
+        const response = { evolution: [], statistics: {} };
+        (apiService.get as jest.Mock).mockResolvedValue(response);
+
+        await userService.getUserEvolution(undefined, '2023-12-31');
+
+        expect(apiService.get).toHaveBeenCalledWith('/user/evolution?endDate=2023-12-31');
+    });
+
+    it('gets user evolution without params', async () => {
+        const response = { evolution: [], statistics: {} };
+        (apiService.get as jest.Mock).mockResolvedValue(response);
+
+        await userService.getUserEvolution();
+
+        expect(apiService.get).toHaveBeenCalledWith('/user/evolution');
+    });
+
+    it('gets progress stats with default period', async () => {
+        const response = { period: 'month' };
+        (apiService.get as jest.Mock).mockResolvedValue(response);
+
+        await userService.getProgressStats();
+
+        expect(apiService.get).toHaveBeenCalledWith('/user/progress/stats?period=month');
+    });
+
+    // Error handling tests
+    it('handles getUserProfile error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.getUserProfile()).rejects.toThrow('Error');
+    });
+
+    it('handles getUserBadges error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.getUserBadges()).rejects.toThrow('Error');
+    });
+
+    it('handles checkNewBadges error', async () => {
+        (apiService.post as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.checkNewBadges()).rejects.toThrow('Error');
+    });
+
+    it('handles getUserEvolution error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.getUserEvolution()).rejects.toThrow('Error');
+    });
+
+    it('handles addEvolutionEntry error', async () => {
+        (apiService.post as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.addEvolutionEntry({ weight: 70, height: 175 })).rejects.toThrow('Error');
+    });
+
+    it('handles getProgressStats error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.getProgressStats()).rejects.toThrow('Error');
+    });
+
+    it('handles updateProfile error', async () => {
+        (apiService.put as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.updateProfile({})).rejects.toThrow('Error');
+    });
+
+    it('handles updatePreferences error', async () => {
+        (apiService.put as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.updatePreferences({})).rejects.toThrow('Error');
+    });
+
+    it('handles checkWeightUpdateStatus error', async () => {
+        (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+        await expect(userService.checkWeightUpdateStatus()).rejects.toThrow('Error');
+    });
 });
