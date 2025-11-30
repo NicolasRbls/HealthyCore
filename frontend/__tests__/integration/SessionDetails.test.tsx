@@ -41,6 +41,17 @@ describe('SessionDetailsScreen', () => {
                 equipment: 'None',
                 gif: 'http://example.com/pushups.gif',
             },
+            {
+                id: 2,
+                name: 'Plank',
+                order: 2,
+                sets: null,
+                repetitions: null,
+                duration: 60,
+                description: 'Hold plank',
+                equipment: 'None',
+                gif: null,
+            }
         ],
     };
 
@@ -48,6 +59,8 @@ describe('SessionDetailsScreen', () => {
         jest.clearAllMocks();
         (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '1' });
         (programsService.getSessionDetails as jest.Mock).mockResolvedValue(mockSession);
+        // Mock alert
+        jest.spyOn(window, 'alert').mockImplementation(() => { });
     });
 
     it('renders correctly and fetches session details', async () => {
@@ -74,15 +87,84 @@ describe('SessionDetailsScreen', () => {
         });
     });
 
-    it('handles fetch error', async () => {
-        (programsService.getSessionDetails as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+    it('formats exercise specs correctly', async () => {
         const { getByText } = render(<SessionDetailsScreen />);
 
-        // Similar to ProgramDetails, it falls back to static data or shows error.
-        // Assuming static data fallback might fail or return null if ID doesn't match.
-        // We check if it handles it without crashing.
         await waitFor(() => {
-            // expect(getByText('Séance non trouvée')).toBeTruthy();
+            expect(getByText('3 séries × 10 répétitions')).toBeTruthy();
+            expect(getByText('60 minutes')).toBeTruthy();
         });
     });
+
+    it('formats other exercise specs correctly', async () => {
+        const otherSession = {
+            ...mockSession,
+            exercises: [
+                {
+                    id: 3,
+                    name: 'Sets only',
+                    order: 1,
+                    sets: 3,
+                    repetitions: null,
+                    duration: 0,
+                    description: '',
+                    equipment: null,
+                    gif: null,
+                },
+                {
+                    id: 4,
+                    name: 'Reps only',
+                    order: 2,
+                    sets: null,
+                    repetitions: 15,
+                    duration: 0,
+                    description: '',
+                    equipment: null,
+                    gif: null,
+                },
+                {
+                    id: 5,
+                    name: 'Nothing',
+                    order: 3,
+                    sets: null,
+                    repetitions: null,
+                    duration: 0,
+                    description: '',
+                    equipment: null,
+                    gif: null,
+                }
+            ]
+        };
+        (programsService.getSessionDetails as jest.Mock).mockResolvedValue(otherSession);
+        const { getByText } = render(<SessionDetailsScreen />);
+
+        await waitFor(() => {
+            expect(getByText('3 séries')).toBeTruthy();
+            expect(getByText('15 répétitions')).toBeTruthy();
+            expect(getByText('Non spécifié')).toBeTruthy();
+        });
+    });
+
+    it('handles fetch error and falls back to static data', async () => {
+        (programsService.getSessionDetails as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+        // We assume static data has session with id 1 named "Push (Pectoraux, triceps, épaules)"
+        const { getByText } = render(<SessionDetailsScreen />);
+
+        await waitFor(() => {
+            // Check for static data content
+            expect(getByText(/Push/)).toBeTruthy();
+        });
+    });
+
+    it('handles session not found (API fail and static data fail)', async () => {
+        (programsService.getSessionDetails as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+        (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '999999' }); // ID not in static data
+
+        const { getByText } = render(<SessionDetailsScreen />);
+
+        await waitFor(() => {
+            expect(getByText('Séance non trouvée')).toBeTruthy();
+        });
+    });
+
 });

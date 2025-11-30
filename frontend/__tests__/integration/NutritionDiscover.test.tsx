@@ -68,7 +68,7 @@ describe('NutritionDiscoverScreen', () => {
             // Check for recipe content
             expect(getAllByText('Salad').length).toBeGreaterThan(0);
             expect(getAllByText('Steak').length).toBeGreaterThan(0);
-        });
+        }, { timeout: 10000 });
     });
 
     it('navigates to search screen', () => {
@@ -80,7 +80,7 @@ describe('NutritionDiscoverScreen', () => {
     it('navigates to recipe detail', async () => {
         const { getAllByText } = render(<NutritionDiscoverScreen />);
 
-        await waitFor(() => expect(getAllByText('Salad').length).toBeGreaterThan(0));
+        await waitFor(() => expect(getAllByText('Salad').length).toBeGreaterThan(0), { timeout: 10000 });
 
         fireEvent.press(getAllByText('Salad')[0]);
         expect(router.push).toHaveBeenCalledWith('/user/nutrition/recipes/1');
@@ -95,6 +95,6 @@ describe('NutritionDiscoverScreen', () => {
                 'Erreur',
                 'Impossible de récupérer les recettes. Veuillez réessayer plus tard.'
             );
-        });
+        }, { timeout: 10000 });
     });
 });

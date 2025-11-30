@@ -18,8 +18,12 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('../../components/layout/Header', () => {
     const React = require('react');
-    const { Text } = require('react-native');
-    return ({ title }: any) => <Text>{title}</Text>;
+    const { Text, TouchableOpacity } = require('react-native');
+    return ({ title, onRightIconPress }: any) => (
+        <TouchableOpacity onPress={onRightIconPress} testID="header-right-icon">
+            <Text>{title}</Text>
+        </TouchableOpacity>
+    );
 });
 
 describe('RecipeDetailScreen', () => {
@@ -58,12 +62,15 @@ describe('RecipeDetailScreen', () => {
         });
     });
 
-    it('handles add to tracking', async () => {
+    it('handles add to tracking with different meal', async () => {
         const { getByText, getByPlaceholderText, getAllByText } = render(<RecipeDetailScreen />);
 
         await waitFor(() => expect(getAllByText(/Salad/).length).toBeGreaterThan(0));
 
         fireEvent.press(getByText('Ajouter au suivi'));
+
+        // Select 'Dîner'
+        fireEvent.press(getByText('Dîner'));
 
         const portionsInput = getByPlaceholderText('1');
         fireEvent.changeText(portionsInput, '2');
@@ -71,8 +78,40 @@ describe('RecipeDetailScreen', () => {
         fireEvent.press(getByText('Ajouter'));
 
         await waitFor(() => {
-            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 2, 'dejeuner');
+            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 2, 'diner');
             expect(Alert.alert).toHaveBeenCalledWith('Recette ajoutée', expect.stringContaining('Salad'), expect.any(Array));
+        });
+    });
+
+    it('validates portions input', async () => {
+        const { getByText, getByPlaceholderText, getAllByText } = render(<RecipeDetailScreen />);
+
+        await waitFor(() => expect(getAllByText(/Salad/).length).toBeGreaterThan(0));
+
+        fireEvent.press(getByText('Ajouter au suivi'));
+
+        const portionsInput = getByPlaceholderText('1');
+        fireEvent.changeText(portionsInput, '0'); // Invalid
+
+        fireEvent.press(getByText('Ajouter'));
+
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Veuillez entrer un nombre de portions valide');
+            expect(nutritionService.logNutrition).not.toHaveBeenCalled();
+        });
+    });
+
+    it('handles error during logging', async () => {
+        (nutritionService.logNutrition as jest.Mock).mockRejectedValue(new Error('Log failed'));
+        const { getByText, getAllByText } = render(<RecipeDetailScreen />);
+
+        await waitFor(() => expect(getAllByText(/Salad/).length).toBeGreaterThan(0));
+
+        fireEvent.press(getByText('Ajouter au suivi'));
+        fireEvent.press(getByText('Ajouter'));
+
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', "Impossible d'ajouter cette recette à votre suivi. Veuillez réessayer plus tard.");
         });
     });
 
@@ -96,5 +135,26 @@ describe('RecipeDetailScreen', () => {
             expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Recette introuvable');
             expect(getByText('Recette non trouvée')).toBeTruthy();
         });
+    });
+
+    it('navigates to report on right icon press', async () => {
+        const { getByTestId, getAllByText } = render(<RecipeDetailScreen />);
+        await waitFor(() => expect(getAllByText(/Salad/).length).toBeGreaterThan(0));
+
+        fireEvent.press(getByTestId('header-right-icon'));
+
+        expect(router.push).toHaveBeenCalledWith({
+            pathname: "/user/nutrition/report",
+            params: { id: 1, name: 'Salad - Brand' },
+        });
+    });
+
+    it('handles local image', async () => {
+        const localRecipe = { ...mockRecipe, image: null }; // Should use placeholder or map
+        (nutritionService.getFoodById as jest.Mock).mockResolvedValue(localRecipe);
+
+        const { getAllByText } = render(<RecipeDetailScreen />);
+        await waitFor(() => expect(getAllByText(/Salad/).length).toBeGreaterThan(0));
+        // We can't easily verify the image source without testID on Image, but we verify it doesn't crash
     });
 });

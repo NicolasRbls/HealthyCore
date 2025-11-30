@@ -75,20 +75,67 @@ describe('ProgramDetailsScreen', () => {
         });
     });
 
-    it('handles fetch error', async () => {
-        (programsService.getProgramDetails as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+    it('navigates to session details', async () => {
         const { getByText } = render(<ProgramDetailsScreen />);
 
-        // It falls back to static data if fetch fails, so we expect it to try to render something or show error if static data also fails.
-        // In this case, since we don't mock static data import, it might fail or show "Programme non trouvé" if static data logic fails.
-        // Let's assume it shows "Programme non trouvé" if static data fallback fails or if ID doesn't match static data.
-        // However, the component catches error and calls fallbackToStaticData.
-        // If static data is not mocked, it might return undefined.
+        await waitFor(() => expect(getByText('Session 1')).toBeTruthy());
 
-        // Let's just verify it handles the error gracefully.
+        fireEvent.press(getByText('Session 1'));
+
+        expect(router.push).toHaveBeenCalledWith('/user/sport/sessions/1');
+    });
+
+    it('handles program in progress', async () => {
+        const inProgressProgram = { ...mockProgram, inProgress: true };
+        (programsService.getProgramDetails as jest.Mock).mockResolvedValue(inProgressProgram);
+        const { getByText } = render(<ProgramDetailsScreen />);
+
         await waitFor(() => {
-            // If fallback fails, it sets program to null
-            // expect(getByText('Programme non trouvé')).toBeTruthy();
+            expect(getByText('Programme en cours')).toBeTruthy();
+            expect(getByText('Ce programme est déjà en cours. Vous pouvez suivre votre progression dans la section "Suivi sportif".')).toBeTruthy();
         });
+    });
+
+    it('handles fetch error and falls back to static data', async () => {
+        (programsService.getProgramDetails as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+        // We assume static data has program with id 1 named "PPL débutant 10"
+        const { getByText } = render(<ProgramDetailsScreen />);
+
+        await waitFor(() => {
+            expect(getByText('PPL débutant 10')).toBeTruthy();
+        });
+    });
+
+    it('handles program not found (API fail and static data fail)', async () => {
+        (programsService.getProgramDetails as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+        (useLocalSearchParams as jest.Mock).mockReturnValue({ id: '999999' }); // ID not in static data
+
+        const { getByText } = render(<ProgramDetailsScreen />);
+
+        await waitFor(() => {
+            expect(getByText('Programme non trouvé')).toBeTruthy();
+        });
+    });
+
+    it('handles start program error', async () => {
+        (programsService.startProgram as jest.Mock).mockRejectedValue(new Error('Start failed'));
+        const { getByText } = render(<ProgramDetailsScreen />);
+
+        await waitFor(() => expect(getByText('Choisir ce programme')).toBeTruthy());
+
+        fireEvent.press(getByText('Choisir ce programme'));
+
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Impossible de démarrer le programme pour le moment.');
+        });
+    });
+
+    it('handles local image', async () => {
+        const localProgram = { ...mockProgram, image: null }; // Should use placeholder or map
+        (programsService.getProgramDetails as jest.Mock).mockResolvedValue(localProgram);
+
+        const { getByText } = render(<ProgramDetailsScreen />);
+        await waitFor(() => expect(getByText('Test Program')).toBeTruthy());
+        // Verify no crash
     });
 });

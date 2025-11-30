@@ -39,15 +39,26 @@ describe('EditProfile', () => {
         },
     };
 
+    const mockDropdowns = {
+        sedentaryLevels: [{ id_niveau_sedentarite: 1, nom: 'Low', description: 'Low activity' }],
+        nutritionalPlans: [{ id_repartition_nutritionnelle: 1, nom: 'Balanced', description: 'Balanced diet', type: 'perte_de_poids' }],
+        diets: [{ id_regime_alimentaire: 1, nom: 'None', description: 'No restrictions' }],
+        activities: [
+            { id_activite: 1, nom: 'Running', description: 'Run' },
+            { id_activite: 2, nom: 'Swimming', description: 'Swim' }
+        ],
+        weeklySessions: [{ id: 3, value: '3', label: '3 times' }],
+    };
+
     beforeEach(() => {
         jest.clearAllMocks();
         jest.spyOn(Alert, 'alert');
         (userService.getUserProfile as jest.Mock).mockResolvedValue(mockUser);
-        (dataService.getSedentaryLevels as jest.Mock).mockResolvedValue([]);
-        (dataService.getNutritionalPlans as jest.Mock).mockResolvedValue([]);
-        (dataService.getDiets as jest.Mock).mockResolvedValue([]);
-        (dataService.getActivities as jest.Mock).mockResolvedValue([]);
-        (dataService.getWeeklySessions as jest.Mock).mockResolvedValue([]);
+        (dataService.getSedentaryLevels as jest.Mock).mockResolvedValue(mockDropdowns.sedentaryLevels);
+        (dataService.getNutritionalPlans as jest.Mock).mockResolvedValue(mockDropdowns.nutritionalPlans);
+        (dataService.getDiets as jest.Mock).mockResolvedValue(mockDropdowns.diets);
+        (dataService.getActivities as jest.Mock).mockResolvedValue(mockDropdowns.activities);
+        (dataService.getWeeklySessions as jest.Mock).mockResolvedValue(mockDropdowns.weeklySessions);
     });
 
     it('renders correctly and fetches user profile', async () => {
@@ -74,6 +85,20 @@ describe('EditProfile', () => {
         });
     });
 
+    it('validates required fields', async () => {
+        const { getByPlaceholderText, getByText } = render(<EditProfile />);
+
+        await waitFor(() => expect(getByPlaceholderText('Votre prénom').props.value).toBe('John'));
+
+        fireEvent.changeText(getByPlaceholderText('Votre prénom'), '');
+        fireEvent.press(getByText('Enregistrer'));
+
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Veuillez remplir tous les champs obligatoires');
+            expect(userService.updateProfile).not.toHaveBeenCalled();
+        });
+    });
+
     it('switches tabs and updates preferences', async () => {
         const { getByText, getByPlaceholderText } = render(<EditProfile />);
 
@@ -91,6 +116,33 @@ describe('EditProfile', () => {
         await waitFor(() => {
             expect(userService.updatePreferences).toHaveBeenCalledWith(expect.objectContaining({ targetWeight: 70 }));
             expect(Alert.alert).toHaveBeenCalledWith('Succès', 'Préférences mises à jour avec succès');
+        });
+    });
+
+    it('toggles activities', async () => {
+        const { getByText } = render(<EditProfile />);
+
+        await waitFor(() => expect(getByText('Préférences')).toBeTruthy());
+        fireEvent.press(getByText('Préférences'));
+
+        await waitFor(() => expect(getByText('Running')).toBeTruthy());
+
+        // Toggle Swimming (add)
+        fireEvent.press(getByText('Swimming'));
+
+        // Toggle Running (remove)
+        fireEvent.press(getByText('Running'));
+
+        fireEvent.press(getByText('Enregistrer'));
+
+        await waitFor(() => {
+            // Should have Swimming (2) and not Running (1)
+            expect(userService.updatePreferences).toHaveBeenCalledWith(expect.objectContaining({
+                activities: expect.arrayContaining([2])
+            }));
+            expect(userService.updatePreferences).toHaveBeenCalledWith(expect.objectContaining({
+                activities: expect.not.arrayContaining([1])
+            }));
         });
     });
 
