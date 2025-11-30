@@ -67,4 +67,56 @@ describe('useNumericInput', () => {
 
         expect(onChange).toHaveBeenCalledWith(10);
     });
+
+    it('handles negative numbers when allowed', () => {
+        const { result } = renderHook(() => useNumericInput({ allowNegative: true }));
+
+        act(() => {
+            result.current.handleChange('-');
+        });
+        expect(result.current.value).toBe('-');
+        expect(result.current.numericValue).toBeNull();
+
+        act(() => {
+            result.current.handleChange('-5');
+        });
+        expect(result.current.value).toBe('-5');
+        expect(result.current.numericValue).toBe(-5);
+    });
+
+    it('rejects negative numbers when not allowed', () => {
+        const { result } = renderHook(() => useNumericInput({ allowNegative: false }));
+
+        act(() => {
+            result.current.handleChange('-');
+        });
+        expect(result.current.value).toBe('');
+    });
+
+    it('handles empty string', () => {
+        const onChange = jest.fn();
+        const { result } = renderHook(() => useNumericInput({ initialValue: 10, onChange }));
+
+        act(() => {
+            result.current.handleChange('');
+        });
+
+        expect(result.current.value).toBe('');
+        expect(result.current.numericValue).toBeNull();
+        expect(result.current.error).toBeNull();
+        expect(onChange).toHaveBeenCalledWith(null);
+    });
+
+    it('formats value correctly', () => {
+        const { result } = renderHook(() => useNumericInput({ precision: 2 }));
+
+        expect(result.current.formattedValue(10.5)).toBe('10.50');
+        expect(result.current.formattedValue(null)).toBe('');
+    });
+
+    it('formats value with 0 precision', () => {
+        const { result } = renderHook(() => useNumericInput({ precision: 0 }));
+
+        expect(result.current.formattedValue(10.5)).toBe('11');
+    });
 });
