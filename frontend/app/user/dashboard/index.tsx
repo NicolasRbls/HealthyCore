@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
+import { format } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../context/AuthContext";
 import Colors from "../../../constants/Colors";
@@ -138,9 +139,7 @@ export default function Dashboard() {
         );
 
         // Obtenir la date du jour pour comparer
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+        const todayStr = format(new Date(), "yyyy-MM-dd"); // Format YYYY-MM-DD
 
         // Vérifier s'il y a une séance pour aujourd'hui dans le planning hebdomadaire
         if (

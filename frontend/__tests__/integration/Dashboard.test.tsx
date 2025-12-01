@@ -7,6 +7,7 @@ import objectivesService from '../../services/objectives.service';
 import apiService from '../../services/api.service';
 import dataService from '../../services/data.service';
 import { router } from 'expo-router';
+import { format } from 'date-fns';
 
 // Mocks
 jest.mock('../../services/auth.service');
@@ -75,9 +76,7 @@ describe('Dashboard', () => {
             ],
         });
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
 
         (apiService.get as jest.Mock).mockResolvedValue({
             weeklySchedule: [
