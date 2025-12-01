@@ -40,7 +40,7 @@ describe('User Programs Service', () => {
             prisma.preferences.findFirst.mockResolvedValue(mockUserPreferences);
             prisma.programmes_utilisateurs.findMany.mockResolvedValue(mockActivePrograms);
             prisma.programmes.findMany.mockResolvedValueOnce(mockPrograms) // For the main query
-                                       .mockResolvedValueOnce(mockPrograms); // For the recommendation query
+                .mockResolvedValueOnce(mockPrograms); // For the recommendation query
             prisma.programmes.count.mockResolvedValue(mockTotal);
 
             const result = await getUserPrograms(1);
@@ -55,18 +55,18 @@ describe('User Programs Service', () => {
         it('should filter programs by tagId', async () => {
             // Mock data with tags
             const mockPrograms = [
-                { 
-                    id_programme: 1, nom: 'Program 1', duree: 7, 
-                    programmes_tags: [{ id_tag: 1, tags: { id_tag: 1, nom: 'Cardio' } }], 
-                    seances_programmes: [] 
+                {
+                    id_programme: 1, nom: 'Program 1', duree: 7,
+                    programmes_tags: [{ id_tag: 1, tags: { id_tag: 1, nom: 'Cardio' } }],
+                    seances_programmes: []
                 },
-                { 
-                    id_programme: 2, nom: 'Program 2', duree: 14, 
-                    programmes_tags: [{ id_tag: 2, tags: { id_tag: 2, nom: 'Strength' } }], 
-                    seances_programmes: [] 
+                {
+                    id_programme: 2, nom: 'Program 2', duree: 14,
+                    programmes_tags: [{ id_tag: 2, tags: { id_tag: 2, nom: 'Strength' } }],
+                    seances_programmes: []
                 },
             ];
-            
+
             // Mock Prisma calls
             prisma.preferences.findFirst.mockResolvedValue(null);
             prisma.programmes_utilisateurs.findMany.mockResolvedValue([]);
@@ -94,22 +94,22 @@ describe('User Programs Service', () => {
                 seances_par_semaines: 5,
             };
             const mockPrograms = [
-                { 
-                    id_programme: 1, nom: 'Cardio Blast', duree: 7, 
-                    programmes_tags: [{ id_tag: 1, tags: { id_tag: 1, nom: 'Cardio' } }], 
-                    seances_programmes: [{ordre_seance: 1}, {ordre_seance: 2}, {ordre_seance: 3}] 
+                {
+                    id_programme: 1, nom: 'Cardio Blast', duree: 7,
+                    programmes_tags: [{ id_tag: 1, tags: { id_tag: 1, nom: 'Cardio' } }],
+                    seances_programmes: [{ ordre_seance: 1 }, { ordre_seance: 2 }, { ordre_seance: 3 }]
                 },
-                { 
-                    id_programme: 2, nom: 'Strength Program', duree: 14, 
-                    programmes_tags: [{ id_tag: 2, tags: { id_tag: 2, nom: 'Strength' } }], 
-                    seances_programmes: [{ordre_seance: 1}]
+                {
+                    id_programme: 2, nom: 'Strength Program', duree: 14,
+                    programmes_tags: [{ id_tag: 2, tags: { id_tag: 2, nom: 'Strength' } }],
+                    seances_programmes: [{ ordre_seance: 1 }]
                 },
             ];
 
             prisma.preferences.findFirst.mockResolvedValue(mockUserPreferences);
             prisma.programmes_utilisateurs.findMany.mockResolvedValue([]);
             prisma.programmes.findMany.mockResolvedValueOnce([]) // First call for non-recommended
-                                       .mockResolvedValueOnce(mockPrograms); // Second call for recommendations
+                .mockResolvedValueOnce(mockPrograms); // Second call for recommendations
             prisma.programmes.count.mockResolvedValue(0);
 
             const result = await getUserPrograms(1);
@@ -123,7 +123,7 @@ describe('User Programs Service', () => {
     describe('getProgramDetails', () => {
         it('should return null if program not found', async () => {
             prisma.programmes.findUnique.mockResolvedValue(null);
-            
+
             await expect(getProgramDetails(1, 999)).rejects.toThrow('Programme non trouvé');
         });
 
@@ -135,13 +135,13 @@ describe('User Programs Service', () => {
                 description: 'A test program',
                 programmes_tags: [],
                 seances_programmes: [
-                    { 
-                        ordre_seance: 1, 
-                        seances: { 
-                            id_seance: 1, 
-                            nom: 'Session 1', 
-                            exercices_seances: [{ id_exercice: 101, series: 3, repetitions: 12, duree: 0, exercices: { id_exercice: 101, nom: 'Push-ups' } }] 
-                        } 
+                    {
+                        ordre_seance: 1,
+                        seances: {
+                            id_seance: 1,
+                            nom: 'Session 1',
+                            exercices_seances: [{ id_exercice: 101, series: 3, repetitions: 12, duree: 0, exercices: { id_exercice: 101, nom: 'Push-ups' } }]
+                        }
                     },
                 ],
                 programmes_utilisateurs: []
@@ -152,7 +152,7 @@ describe('User Programs Service', () => {
                 date_debut: new Date('2023-01-01'),
                 date_fin: new Date('2023-01-15'),
             };
-            
+
             prisma.programmes.findUnique.mockResolvedValue(mockProgram);
             prisma.programmes_utilisateurs.findFirst.mockResolvedValue(mockUserProgram);
             prisma.suivis_sportifs.count.mockResolvedValue(1); // User completed 1 session
@@ -189,6 +189,45 @@ describe('User Programs Service', () => {
             expect(result.programId).toBe(1);
             expect(result.programName).toBe('New Program');
             expect(prisma.programmes_utilisateurs.create).toHaveBeenCalled();
+        });
+
+        it('should calculate end date correctly based on weeks (duration * 7)', async () => {
+            const userId = 1;
+            const programId = 1;
+            const durationWeeks = 10;
+            const startDate = new Date('2023-01-01T00:00:00.000Z');
+
+            // Mock program data
+            prisma.programmes.findUnique.mockResolvedValue({
+                id_programme: programId,
+                nom: 'Test Program',
+                duree: durationWeeks,
+                seances_programmes: [],
+            });
+
+            // Mock no existing program
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(null);
+
+            // Mock creation
+            prisma.programmes_utilisateurs.create.mockImplementation((args) => {
+                return {
+                    id_programme_utilisateur: 1,
+                    ...args.data,
+                };
+            });
+
+            const result = await startProgram(userId, programId, startDate.toISOString());
+
+            const expectedEndDate = new Date(startDate);
+            expectedEndDate.setDate(expectedEndDate.getDate() + durationWeeks * 7);
+            expectedEndDate.setHours(0, 0, 0, 0);
+
+            expect(result.endDate).toEqual(expectedEndDate);
+
+            // Verify that the difference is exactly 70 days
+            const diffTime = Math.abs(result.endDate - new Date(result.startDate));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            expect(diffDays).toBe(70);
         });
     });
 
@@ -242,7 +281,7 @@ describe('User Programs Service', () => {
             prisma.suivis_sportifs.create.mockResolvedValue({ id_suivi_sportif: 1, id_seance: 1, id_user: 1 });
 
             const result = await completeSession(1, 1);
-            
+
             expect(result.sessionId).toBe(1);
             expect(result.sessionName).toBe('Leg Day');
             expect(prisma.suivis_sportifs.create).toHaveBeenCalled();

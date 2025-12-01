@@ -316,7 +316,7 @@ const startProgram = async (userId, programId, startDate = null) => {
     actualStartDate.setHours(0, 0, 0, 0);
 
     const endDate = new Date(actualStartDate);
-    endDate.setDate(endDate.getDate() + program.duree);
+    endDate.setDate(endDate.getDate() + program.duree * 7);
 
     const userProgram = await prisma.programmes_utilisateurs.create({
       data: {
@@ -653,9 +653,9 @@ const getSportProgress = async (userId) => {
     const sessionProgressPercentage =
       expectedSessions > 0
         ? Math.min(
-            Math.round((completedSessions / expectedSessions) * 100),
-            100
-          )
+          Math.round((completedSessions / expectedSessions) * 100),
+          100
+        )
         : 0;
 
     const weeklySchedule = generateWeekSchedule(
