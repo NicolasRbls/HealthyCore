@@ -274,6 +274,51 @@ describe('User Programs Service', () => {
         });
     });
 
+    describe('getTodaySession', () => {
+        const { getTodaySession } = require('../../../../src/modules/data/programs/programs.service');
+
+        it('should return the completed session if done today (with time component)', async () => {
+            const userId = 1;
+            const sessionId = 1;
+            // Simulate completion "now" (e.g., 14:30)
+            const completionDate = new Date();
+
+            // Mock findFirst for completedToday
+            // The bug is that the service queries with exactly midnight, so if we mock it to return null 
+            // when called with midnight but return something when called with range, we can simulate the DB behavior.
+            // But since we are mocking Prisma, we have to inspect the call arguments.
+
+            prisma.suivis_sportifs.findFirst.mockResolvedValue(null); // Default to not found
+
+            // We want to verify that it FAILS to find it if the query is too specific (exact date match)
+            // But here we are testing the service logic. 
+            // Let's mock the return value assuming the query *would* fail in a real DB if checking equality.
+            // Actually, better: let's inspect what findFirst is called with.
+
+            await getTodaySession(userId);
+
+            // Check the arguments passed to findFirst
+            const findFirstCall = prisma.suivis_sportifs.findFirst.mock.calls[0];
+            const query = findFirstCall[0];
+
+            // We expect the query to use a range (gte/lte) or handle time, 
+            // BUT currently it likely uses exact equality.
+            // If the code is buggy, it passes a specific Date object (midnight).
+            // If we want to PROVE it's buggy, we show that it passes a Date object, not a range.
+
+            const dateQuery = query.where.date;
+
+            // If dateQuery is a Date object, it means it's doing exact match -> BUG/FRAGILE
+            // If dateQuery is an object with gte/lte, it's robust.
+
+            // For this test to be a "reproduction", we assert that it IS doing the wrong thing (or we assert the right thing and watch it fail).
+            // Let's assert the RIGHT thing (that it uses a range) and expect it to FAIL.
+
+            const isRangeQuery = dateQuery && (dateQuery.gte || dateQuery.lte);
+            expect(isRangeQuery).toBeTruthy();
+        });
+    });
+
     describe('completeSession', () => {
         it('should successfully mark a session as complete', async () => {
             prisma.seances.findUnique.mockResolvedValue({ id_seance: 1, nom: 'Leg Day' });

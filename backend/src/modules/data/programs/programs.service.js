@@ -920,13 +920,26 @@ const getTodaySession = async (userId) => {
 
   // Pour la comparaison avec la base de données, on a besoin de minuit UTC
   // mais en gardant la date locale correcte
-  const today = new Date(
+  const todayStart = new Date(
     Date.UTC(
       todayLocal.getFullYear(),
       todayLocal.getMonth(),
-      todayLocal.getDate()
+      todayLocal.getDate(),
+      0, 0, 0, 0
     )
   );
+
+  const todayEnd = new Date(
+    Date.UTC(
+      todayLocal.getFullYear(),
+      todayLocal.getMonth(),
+      todayLocal.getDate(),
+      23, 59, 59, 999
+    )
+  );
+
+  // Keep 'today' for other queries that expect a single date point (midnight)
+  const today = todayStart;
 
   // Obtenir le jour de la semaine basé sur la date locale
   const currentDayOfWeek = todayLocal.getDay();
@@ -938,7 +951,10 @@ const getTodaySession = async (userId) => {
   const completedToday = await prisma.suivis_sportifs.findFirst({
     where: {
       id_user: userId,
-      date: today,
+      date: {
+        gte: todayStart,
+        lte: todayEnd
+      },
     },
     include: {
       seances: {
