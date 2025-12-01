@@ -155,7 +155,7 @@ describe('SearchProductsScreen', () => {
 
         fireEvent.press(getByTestId('product-item-1'));
 
-        expect(router.push).toHaveBeenCalledWith('/user/nutrition/products/1');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/products/1', params: { from: 'search' } });
     });
 
     it('opens QR scanner and scans product', async () => {
@@ -177,7 +177,7 @@ describe('SearchProductsScreen', () => {
 
         await waitFor(() => {
             expect(openFoodFactsService.getProductByBarcode).toHaveBeenCalledWith('12345678');
-            expect(router.push).toHaveBeenCalledWith('/user/nutrition/products/123');
+            expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/products/123', params: { from: 'search' } });
         });
     });
 

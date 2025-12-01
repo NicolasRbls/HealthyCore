@@ -106,7 +106,7 @@ describe('ProfileScreen', () => {
         expect(router.push).toHaveBeenCalledWith('/user/profile/progress');
 
         fireEvent.press(getByTestId('badges-button'));
-        expect(router.push).toHaveBeenCalledWith('/user/dashboard/badge-monitoring');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/dashboard/badge-monitoring', params: { from: 'profile' } });
 
         fireEvent.press(getByTestId('edit-profile-button'));
         expect(router.push).toHaveBeenCalledWith('/user/profile/edit');

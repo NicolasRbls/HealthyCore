@@ -76,7 +76,7 @@ describe('ProductDetailScreen', () => {
         fireEvent.press(getByText('Ajouter'));
 
         await waitFor(() => {
-            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 200, 'diner');
+            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 200, 'diner', expect.any(String));
             expect(Alert.alert).toHaveBeenCalledWith('Aliment ajouté', expect.stringContaining('Apple'), expect.any(Array));
         });
     });

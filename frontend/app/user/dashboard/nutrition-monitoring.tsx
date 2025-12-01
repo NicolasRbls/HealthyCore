@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -69,6 +69,7 @@ interface NutritionData {
 
 export default function NutritionMonitoring() {
   const { user } = useAuth();
+  const { from } = useLocalSearchParams();
   const [summary, setSummary] = useState<NutritionSummary | null>(null);
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(
     null
@@ -81,6 +82,14 @@ export default function NutritionMonitoring() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleBackPress = () => {
+    if (from === "dashboard") {
+      router.push("/user/dashboard");
+    } else {
+      router.back();
+    }
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -160,12 +169,12 @@ export default function NutritionMonitoring() {
 
   // Navigate to discover page
   const navigateToDiscover = () => {
-    router.push("/user/nutrition/nutrition-discover");
+    router.push({ pathname: "/user/nutrition/nutrition-discover", params: { from: "monitoring" } } as any);
   };
 
   // Navigate to history page
   const navigateToHistory = () => {
-    router.push("/user/dashboard/history");
+    router.push({ pathname: "/user/dashboard/history", params: { from: "monitoring" } } as any);
   };
 
   // Macro nutrient component
@@ -247,17 +256,16 @@ export default function NutritionMonitoring() {
     nutritionService
       .getFoodById(foodId)
       .then((food) => {
-        const route =
-          food.type === "recette"
-            ? `/user/nutrition/recipes/${foodId}`
-            : `/user/nutrition/products/${foodId}`;
-
-        router.push(route as any);
+        if (food.type === "recette") {
+          router.push({ pathname: `/user/nutrition/recipes/${foodId}`, params: { from: "monitoring" } } as any);
+        } else {
+          router.push({ pathname: `/user/nutrition/products/${foodId}`, params: { from: "monitoring" } } as any);
+        }
       })
       .catch((error) => {
         console.error("Error fetching food details:", error);
         // Fallback to products route
-        router.push(`/user/nutrition/products/${foodId}` as any);
+        router.push({ pathname: `/user/nutrition/products/${foodId}`, params: { from: "monitoring" } } as any);
       });
   };
 
@@ -391,7 +399,7 @@ export default function NutritionMonitoring() {
         <Header
           title="Suivi nutritionnel"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
           rightIconName="calendar-outline"
           onRightIconPress={navigateToHistory}
@@ -430,7 +438,7 @@ export default function NutritionMonitoring() {
       <Header
         title="Suivi nutritionnel"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         style={{ marginTop: Layout.spacing.md }}
         rightIconName="calendar-outline"
         onRightIconPress={navigateToHistory}

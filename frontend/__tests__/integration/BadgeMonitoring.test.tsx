@@ -10,6 +10,7 @@ jest.mock('expo-router', () => ({
     router: {
         back: jest.fn(),
     },
+    useLocalSearchParams: jest.fn().mockReturnValue({ from: '' }),
 }));
 jest.mock('../../components/layout/Header', () => 'Header');
 

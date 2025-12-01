@@ -21,12 +21,36 @@ import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
 import imageMapping from "../../../../constants/imageMapping";
 import { useAuth } from "../../../../context/AuthContext";
-import { nutritionService, FoodProduct } from "../../../../services/nutrition.service";
+import { nutritionService } from "../../../../services/nutrition.service";
+
+// Type definitions
+interface Tag {
+  id: number;
+  name: string;
+}
+
+interface FoodProduct {
+  id: number;
+  name: string;
+  image: string | null;
+  type: string;
+  source: string;
+  calories: number;
+  proteins: number;
+  carbs: number;
+  fats: number;
+  tags: Tag[];
+  barcode?: string;
+  description?: string;
+  brand?: string;
+  ingredients?: string;
+}
 
 export default function ProductDetailScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
   const productId = Number(params.id);
+  const from = params.from as string;
 
   const [product, setProduct] = useState<FoodProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +62,18 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     fetchProductDetails();
   }, [productId]);
+
+  const handleBackPress = () => {
+    if (from === "search") {
+      router.push("/user/nutrition/search-products");
+    } else if (from === "history") {
+      router.push("/user/dashboard/history");
+    } else if (from === "monitoring") {
+      router.push("/user/dashboard/nutrition-monitoring");
+    } else {
+      router.back();
+    }
+  };
 
   const fetchProductDetails = async () => {
     setIsLoading(true);
@@ -114,9 +150,9 @@ export default function ProductDetailScreen() {
       await nutritionService.logNutrition(
         product?.id as number,
         parsedQuantity,
-        selectedMeal
+        selectedMeal,
+        new Date().toISOString().split("T")[0]
       );
-
       // Fermer la modale
       setShowAddModal(false);
 
@@ -144,7 +180,7 @@ export default function ProductDetailScreen() {
         <Header
           title="Détails du produit"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.loadingContainer}>
@@ -161,14 +197,14 @@ export default function ProductDetailScreen() {
         <Header
           title="Détails du produit"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Produit non trouvé</Text>
           <Button
             text="Retour"
-            onPress={() => router.back()}
+            onPress={handleBackPress}
             style={styles.backButton}
           />
         </View>

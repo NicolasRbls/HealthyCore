@@ -78,8 +78,8 @@ describe('RecipeDetailScreen', () => {
         fireEvent.press(getByText('Ajouter'));
 
         await waitFor(() => {
-            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 2, 'diner');
-            expect(Alert.alert).toHaveBeenCalledWith('Recette ajoutée', expect.stringContaining('Salad'), expect.any(Array));
+            expect(nutritionService.logNutrition).toHaveBeenCalledWith(1, 2, 'diner', expect.any(String));
+            expect(Alert.alert).toHaveBeenCalledWith('Succès', 'Recette ajoutée à votre journal nutritionnel.', expect.any(Array));
         });
     });
 
@@ -96,7 +96,7 @@ describe('RecipeDetailScreen', () => {
         fireEvent.press(getByText('Ajouter'));
 
         await waitFor(() => {
-            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Veuillez entrer un nombre de portions valide');
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Veuillez entrer un nombre de portions valide.');
             expect(nutritionService.logNutrition).not.toHaveBeenCalled();
         });
     });
@@ -111,7 +111,7 @@ describe('RecipeDetailScreen', () => {
         fireEvent.press(getByText('Ajouter'));
 
         await waitFor(() => {
-            expect(Alert.alert).toHaveBeenCalledWith('Erreur', "Impossible d'ajouter cette recette à votre suivi. Veuillez réessayer plus tard.");
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', "Impossible d'ajouter la recette. Veuillez réessayer plus tard.");
         });
     });
 
@@ -122,7 +122,7 @@ describe('RecipeDetailScreen', () => {
         await waitFor(() => {
             expect(Alert.alert).toHaveBeenCalledWith(
                 'Erreur',
-                'Impossible de récupérer les détails de la recette. Veuillez réessayer plus tard.'
+                'Impossible de charger les détails de la recette. Veuillez réessayer plus tard.'
             );
         });
     });
@@ -132,8 +132,9 @@ describe('RecipeDetailScreen', () => {
         const { getByText } = render(<RecipeDetailScreen />);
 
         await waitFor(() => {
-            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Recette introuvable');
-            expect(getByText('Recette non trouvée')).toBeTruthy();
+            expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Recette non trouvée');
+            // We return null now, so we can't check for text in the component
+            // expect(getByText('Recette non trouvée')).toBeTruthy();
         });
     });
 

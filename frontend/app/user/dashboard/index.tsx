@@ -253,7 +253,7 @@ export default function Dashboard() {
     <TouchableOpacity
       style={[styles.card, styles.nutritionCard]}
       activeOpacity={0.7}
-      onPress={() => router.push("/user/dashboard/nutrition-monitoring")}
+      onPress={() => router.push({ pathname: "/user/dashboard/nutrition-monitoring", params: { from: "dashboard" } })}
     >
       <Text style={styles.cardTitle}>Calories absorbées</Text>
       <Text style={styles.calorieValue}>

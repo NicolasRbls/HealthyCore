@@ -173,7 +173,7 @@ export default function NutritionDiscoverScreen() {
 
   // Navigate to recipe detail
   const navigateToRecipeDetail = (recipeId: number) => {
-    router.push(`/user/nutrition/recipes/${recipeId}` as any);
+    router.push({ pathname: `/user/nutrition/recipes/${recipeId}`, params: { from: "discover" } } as any);
   };
 
   // Recipe card component

@@ -21,24 +21,62 @@ import Header from "../../../../components/layout/Header";
 import Button from "../../../../components/ui/Button";
 import imageMapping from "../../../../constants/imageMapping";
 import { useAuth } from "../../../../context/AuthContext";
-import { nutritionService, FoodProduct } from "../../../../services/nutrition.service";
+import { nutritionService } from "../../../../services/nutrition.service";
 
-export default function RecipeDetailScreen() {
+// Type definitions
+interface Tag {
+  id: number;
+  name: string;
+}
+
+interface FoodProduct {
+  id: number;
+  name: string;
+  image: string | null;
+  type: string;
+  source: string;
+  calories: number;
+  proteins: number;
+  carbs: number;
+  fats: number;
+  tags: Tag[];
+  description?: string;
+  ingredients?: string;
+  preparationTime?: number;
+  cookingTime?: number;
+  difficulty?: string;
+  servings?: number;
+  instructions?: string[];
+}
+
+export default function RecipeDetailsScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
   const recipeId = Number(params.id);
+  const from = params.from as string;
 
   const [recipe, setRecipe] = useState<FoodProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [portions, setPortions] = useState("1");
-  const [selectedMeal, setSelectedMeal] = useState<string>("dejeuner");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [selectedMeal, setSelectedMeal] = useState("dejeuner");
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    // Fetch recipe details
     fetchRecipeDetails();
   }, [recipeId]);
+
+  const handleBackPress = () => {
+    if (from === "discover") {
+      router.push("/user/nutrition/nutrition-discover");
+    } else if (from === "history") {
+      router.push("/user/dashboard/history");
+    } else if (from === "monitoring") {
+      router.push("/user/dashboard/nutrition-monitoring");
+    } else {
+      router.back();
+    }
+  };
 
   const fetchRecipeDetails = async () => {
     setIsLoading(true);
@@ -47,44 +85,59 @@ export default function RecipeDetailScreen() {
       const response = await nutritionService.getFoodById(recipeId);
 
       if (response) {
-        setRecipe(response);
+        setRecipe(response as unknown as FoodProduct);
+        if ((response as any).servings) {
+          setPortions(String((response as any).servings));
+        }
       } else {
-        Alert.alert("Erreur", "Recette introuvable");
+        Alert.alert("Erreur", "Recette non trouvée");
+        router.back();
       }
     } catch (error) {
       console.error("Error fetching recipe details:", error);
       Alert.alert(
         "Erreur",
-        "Impossible de récupérer les détails de la recette. Veuillez réessayer plus tard."
+        "Impossible de charger les détails de la recette. Veuillez réessayer plus tard."
       );
+      router.back();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get recipe image
-  const getRecipeImage = () => {
-    if (!recipe) return null;
-
-    // Check if the image path is an HTTP or HTTPS URL
-    if (
-      recipe.image &&
-      (recipe.image.startsWith("http://") ||
-        recipe.image.startsWith("https://"))
-    ) {
-      return { uri: recipe.image };
+  // Get food image based on source and id
+  const getFoodImage = (food: FoodProduct) => {
+    // Check if the image is null or undefined
+    if (!food.image) {
+      // Return a placeholder if no image
+      return {
+        uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
+          food.name
+        )}`,
+      };
     }
 
-    // Map product IDs to the imageMapping
-    const mappedId = 200 + recipe.id;
+    // Check if the image path is an HTTP or HTTPS URL
+    if (food.image.startsWith("http://") || food.image.startsWith("https://")) {
+      return { uri: food.image };
+    }
+
+    // Map aliment IDs to the imageMapping for local images
+    const mappedId = 200 + food.id;
 
     return (
       imageMapping[mappedId] || {
         uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
-          recipe.name
+          food.name
         )}`,
       }
     );
+  };
+
+  // Calculate values based on servings
+  const calculateValue = (value: number) => {
+    // Values are usually per serving for recipes
+    return Math.round(value);
   };
 
   // Format ingredients list from string
@@ -108,45 +161,49 @@ export default function RecipeDetailScreen() {
     return Math.min(100, (value / total) * 100);
   };
 
+  // Add to tracking
   const handleAddToTracking = async () => {
-    // Validate portions
-    const parsedPortions = parseInt(portions);
-    if (isNaN(parsedPortions) || parsedPortions <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer un nombre de portions valide");
+    if (!recipe) return;
+
+    const qty = parseInt(portions);
+    if (isNaN(qty) || qty <= 0) {
+      Alert.alert("Erreur", "Veuillez entrer un nombre de portions valide.");
       return;
     }
 
-    setIsSubmitting(true);
-
+    setIsAdding(true);
     try {
-      if (!recipe) {
-        throw new Error("Recette introuvable");
-      }
-
       await nutritionService.logNutrition(
         recipe.id,
-        parsedPortions,
-        selectedMeal
+        qty,
+        selectedMeal,
+        new Date().toISOString().split("T")[0]
       );
 
-      // Fermer la modale
       setShowAddModal(false);
 
-      // Afficher un message de succès
       Alert.alert(
-        "Recette ajoutée",
-        `${recipe.name} (${parsedPortions} portion${parsedPortions > 1 ? "s" : ""
-        }) a été ajoutée à votre suivi nutritionnel.`,
-        [{ text: "OK" }]
+        "Succès",
+        "Recette ajoutée à votre journal nutritionnel.",
+        [
+          {
+            text: "Continuer",
+            style: "cancel",
+          },
+          {
+            text: "Voir le journal",
+            onPress: () => router.push({ pathname: "/user/dashboard/nutrition-monitoring", params: { from: "monitoring" } } as any),
+          },
+        ]
       );
     } catch (error) {
-      console.error("Error adding recipe to tracking:", error);
+      console.error("Error adding to tracking:", error);
       Alert.alert(
         "Erreur",
-        "Impossible d'ajouter cette recette à votre suivi. Veuillez réessayer plus tard."
+        "Impossible d'ajouter la recette. Veuillez réessayer plus tard."
       );
     } finally {
-      setIsSubmitting(false);
+      setIsAdding(false);
     }
   };
 
@@ -156,36 +213,19 @@ export default function RecipeDetailScreen() {
         <Header
           title="Détails de la recette"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
-          <Text style={styles.loadingText}>Chargement...</Text>
+          <Text style={styles.loadingText}>Chargement de la recette...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   if (!recipe) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header
-          title="Détails de la recette"
-          showBackButton
-          onBackPress={() => router.back()}
-          style={{ marginTop: Layout.spacing.md }}
-        />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Recette non trouvée</Text>
-          <Button
-            text="Retour"
-            onPress={() => router.back()}
-            style={styles.backButton}
-          />
-        </View>
-      </SafeAreaView>
-    );
+    return null;
   }
 
   // Format ingredients and instructions
@@ -197,7 +237,7 @@ export default function RecipeDetailScreen() {
       <Header
         title="Détails de la recette"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         rightIconName="alert-circle-outline"
         onRightIconPress={() =>
           router.push({
@@ -211,7 +251,7 @@ export default function RecipeDetailScreen() {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
           <Image
-            source={getRecipeImage()}
+            source={getFoodImage(recipe)}
             style={styles.recipeImage}
             resizeMode="cover"
           />
@@ -522,13 +562,13 @@ export default function RecipeDetailScreen() {
                 variant="outline"
                 onPress={() => setShowAddModal(false)}
                 style={styles.modalButton}
-                disabled={isSubmitting}
+                disabled={isAdding}
               />
               <Button
-                text={isSubmitting ? "Ajout en cours..." : "Ajouter"}
+                text={isAdding ? "Ajout en cours..." : "Ajouter"}
                 onPress={handleAddToTracking}
                 style={styles.modalButton}
-                disabled={isSubmitting}
+                disabled={isAdding}
               />
             </View>
           </View>

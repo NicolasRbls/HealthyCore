@@ -113,7 +113,7 @@ describe('Dashboard', () => {
         await waitFor(() => expect(getByText('Bon retour,')).toBeTruthy());
 
         fireEvent.press(getByText('Calories absorbées'));
-        expect(router.push).toHaveBeenCalledWith('/user/dashboard/nutrition-monitoring');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/dashboard/nutrition-monitoring', params: { from: 'dashboard' } });
 
         fireEvent.press(getByText('Séance du jour'));
         expect(router.push).toHaveBeenCalledWith('/user/dashboard/sport-monitoring');
@@ -150,6 +150,6 @@ describe('Dashboard', () => {
         await waitFor(() => expect(getByTestId('badge-button')).toBeTruthy());
 
         fireEvent.press(getByTestId('badge-button'));
-        expect(router.push).toHaveBeenCalledWith('/user/dashboard/badge-monitoring');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/dashboard/badge-monitoring', params: { from: 'dashboard' } });
     });
 });
