@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import SportMonitoring from '../../app/user/dashboard/sport-monitoring';
 import apiService from '../../services/api.service';
 import { router } from 'expo-router';
+import { format } from 'date-fns';
 
 // Mocks
 jest.mock('../../services/api.service');
@@ -58,7 +59,8 @@ describe('SportMonitoring', () => {
         fireEvent(switchElement, 'valueChange', true);
 
         await waitFor(() => {
-            expect(apiService.post).toHaveBeenCalledWith('/data/programs/sessions/1/complete', {});
+            const expectedDate = format(new Date(), 'yyyy-MM-dd');
+            expect(apiService.post).toHaveBeenCalledWith('/data/programs/sessions/1/complete', { date: expectedDate });
         });
     });
 

@@ -11,6 +11,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
+import { format } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -61,9 +62,7 @@ export default function SportMonitoring() {
       ]);
 
       // Obtenir la date du jour pour comparer
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+      const todayStr = format(new Date(), "yyyy-MM-dd"); // Format YYYY-MM-DD
 
       // Si l'utilisateur a un programme actif
       if (sportProgressData.activeProgram) {
@@ -202,9 +201,10 @@ export default function SportMonitoring() {
     );
     try {
       // Appel API pour marquer la séance comme complétée
+      const today = format(new Date(), "yyyy-MM-dd");
       await apiService.post(
         `/data/programs/sessions/${sessionId}/complete`,
-        {}
+        { date: today }
       );
 
       // Rafraîchir les données pour confirmer que tout est à jour
