@@ -23,6 +23,7 @@ import Card from "../../../components/ui/Card";
 import imageMapping from "../../../constants/imageMapping";
 import { useAuth } from "../../../context/AuthContext";
 import { nutritionService } from "../../../services/nutrition.service";
+import { NUTRITION_FILTERS } from "../../../constants/Filters";
 
 // Type definitions
 interface Tag {
@@ -90,11 +91,10 @@ export default function NutritionDiscoverScreen() {
         const vegetarian = recipesData.filter(
           (recipe) =>
             recipe.tags &&
-            recipe.tags.some(
-              (tag) =>
-                tag.name.toLowerCase().includes("vegetarien") ||
-                tag.name.toLowerCase().includes("veggie") ||
-                tag.name.toLowerCase().includes("legume")
+            recipe.tags.some((tag) =>
+              NUTRITION_FILTERS.VEGETARIAN.some((filter) =>
+                tag.name.toLowerCase().includes(filter)
+              )
             )
         );
         setVegetarianRecipes(vegetarian);
@@ -103,11 +103,10 @@ export default function NutritionDiscoverScreen() {
         const simple = recipesData.filter(
           (recipe) =>
             recipe.tags &&
-            recipe.tags.some(
-              (tag) =>
-                tag.name.toLowerCase().includes("simple") ||
-                tag.name.toLowerCase().includes("rapide") ||
-                tag.name.toLowerCase().includes("facile")
+            recipe.tags.some((tag) =>
+              NUTRITION_FILTERS.SIMPLE.some((filter) =>
+                tag.name.toLowerCase().includes(filter)
+              )
             )
         );
         setSimpleRecipes(simple);
@@ -116,10 +115,10 @@ export default function NutritionDiscoverScreen() {
         const sides = recipesData.filter(
           (recipe) =>
             recipe.tags &&
-            recipe.tags.some(
-              (tag) =>
-                tag.name.toLowerCase().includes("accompagnement") ||
-                tag.name.toLowerCase().includes("garniture")
+            recipe.tags.some((tag) =>
+              NUTRITION_FILTERS.SIDES.some((filter) =>
+                tag.name.toLowerCase().includes(filter)
+              )
             )
         );
         setSideRecipes(sides);
