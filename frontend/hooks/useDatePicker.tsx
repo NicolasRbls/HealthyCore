@@ -4,6 +4,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
+import { format as formatFn } from "date-fns";
 
 interface UseDatePickerOptions {
   initialDate?: Date | null;
@@ -19,7 +20,7 @@ export function useDatePicker({
   minDate,
   maxDate,
   onChange,
-  format = (date) => date.toISOString().split("T")[0], // Format par défaut: YYYY-MM-DD
+  format = (date) => formatFn(date, "yyyy-MM-dd"), // Format par défaut: YYYY-MM-DD
   mode = "date",
 }: UseDatePickerOptions = {}) {
   const [date, setDate] = useState<Date | null>(initialDate);
