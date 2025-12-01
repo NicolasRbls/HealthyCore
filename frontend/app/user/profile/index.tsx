@@ -80,7 +80,7 @@ export default function ProfileScreen() {
   };
 
   const navigateToBadges = () => {
-    router.push("/user/dashboard/badge-monitoring" as any);
+    router.push({ pathname: "/user/dashboard/badge-monitoring", params: { from: "profile" } } as any);
   };
 
   const navigateToEditProfile = () => {

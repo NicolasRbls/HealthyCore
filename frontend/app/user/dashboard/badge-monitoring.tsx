@@ -10,7 +10,7 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
@@ -21,6 +21,7 @@ import userService, {
 } from "../../../services/user.service";
 
 export default function BadgeMonitoring() {
+  const { from } = useLocalSearchParams();
   const [unlockedBadges, setUnlockedBadges] = useState<UnlockedBadge[]>([]);
   const [lockedBadges, setLockedBadges] = useState<LockedBadge[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -31,6 +32,14 @@ export default function BadgeMonitoring() {
     // Check for new badges when the component mounts
     checkNewBadges();
   }, []);
+
+  const handleBackPress = () => {
+    if (from === "profile") {
+      router.push("/user/profile");
+    } else {
+      router.push("/user/dashboard");
+    }
+  };
 
   const fetchBadges = async () => {
     setIsLoading(true);
@@ -164,7 +173,7 @@ export default function BadgeMonitoring() {
       <Header
         title="Mes badges"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         style={{ marginTop: Layout.spacing.md }}
       />
 

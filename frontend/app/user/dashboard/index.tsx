@@ -337,7 +337,7 @@ export default function Dashboard() {
             <TouchableOpacity
               testID="badge-button"
               style={styles.badgeButton}
-              onPress={() => router.push("/user/dashboard/badge-monitoring")}
+              onPress={() => router.push({ pathname: "/user/dashboard/badge-monitoring", params: { from: "dashboard" } })}
             >
               <Ionicons name="trophy" size={24} color="#A091FF" />
             </TouchableOpacity>
