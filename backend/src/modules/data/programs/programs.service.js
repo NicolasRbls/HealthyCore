@@ -226,9 +226,13 @@ const getProgramDetails = async (userId, programId) => {
     const daysSinceStart = Math.floor(
       (new Date() - new Date(userProgram.date_debut)) / (1000 * 60 * 60 * 24)
     );
-    const totalSessions = program.seances_programmes.length;
+
+    // Fix: totalSessions should be sessions per week * duration in weeks
+    const sessionsPerWeek = program.seances_programmes.length;
+    const totalSessions = sessionsPerWeek * program.duree;
+
     const expectedSessions = Math.min(
-      Math.ceil((daysSinceStart / program.duree) * totalSessions),
+      Math.ceil((daysSinceStart / (program.duree * 7)) * totalSessions),
       totalSessions
     );
 
@@ -236,10 +240,10 @@ const getProgramDetails = async (userId, programId) => {
       startDate: userProgram.date_debut,
       endDate: userProgram.date_fin,
       completedSessions,
-      totalSessions: expectedSessions,
+      totalSessions: totalSessions, // Return the true total
       progressPercentage:
-        expectedSessions > 0
-          ? Math.round((completedSessions / expectedSessions) * 100)
+        totalSessions > 0
+          ? Math.round((completedSessions / totalSessions) * 100)
           : 0,
     };
   }
@@ -640,20 +644,24 @@ const getSportProgress = async (userId) => {
     const today = new Date();
     const startDate = new Date(activeUserProgram.date_debut);
     const endDate = new Date(activeUserProgram.date_fin);
-    const daysPassed = Math.floor((today - startDate) / 86400000);
-    const totalDays = Math.floor((endDate - startDate) / 86400000);
-    const totalSessions =
-      activeUserProgram.programmes.seances_programmes.length;
+    const daysPassed = Math.max(0, Math.floor((today - startDate) / 86400000));
+    const totalDays = Math.max(1, Math.floor((endDate - startDate) / 86400000));
+
+    // Fix: totalSessions should be sessions per week * duration in weeks
+    const sessionsPerWeek = activeUserProgram.programmes.seances_programmes.length;
+    const totalSessions = sessionsPerWeek * activeUserProgram.programmes.duree;
+
     const completedSessions = sportFollowUps.length;
 
     const expectedSessions = Math.round(
       (daysPassed / totalDays) * totalSessions
     );
 
+    // Progress is completed / total, not completed / expected
     const sessionProgressPercentage =
-      expectedSessions > 0
+      totalSessions > 0
         ? Math.min(
-          Math.round((completedSessions / expectedSessions) * 100),
+          Math.round((completedSessions / totalSessions) * 100),
           100
         )
         : 0;
@@ -679,7 +687,8 @@ const getSportProgress = async (userId) => {
         endDate: activeUserProgram.date_fin,
         progressPercentage: sessionProgressPercentage,
         completedSessions,
-        totalSessions: Math.min(expectedSessions, totalSessions),
+        totalSessions: totalSessions, // Return true total
+        expectedSessions: expectedSessions, // Add expected for debugging/display
       },
       weeklySchedule,
       recentSessions,

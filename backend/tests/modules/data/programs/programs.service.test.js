@@ -336,5 +336,47 @@ describe('User Programs Service', () => {
             expect(result.activeProgram).toBeNull();
             expect(result.recentSessions.length).toBe(0);
         });
+
+        it('should calculate progress correctly considering program duration in weeks', async () => {
+            const mockActiveProgram = {
+                id_programme: 1,
+                date_debut: new Date(new Date().setDate(new Date().getDate() - 14)), // Started 14 days ago (2 weeks)
+                date_fin: new Date(new Date().setDate(new Date().getDate() + 56)), // Ends in future
+                programmes: {
+                    nom: '10 Week Program',
+                    duree: 10, // 10 weeks
+                    seances_programmes: [
+                        { ordre_seance: 1, seances: { id_seance: 1, nom: 'S1' } },
+                        { ordre_seance: 2, seances: { id_seance: 2, nom: 'S2' } },
+                        { ordre_seance: 3, seances: { id_seance: 3, nom: 'S3' } }
+                    ]
+                }
+            };
+            // User completed 3 sessions
+            const mockFollowUps = [
+                { id_suivi_sportif: 1, id_seance: 1, date: new Date(), seances: { nom: 'S1' } },
+                { id_suivi_sportif: 2, id_seance: 2, date: new Date(), seances: { nom: 'S2' } },
+                { id_suivi_sportif: 3, id_seance: 3, date: new Date(), seances: { nom: 'S3' } }
+            ];
+
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(mockActiveProgram);
+            prisma.suivis_sportifs.findMany.mockResolvedValue(mockFollowUps);
+            prisma.suivis_sportifs.count.mockResolvedValue(3);
+
+            const result = await getSportProgress(1);
+
+            // Total sessions should be 3 sessions/week * 10 weeks = 30
+            expect(result.activeProgram.totalSessions).toBe(30);
+
+            // Expected sessions after 14 days:
+            // 14 days / 70 days total = 20%
+            // 20% of 30 sessions = 6 sessions expected
+            expect(result.activeProgram.expectedSessions).toBe(6);
+
+            expect(result.activeProgram.completedSessions).toBe(3);
+
+            // Progress percentage: 3 completed / 30 total = 10%
+            expect(result.activeProgram.progressPercentage).toBe(10);
+        });
     });
 });
