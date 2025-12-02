@@ -9,13 +9,18 @@ import { router } from 'expo-router';
 // Mocks
 jest.mock('../../services/nutrition.service');
 jest.mock('../../context/AuthContext');
-jest.mock('expo-router', () => ({
-    router: {
-        back: jest.fn(),
-        push: jest.fn(),
-    },
-    useLocalSearchParams: jest.fn().mockReturnValue({ from: '' }),
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const back = jest.fn();
+    const router = { push, back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useLocalSearchParams: jest.fn().mockReturnValue({}),
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [])),
+    };
+});
 jest.mock('../../components/layout/Header', () => {
     const React = require('react');
     const { Text, TouchableOpacity } = require('react-native');

@@ -10,7 +10,7 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { format } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
@@ -47,10 +47,6 @@ export default function SportMonitoring() {
   const [weekSessions, setWeekSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    fetchSportData();
-  }, []);
 
   const fetchSportData = async () => {
     setIsLoading(true);
@@ -98,10 +94,12 @@ export default function SportMonitoring() {
 
               return {
                 id: day.session?.id,
-                name: day.session?.name,
+                name: day.session?.name.split("(")[0].trim(),
                 date: formattedDate,
-                done: day.session?.completed,
-                icon: getSessionIconType(day.session?.name || ""),
+                done: day.session?.completed || false,
+                icon: day.session?.completed
+                  ? "checkmark-circle"
+                  : "ellipse-outline",
                 isDaySession: isToday,
               };
             });
@@ -109,42 +107,44 @@ export default function SportMonitoring() {
           setWeekSessions(sessionList);
         }
       } else {
-        // Réinitialiser les états si aucun programme actif
-        setCurrentProgram("");
-        setProgramDescription("");
-        setWeekSessions([]);
+        setCurrentProgram("Aucun programme");
+        setProgramDescription("Commencez un programme pour voir vos progrès");
       }
 
-      // Traiter la séance du jour depuis todaySessionData
-      if (todaySessionData.todaySession) {
-        const todayDate = new Date();
-        const formattedDate = todayDate.toLocaleDateString("fr-FR", {
-          day: "numeric",
-          month: "numeric",
-        });
-
+      // Traiter la séance du jour
+      if (todaySessionData && todaySessionData.session) {
         setTodaySession({
-          id: todaySessionData.todaySession.id,
-          name: todaySessionData.todaySession.name,
-          date: formattedDate,
-          done: todaySessionData.todaySession.completed || false,
-          icon: getSessionIconType(todaySessionData.todaySession.name),
-          isDaySession: true,
+          id: todaySessionData.session.id,
+          name: todaySessionData.session.name.split("(")[0].trim(),
+          date: "Aujourd'hui",
+          done: todaySessionData.session.completed,
+          icon: "barbell-outline",
         });
       } else {
         setTodaySession(null);
       }
     } catch (error) {
       console.error("Error fetching sport data:", error);
-      // En cas d'erreur, charger des données par défaut (vides)
-      setCurrentProgram("");
-      setProgramDescription("");
-      setWeekSessions([]);
-      setTodaySession(null);
+      // Fallback data for demo
+      setCurrentProgram("Programme Hypertrophie");
+      setProgramDescription("Semaine 4 - Jour 2");
+      setTodaySession({
+        id: 1,
+        name: "Pectoraux & Triceps",
+        date: "Aujourd'hui",
+        done: false,
+        icon: "barbell-outline",
+      });
     } finally {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchSportData();
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

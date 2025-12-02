@@ -22,11 +22,18 @@ jest.mock('../../context/AuthContext', () => ({
     }),
 }));
 
-jest.mock('expo-router', () => ({
-    router: {
-        push: jest.fn(),
-    },
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const back = jest.fn();
+    const router = { push, back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useLocalSearchParams: jest.fn().mockReturnValue({}),
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [])),
+    };
+});
 
 jest.mock('@expo/vector-icons', () => ({
     Ionicons: 'Ionicons',

@@ -6,12 +6,18 @@ import { format } from 'date-fns';
 
 // Mocks
 jest.mock('../../services/api.service');
-jest.mock('expo-router', () => ({
-    router: {
-        push: jest.fn(),
-        back: jest.fn(),
-    },
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const back = jest.fn();
+    const router = { push, back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useLocalSearchParams: jest.fn(() => ({})),
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [])),
+    };
+});
 jest.mock('../../components/layout/Header', () => 'Header');
 jest.mock('@expo/vector-icons', () => ({
     Ionicons: 'Ionicons',

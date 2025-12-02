@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -79,18 +79,6 @@ export default function NutritionMonitoring() {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteInProgress, setDeleteInProgress] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleBackPress = () => {
-    if (from === "dashboard") {
-      router.push("/user/dashboard");
-    } else {
-      router.back();
-    }
-  };
-
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -100,22 +88,20 @@ export default function NutritionMonitoring() {
         setSummary(summaryData);
       }
 
-      // Load today's nutrition data
+      // Load today's nutrition details
       const todayData = await nutritionService.getTodayNutrition();
       if (todayData) {
         setNutritionData(todayData);
 
-        // Flatten meals into a single array for display
+        // Flatten meals into a single list of food entries
         const allEntries: FoodEntry[] = [];
-        Object.entries(todayData.meals).forEach(([mealType, entries]) => {
-          entries.forEach((entry) => {
-            allEntries.push({
-              ...entry,
-              meal: mealType,
-            });
-          });
+        Object.keys(todayData.meals).forEach((mealType) => {
+          const mealEntries = todayData.meals[mealType].map((entry) => ({
+            ...entry,
+            meal: mealType,
+          }));
+          allEntries.push(...mealEntries);
         });
-
         setFoodEntries(allEntries);
       }
     } catch (error) {
@@ -126,6 +112,20 @@ export default function NutritionMonitoring() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
+
+  const handleBackPress = () => {
+    if (from === "dashboard") {
+      router.push("/user/dashboard");
+    } else {
+      router.back();
     }
   };
 

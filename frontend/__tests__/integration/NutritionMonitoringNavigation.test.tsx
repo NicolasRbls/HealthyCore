@@ -6,13 +6,18 @@ import { router } from 'expo-router';
 
 // Mocks
 jest.mock('../../services/nutrition.service');
-jest.mock('expo-router', () => ({
-    router: {
-        push: jest.fn(),
-        back: jest.fn(),
-    },
-    useLocalSearchParams: jest.fn().mockReturnValue({ from: '' }),
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const back = jest.fn();
+    const router = { push, back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useLocalSearchParams: jest.fn().mockReturnValue({ from: '' }),
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [])),
+    };
+});
 
 jest.mock('../../context/AuthContext', () => ({
     useAuth: () => ({
