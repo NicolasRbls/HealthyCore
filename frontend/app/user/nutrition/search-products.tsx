@@ -184,7 +184,7 @@ export default function SearchProductsScreen() {
       // Si on a un produit, naviguer vers la page de détail
       if (response.data && response.data.id) {
         // Navigate to the product detail page
-        router.push({ pathname: `/user/nutrition/products/${response.data.id}`, params: { from: "search" } } as any);
+        router.push(`/nutrition-details/products/${response.data.id}` as any);
       } else {
         // Dans le cas où la structure de réponse est inattendue
         setTimeout(() => {
@@ -336,7 +336,7 @@ export default function SearchProductsScreen() {
 
   // Navigate to food detail
   const navigateToProductDetail = (productId: number) => {
-    router.push({ pathname: `/user/nutrition/products/${productId}`, params: { from: "search" } } as any);
+    router.push(`/nutrition-details/products/${productId}` as any);
   };
 
   // Product list item component

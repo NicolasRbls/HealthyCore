@@ -14,14 +14,14 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../../../../constants/Colors";
-import Layout from "../../../../constants/Layout";
-import { TextStyles } from "../../../../constants/Fonts";
-import Header from "../../../../components/layout/Header";
-import Button from "../../../../components/ui/Button";
-import imageMapping from "../../../../constants/imageMapping";
-import { useAuth } from "../../../../context/AuthContext";
-import { nutritionService } from "../../../../services/nutrition.service";
+import Colors from "../../../constants/Colors";
+import Layout from "../../../constants/Layout";
+import { TextStyles } from "../../../constants/Fonts";
+import Header from "../../../components/layout/Header";
+import Button from "../../../components/ui/Button";
+import imageMapping from "../../../constants/imageMapping";
+import { useAuth } from "../../../context/AuthContext";
+import { nutritionService } from "../../../services/nutrition.service";
 
 // Type definitions
 interface Tag {
@@ -53,7 +53,6 @@ export default function RecipeDetailsScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
   const recipeId = Number(params.id);
-  const from = params.from as string;
 
   const [recipe, setRecipe] = useState<FoodProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,15 +66,7 @@ export default function RecipeDetailsScreen() {
   }, [recipeId]);
 
   const handleBackPress = () => {
-    if (from === "discover") {
-      router.push("/user/nutrition/nutrition-discover");
-    } else if (from === "history") {
-      router.push("/user/dashboard/history");
-    } else if (from === "monitoring") {
-      router.push("/user/dashboard/nutrition-monitoring");
-    } else {
-      router.back();
-    }
+    router.back();
   };
 
   const fetchRecipeDetails = async () => {

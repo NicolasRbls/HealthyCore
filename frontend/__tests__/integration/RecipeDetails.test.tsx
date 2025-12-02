@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import RecipeDetailScreen from '../../app/user/nutrition/recipes/[id]';
+import RecipeDetailScreen from '../../app/nutrition-details/recipes/[id]';
 import { nutritionService } from '../../services/nutrition.service';
 import { useAuth } from '../../context/AuthContext';
 import { Alert } from 'react-native';

@@ -171,7 +171,7 @@ describe('NutritionHistoryScreen', () => {
 
         await waitFor(() => {
             expect(nutritionService.getFoodById).toHaveBeenCalledWith(101);
-            expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/products/101', params: { from: 'history' } });
+            expect(router.push).toHaveBeenCalledWith('/nutrition-details/products/101');
         });
     });
 
@@ -210,7 +210,7 @@ describe('NutritionHistoryScreen', () => {
 
         await waitFor(() => {
             expect(nutritionService.getFoodById).toHaveBeenCalledWith(202);
-            expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/recipes/202', params: { from: 'history' } });
+            expect(router.push).toHaveBeenCalledWith('/nutrition-details/recipes/202');
         });
     });
 

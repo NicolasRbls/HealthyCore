@@ -83,7 +83,7 @@ describe('NutritionDiscoverScreen', () => {
         await waitFor(() => expect(getAllByText('Salad').length).toBeGreaterThan(0), { timeout: 10000 });
 
         fireEvent.press(getAllByText('Salad')[0]);
-        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/recipes/1', params: { from: 'discover' } });
+        expect(router.push).toHaveBeenCalledWith('/nutrition-details/recipes/1');
     });
 
     it('handles fetch error', async () => {

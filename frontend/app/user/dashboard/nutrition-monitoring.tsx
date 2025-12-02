@@ -257,15 +257,15 @@ export default function NutritionMonitoring() {
       .getFoodById(foodId)
       .then((food) => {
         if (food.type === "recette") {
-          router.push({ pathname: `/user/nutrition/recipes/${foodId}`, params: { from: "monitoring" } } as any);
+          router.push(`/nutrition-details/recipes/${foodId}` as any);
         } else {
-          router.push({ pathname: `/user/nutrition/products/${foodId}`, params: { from: "monitoring" } } as any);
+          router.push(`/nutrition-details/products/${foodId}` as any);
         }
       })
       .catch((error) => {
         console.error("Error fetching food details:", error);
         // Fallback to products route
-        router.push({ pathname: `/user/nutrition/products/${foodId}`, params: { from: "monitoring" } } as any);
+        router.push(`/nutrition-details/products/${foodId}` as any);
       });
   };
 
