@@ -8,7 +8,11 @@ const { catchAsync } = require("../../utils/catcherror.utils");
  */
 const getUserDailyObjectives = catchAsync(async (req, res) => {
   const userId = req.user.id_user;
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
   // Récupérer tous les objectifs disponibles
   const allObjectives = await prisma.objectifs.findMany();
@@ -17,7 +21,10 @@ const getUserDailyObjectives = catchAsync(async (req, res) => {
   const userObjectives = await prisma.objectifs_utilisateurs.findMany({
     where: {
       id_user: userId,
-      date: today,
+      date: {
+        gte: today,
+        lt: tomorrow,
+      },
     },
     include: {
       objectifs: true,
@@ -85,7 +92,11 @@ const getUserDailyObjectives = catchAsync(async (req, res) => {
  * Vérifier automatiquement les objectifs complétés
  */
 const checkObjectivesCompletion = async (userId, objectives) => {
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
   // Vérifier l'objectif "Ajouter un aliment à son suivi quotidien"
   const foodObjective = objectives.find((obj) =>
@@ -95,7 +106,10 @@ const checkObjectivesCompletion = async (userId, objectives) => {
     const foodTracking = await prisma.suivis_nutritionnels.findFirst({
       where: {
         id_user: userId,
-        date: today,
+        date: {
+          gte: today,
+          lt: tomorrow,
+        },
       },
     });
 
@@ -117,7 +131,10 @@ const checkObjectivesCompletion = async (userId, objectives) => {
     const workoutTracking = await prisma.suivis_sportifs.findFirst({
       where: {
         id_user: userId,
-        date: today,
+        date: {
+          gte: today,
+          lt: tomorrow,
+        },
       },
     });
 

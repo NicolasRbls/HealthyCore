@@ -8,9 +8,34 @@ const {
 const validationValidators = require("./validation.validators");
 
 /**
- * @route POST /api/validation/check-email
- * @desc Vérifier la disponibilité d'un email
- * @access Public
+ * @swagger
+ * tags:
+ *   name: Validation
+ *   description: Input validation endpoints
+ */
+
+/**
+ * @swagger
+ * /api/validation/check-email:
+ *   post:
+ *     summary: Check email availability
+ *     tags: [Validation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email is available
+ *       400:
+ *         description: Email already exists or invalid
  */
 router.post(
   "/check-email",
@@ -19,9 +44,36 @@ router.post(
 );
 
 /**
- * @route POST /api/validation/validate-profile
- * @desc Valider les données du profil (nom, prénom, email, mot de passe)
- * @access Public
+ * @swagger
+ * /api/validation/validate-profile:
+ *   post:
+ *     summary: Validate profile data
+ *     tags: [Validation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile data is valid
+ *       400:
+ *         description: Validation error
  */
 router.post(
   "/validate-profile",
@@ -30,9 +82,37 @@ router.post(
 );
 
 /**
- * @route POST /api/validation/validate-physical
- * @desc Valider les attributs physiques (genre, date de naissance, poids, taille)
- * @access Public
+ * @swagger
+ * /api/validation/validate-physical:
+ *   post:
+ *     summary: Validate physical attributes
+ *     tags: [Validation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - gender
+ *               - birthDate
+ *               - weight
+ *               - height
+ *             properties:
+ *               gender:
+ *                 type: string
+ *               birthDate:
+ *                 type: string
+ *                 format: date
+ *               weight:
+ *                 type: number
+ *               height:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Physical attributes are valid
+ *       400:
+ *         description: Validation error
  */
 router.post(
   "/validate-physical",
@@ -41,9 +121,33 @@ router.post(
 );
 
 /**
- * @route POST /api/validation/validate-target-weight
- * @desc Valider le poids cible et calculer l'estimation
- * @access Public
+ * @swagger
+ * /api/validation/validate-target-weight:
+ *   post:
+ *     summary: Validate target weight
+ *     tags: [Validation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - targetWeight
+ *               - currentWeight
+ *               - height
+ *             properties:
+ *               targetWeight:
+ *                 type: number
+ *               currentWeight:
+ *                 type: number
+ *               height:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Target weight is valid
+ *       400:
+ *         description: Validation error
  */
 router.post(
   "/validate-target-weight",

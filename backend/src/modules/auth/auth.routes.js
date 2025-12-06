@@ -7,37 +7,124 @@ const {
 } = require("../../middleware/validation.middleware");
 
 /**
- * @route POST /api/auth/register
- * @desc Inscription d'un nouvel utilisateur
- * @access Public
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication management
+ */
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *               - birthDate
+ *               - gender
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               birthDate:
+ *                 type: string
+ *                 format: date
+ *               gender:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Validation error
  */
 router.post("/register", validateRegistration, authController.register);
 
 /**
- * @route POST /api/auth/login
- * @desc Connexion d'un utilisateur
- * @access Public
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login a user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid credentials
  */
 router.post("/login", authController.login);
 
 /**
- * @route GET /api/auth/verify-token
- * @desc Vérification de la validité d'un token JWT
- * @access Private
+ * @swagger
+ * /api/auth/verify-token:
+ *   get:
+ *     summary: Verify JWT token validity
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *       401:
+ *         description: Invalid or expired token
  */
 router.get("/verify-token", checkAuth, authController.verifyToken);
 
 /**
- * @route GET /api/auth/me
- * @desc Récupération des informations de l'utilisateur authentifié
- * @access Private
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile data
+ *       401:
+ *         description: Not authenticated
  */
 router.get("/me", checkAuth, authController.getMe);
 
 /**
- * @route POST /api/auth/logout
- * @desc Déconnexion de l'utilisateur
- * @access Private
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
  */
 router.post("/logout", checkAuth, authController.logout);
 

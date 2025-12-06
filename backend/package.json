@@ -27,7 +27,9 @@
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "pg": "^8.13.3",
-    "prisma": "^6.4.1"
+    "prisma": "^6.4.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
