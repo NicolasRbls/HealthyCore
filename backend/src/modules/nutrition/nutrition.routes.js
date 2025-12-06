@@ -5,52 +5,141 @@ const { checkAuth } = require("../auth/auth.middleware");
 const router = express.Router();
 
 /**
- * Routes publiques (accessibles sans authentification)
+ * @swagger
+ * tags:
+ *   name: Nutrition
+ *   description: Nutrition and food management
  */
 
 /**
- * @route GET /api/nutrition
- * @desc Récupérer tous les aliments avec pagination et filtrage
- * @access Public
+ * @swagger
+ * /api/nutrition:
+ *   get:
+ *     summary: Get all foods with pagination and filtering
+ *     tags: [Nutrition]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term
+ *     responses:
+ *       200:
+ *         description: List of foods
  */
 router.get("/", NutritionController.getAllFoods);
 
 /**
- * @route GET /api/nutrition/:id
- * @desc Récupérer un aliment par son identifiant
- * @access Public
+ * @swagger
+ * /api/nutrition/{id}:
+ *   get:
+ *     summary: Get a food item by ID
+ *     tags: [Nutrition]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Food ID
+ *     responses:
+ *       200:
+ *         description: Food details
+ *       404:
+ *         description: Food not found
  */
 router.get("/:id", NutritionController.getFoodById);
 
 /**
- * Routes utilisateur (nécessitent une authentification)
- */
-
-/**
- * @route GET /api/nutrition/user/summary
- * @desc Obtenir le résumé nutritionnel de l'utilisateur
- * @access Private (User)
+ * @swagger
+ * /api/nutrition/user/summary:
+ *   get:
+ *     summary: Get user nutrition summary
+ *     tags: [Nutrition]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Nutrition summary
  */
 router.get("/user/summary", checkAuth, NutritionController.getNutritionSummary);
 
 /**
- * @route GET /api/nutrition/user/today
- * @desc Obtenir la nutrition d'aujourd'hui
- * @access Private (User)
+ * @swagger
+ * /api/nutrition/user/today:
+ *   get:
+ *     summary: Get today's nutrition logs
+ *     tags: [Nutrition]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Today's nutrition logs
  */
 router.get("/user/today", checkAuth, NutritionController.getTodayNutrition);
 
 /**
- * @route POST /api/nutrition/user/log
- * @desc Ajouter un aliment au suivi nutritionnel
- * @access Private (User)
+ * @swagger
+ * /api/nutrition/user/log:
+ *   post:
+ *     summary: Log a food item
+ *     tags: [Nutrition]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - foodId
+ *               - quantity
+ *               - meal
+ *             properties:
+ *               foodId:
+ *                 type: integer
+ *               quantity:
+ *                 type: number
+ *               meal:
+ *                 type: string
+ *               date:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       201:
+ *         description: Food logged successfully
  */
 router.post("/user/log", checkAuth, NutritionController.logNutrition);
 
 /**
- * @route DELETE /api/nutrition/user/log/:entryId
- * @desc Supprimer une entrée du suivi nutritionnel
- * @access Private (User)
+ * @swagger
+ * /api/nutrition/user/log/{entryId}:
+ *   delete:
+ *     summary: Delete a nutrition log entry
+ *     tags: [Nutrition]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: entryId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Log entry ID
+ *     responses:
+ *       200:
+ *         description: Entry deleted successfully
  */
 router.delete(
   "/user/log/:entryId",
@@ -59,9 +148,27 @@ router.delete(
 );
 
 /**
- * @route GET /api/nutrition/user/history
- * @desc Récupérer l'historique du suivi nutritionnel
- * @access Private (User)
+ * @swagger
+ * /api/nutrition/user/history:
+ *   get:
+ *     summary: Get nutrition history
+ *     tags: [Nutrition]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Nutrition history
  */
 router.get("/user/history", checkAuth, NutritionController.getNutritionHistory);
 
