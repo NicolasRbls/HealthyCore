@@ -34,11 +34,7 @@ export default function BadgeMonitoring() {
   }, []);
 
   const handleBackPress = () => {
-    if (from === "profile") {
-      router.push("/user/profile");
-    } else {
-      router.push("/user/dashboard");
-    }
+    router.back();
   };
 
   const fetchBadges = async () => {

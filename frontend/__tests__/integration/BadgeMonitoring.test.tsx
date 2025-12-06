@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import BadgeMonitoring from '../../app/user/dashboard/badge-monitoring';
 import userService from '../../services/user.service';
-import { Alert } from 'react-native';
+import { Alert, TouchableOpacity, Text } from 'react-native';
+import { router } from 'expo-router';
 
 // Mocks
 jest.mock('../../services/user.service');
@@ -12,7 +13,17 @@ jest.mock('expo-router', () => ({
     },
     useLocalSearchParams: jest.fn().mockReturnValue({ from: '' }),
 }));
-jest.mock('../../components/layout/Header', () => 'Header');
+
+// Mock Header to be interactive
+jest.mock('../../components/layout/Header', () => {
+    const React = require('react');
+    const { TouchableOpacity, Text } = require('react-native');
+    return ({ onBackPress }: { onBackPress?: () => void }) => (
+        <TouchableOpacity onPress={onBackPress} testID="header-back-button">
+            <Text>Header</Text>
+        </TouchableOpacity>
+    );
+});
 
 describe('BadgeMonitoring', () => {
     const mockBadges = {
@@ -58,5 +69,14 @@ describe('BadgeMonitoring', () => {
                 expect.any(Array)
             );
         });
+    });
+
+    it('handles back press', async () => {
+        const { getByTestId } = render(<BadgeMonitoring />);
+
+        const backButton = getByTestId('header-back-button');
+        fireEvent.press(backButton);
+
+        expect(router.back).toHaveBeenCalled();
     });
 });
