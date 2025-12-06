@@ -21,7 +21,7 @@ import Card from "../../../components/ui/Card";
 import Header from "../../../components/layout/Header";
 import NumericInput from "../../../components/ui/NumericInput";
 import DatePicker from "../../../components/ui/DatePicker";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import userService, {
   EvolutionEntry,
   EvolutionStatistics,
@@ -47,11 +47,6 @@ export default function ProgressScreen() {
     height: "",
     date: format(new Date(), "yyyy-MM-dd"),
   });
-
-  useEffect(() => {
-    fetchEvolutionData();
-    fetchProgressStats();
-  }, [period]);
 
   const fetchEvolutionData = async () => {
     try {
@@ -93,6 +88,13 @@ export default function ProgressScreen() {
       setProgressStats(null);
     }
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchEvolutionData();
+      fetchProgressStats();
+    }, [period])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
