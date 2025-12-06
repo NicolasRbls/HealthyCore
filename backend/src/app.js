@@ -44,7 +44,26 @@ app.use((req, res, next) => {
     next();
 });
 
-// Configure health check
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Health check
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: System is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 version:
+ *                   type: string
+ */
 app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "healthy", version: config.VERSION });
 });
