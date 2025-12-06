@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { format as formatFn } from "date-fns";
 import Colors from "../../constants/Colors";
 import Layout from "../../constants/Layout";
 import Input, { InputProps } from "./Input";
@@ -42,7 +43,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
   onChange,
   minDate,
   maxDate,
-  format = (date) => date.toISOString().split("T")[0],
+  format = (date) => formatFn(date, "yyyy-MM-dd"),
   mode = "date",
   display = Platform.OS === "ios" ? "spinner" : "default",
   containerStyle,

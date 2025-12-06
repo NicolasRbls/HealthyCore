@@ -12,6 +12,7 @@ jest.mock('expo-router', () => ({
         back: jest.fn(),
         push: jest.fn(),
     },
+    useLocalSearchParams: jest.fn().mockReturnValue({ from: '' }),
 }));
 jest.mock('../../components/layout/Header', () => {
     const { Text, TouchableOpacity } = require('react-native');
@@ -104,7 +105,7 @@ describe('NutritionHistoryScreen', () => {
 
         // Test empty button navigation
         fireEvent.press(getByTestId('empty-history-button'));
-        expect(router.push).toHaveBeenCalledWith('/user/nutrition/nutrition-discover');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/nutrition-discover', params: { from: 'history' } });
 
         // Test back button in empty state
         fireEvent.press(getByTestId('header-back-button'));
@@ -170,7 +171,7 @@ describe('NutritionHistoryScreen', () => {
 
         await waitFor(() => {
             expect(nutritionService.getFoodById).toHaveBeenCalledWith(101);
-            expect(router.push).toHaveBeenCalledWith('/user/nutrition/products/101');
+            expect(router.push).toHaveBeenCalledWith('/nutrition-details/products/101');
         });
     });
 
@@ -209,7 +210,7 @@ describe('NutritionHistoryScreen', () => {
 
         await waitFor(() => {
             expect(nutritionService.getFoodById).toHaveBeenCalledWith(202);
-            expect(router.push).toHaveBeenCalledWith('/user/nutrition/recipes/202');
+            expect(router.push).toHaveBeenCalledWith('/nutrition-details/recipes/202');
         });
     });
 

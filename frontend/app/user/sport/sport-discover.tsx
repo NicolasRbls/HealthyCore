@@ -18,6 +18,7 @@ import Layout from "../../../constants/Layout";
 import { TextStyles } from "../../../constants/Fonts";
 import Header from "../../../components/layout/Header";
 import programsService from "../../../services/programs.service";
+import { SPORT_FILTERS } from "../../../constants/Filters";
 
 interface Tag {
   id: number;
@@ -72,14 +73,20 @@ export default function SportDiscoverScreen() {
 
       // Filtre pour les programmes débutants
       const beginner = response.programs.filter((program) =>
-        program.tags.some((tag) => tag.name.toLowerCase().includes("débutant"))
+        program.tags.some((tag) =>
+          SPORT_FILTERS.BEGINNER.some((filter) =>
+            tag.name.toLowerCase().includes(filter)
+          )
+        )
       );
       setBeginnerPrograms(beginner);
 
       // Filtre pour les programmes intermédiaires
       const intermediate = response.programs.filter((program) =>
         program.tags.some((tag) =>
-          tag.name.toLowerCase().includes("intermédiaire")
+          SPORT_FILTERS.INTERMEDIATE.some((filter) =>
+            tag.name.toLowerCase().includes(filter)
+          )
         )
       );
       setIntermediatePrograms(intermediate);
@@ -118,14 +125,14 @@ export default function SportDiscoverScreen() {
       <Image
         source={
           program.image &&
-          (program.image.startsWith("http://") ||
-            program.image.startsWith("https://"))
+            (program.image.startsWith("http://") ||
+              program.image.startsWith("https://"))
             ? { uri: program.image }
             : imageMapping[program.id + 100] || {
-                uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
-                  program.name
-                )}`,
-              }
+              uri: `https://placehold.co/600x300/92A3FD/FFFFFF?text=${getProgramTitle(
+                program.name
+              )}`,
+            }
         }
         style={styles.programImage}
         resizeMode="contain"

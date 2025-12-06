@@ -14,78 +14,121 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "../../../../constants/Colors";
-import Layout from "../../../../constants/Layout";
-import { TextStyles } from "../../../../constants/Fonts";
-import Header from "../../../../components/layout/Header";
-import Button from "../../../../components/ui/Button";
-import imageMapping from "../../../../constants/imageMapping";
-import { useAuth } from "../../../../context/AuthContext";
-import { nutritionService, FoodProduct } from "../../../../services/nutrition.service";
+import Colors from "../../../constants/Colors";
+import Layout from "../../../constants/Layout";
+import { TextStyles } from "../../../constants/Fonts";
+import Header from "../../../components/layout/Header";
+import Button from "../../../components/ui/Button";
+import imageMapping from "../../../constants/imageMapping";
+import { useAuth } from "../../../context/AuthContext";
+import { nutritionService } from "../../../services/nutrition.service";
 
-export default function ProductDetailScreen() {
+// Type definitions
+interface Tag {
+  id: number;
+  name: string;
+}
+
+interface FoodProduct {
+  id: number;
+  name: string;
+  image: string | null;
+  type: string;
+  source: string;
+  calories: number;
+  proteins: number;
+  carbs: number;
+  fats: number;
+  tags: Tag[];
+  description?: string;
+  ingredients?: string;
+  preparationTime?: number;
+  cookingTime?: number;
+  difficulty?: string;
+  servings?: number;
+  instructions?: string[];
+}
+
+export default function RecipeDetailsScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams();
-  const productId = Number(params.id);
+  const recipeId = Number(params.id);
 
-  const [product, setProduct] = useState<FoodProduct | null>(null);
+  const [recipe, setRecipe] = useState<FoodProduct | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState<boolean>(false);
-  const [quantity, setQuantity] = useState<string>("100");
-  const [selectedMeal, setSelectedMeal] = useState<string>("dejeuner");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [portions, setPortions] = useState("1");
+  const [selectedMeal, setSelectedMeal] = useState("dejeuner");
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    fetchProductDetails();
-  }, [productId]);
+    fetchRecipeDetails();
+  }, [recipeId]);
 
-  const fetchProductDetails = async () => {
+  const handleBackPress = () => {
+    router.back();
+  };
+
+  const fetchRecipeDetails = async () => {
     setIsLoading(true);
     try {
-      const product = await nutritionService.getFoodById(productId);
+      // Get recipe by ID
+      const response = await nutritionService.getFoodById(recipeId);
 
-      if (product) {
-        setProduct(product);
+      if (response) {
+        setRecipe(response as unknown as FoodProduct);
+        if ((response as any).servings) {
+          setPortions(String((response as any).servings));
+        }
       } else {
-        Alert.alert(
-          "Erreur",
-          "Impossible de récupérer les détails du produit."
-        );
+        Alert.alert("Erreur", "Recette non trouvée");
+        router.back();
       }
     } catch (error) {
-      console.error("Error fetching product details:", error);
+      console.error("Error fetching recipe details:", error);
       Alert.alert(
         "Erreur",
-        "Une erreur s'est produite lors de la récupération des détails du produit. Veuillez réessayer plus tard."
+        "Impossible de charger les détails de la recette. Veuillez réessayer plus tard."
       );
+      router.back();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get product image
-  const getProductImage = () => {
-    if (!product) return null;
-
-    // Check if the image path is an HTTP or HTTPS URL
-    if (
-      product.image &&
-      (product.image.startsWith("http://") ||
-        product.image.startsWith("https://"))
-    ) {
-      return { uri: product.image };
+  // Get food image based on source and id
+  const getFoodImage = (food: FoodProduct) => {
+    // Check if the image is null or undefined
+    if (!food.image) {
+      // Return a placeholder if no image
+      return {
+        uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
+          food.name
+        )}`,
+      };
     }
 
-    // Map product IDs to the imageMapping
-    const mappedId = 200 + product.id;
+    // Check if the image path is an HTTP or HTTPS URL
+    if (food.image.startsWith("http://") || food.image.startsWith("https://")) {
+      return { uri: food.image };
+    }
+
+    // Map aliment IDs to the imageMapping for local images
+    const mappedId = 200 + food.id;
 
     return (
       imageMapping[mappedId] || {
         uri: `https://placehold.co/400x300/92A3FD/FFFFFF?text=${encodeURIComponent(
-          product.name
+          food.name
         )}`,
       }
     );
+  };
+
+  // Calculate values based on servings
+  const calculateValue = (value: number) => {
+    // Values are usually per serving for recipes
+    return Math.round(value);
   };
 
   // Format ingredients list from string
@@ -96,45 +139,62 @@ export default function ProductDetailScreen() {
     return ingredientsStr.split("|").map((ingredient) => ingredient.trim());
   };
 
+  // Format recipe instructions from string
+  const formatInstructions = (description?: string) => {
+    if (!description) return [];
+
+    // Split by | character which separates steps in our data
+    return description.split("|").map((step) => step.trim());
+  };
+
   // Calculate percentage for nutrition bars
   const calculatePercentage = (value: number, total: number) => {
     return Math.min(100, (value / total) * 100);
   };
 
+  // Add to tracking
   const handleAddToTracking = async () => {
-    // Validate quantity
-    const parsedQuantity = parseInt(quantity);
-    if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer une quantité valide");
+    if (!recipe) return;
+
+    const qty = parseInt(portions);
+    if (isNaN(qty) || qty <= 0) {
+      Alert.alert("Erreur", "Veuillez entrer un nombre de portions valide.");
       return;
     }
 
-    setIsSubmitting(true);
+    setIsAdding(true);
     try {
       await nutritionService.logNutrition(
-        product?.id as number,
-        parsedQuantity,
-        selectedMeal
+        recipe.id,
+        qty,
+        selectedMeal,
+        new Date().toISOString().split("T")[0]
       );
 
-      // Fermer la modale
       setShowAddModal(false);
 
-      // Afficher un message de succès
       Alert.alert(
-        "Aliment ajouté",
-        `${product?.name.split(" - ")[0]
-        } (${parsedQuantity}g) a été ajouté à votre suivi nutritionnel.`,
-        [{ text: "OK" }]
+        "Succès",
+        "Recette ajoutée à votre journal nutritionnel.",
+        [
+          {
+            text: "Continuer",
+            style: "cancel",
+          },
+          {
+            text: "Voir le journal",
+            onPress: () => router.push({ pathname: "/user/dashboard/nutrition-monitoring", params: { from: "monitoring" } } as any),
+          },
+        ]
       );
     } catch (error) {
       console.error("Error adding to tracking:", error);
       Alert.alert(
         "Erreur",
-        "Impossible d'ajouter cet aliment à votre suivi. Veuillez réessayer plus tard."
+        "Impossible d'ajouter la recette. Veuillez réessayer plus tard."
       );
     } finally {
-      setIsSubmitting(false);
+      setIsAdding(false);
     }
   };
 
@@ -142,60 +202,38 @@ export default function ProductDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <Header
-          title="Détails du produit"
+          title="Détails de la recette"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.brandBlue[0]} />
-          <Text style={styles.loadingText}>Chargement des détails...</Text>
+          <Text style={styles.loadingText}>Chargement de la recette...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!product) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Header
-          title="Détails du produit"
-          showBackButton
-          onBackPress={() => router.back()}
-          style={{ marginTop: Layout.spacing.md }}
-        />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Produit non trouvé</Text>
-          <Button
-            text="Retour"
-            onPress={() => router.back()}
-            style={styles.backButton}
-          />
-        </View>
-      </SafeAreaView>
-    );
+  if (!recipe) {
+    return null;
   }
 
-  // Product name parts (usually in format "Name - Brand - Weight")
-  const nameParts = product.name.split(" - ");
-  const productName = nameParts[0];
-  const productBrand = nameParts.length > 1 ? nameParts[1] : "";
-  const productWeight = nameParts.length > 2 ? nameParts[2] : "";
-
-  // Format ingredients list
-  const ingredients = formatIngredients(product.ingredients);
+  // Format ingredients and instructions
+  const ingredients = formatIngredients(recipe.ingredients);
+  const instructions = formatInstructions(recipe.description);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
-        title="Détails du produit"
+        title="Détails de la recette"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         rightIconName="alert-circle-outline"
         onRightIconPress={() =>
           router.push({
             pathname: "/user/nutrition/report",
-            params: { id: product.id, name: product.name },
+            params: { id: recipe.id, name: recipe.name },
           } as any)
         }
         style={{ marginTop: Layout.spacing.md }}
@@ -204,22 +242,31 @@ export default function ProductDetailScreen() {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
           <Image
-            source={getProductImage()}
-            style={styles.productImage}
-            resizeMode="contain"
+            source={getFoodImage(recipe)}
+            style={styles.recipeImage}
+            resizeMode="cover"
           />
         </View>
 
         <View style={styles.contentContainer}>
-          {/* Product Header */}
-          <View style={styles.productHeader}>
-            <Text style={styles.productName}>{productName}</Text>
-            {productBrand && (
-              <Text style={styles.productBrand}>{productBrand}</Text>
-            )}
-            {productWeight && (
-              <Text style={styles.productWeight}>{productWeight}</Text>
-            )}
+          {/* Recipe Header */}
+          <View style={styles.recipeHeader}>
+            <Text style={styles.recipeName}>{recipe.name}</Text>
+            <View style={styles.recipeMetaInfo}>
+              <View style={styles.metaItem}>
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={Colors.gray.dark}
+                />
+                <Text style={styles.metaText}>
+                  {recipe.preparationTime} min
+                </Text>
+              </View>
+              <View style={styles.metaBadge}>
+                <Text style={styles.metaBadgeText}>1 portion</Text>
+              </View>
+            </View>
           </View>
 
           {/* Nutritional Info */}
@@ -227,11 +274,11 @@ export default function ProductDetailScreen() {
             <Text style={styles.sectionTitle}>
               Informations nutritionnelles
             </Text>
-            <Text style={styles.perServingText}>Pour 100g</Text>
+            <Text style={styles.perServingText}>Pour 1 portion</Text>
 
             <View style={styles.mainNutritionRow}>
               <View style={styles.nutritionCircle}>
-                <Text style={styles.nutritionValue}>{product.calories}</Text>
+                <Text style={styles.nutritionValue}>{recipe.calories}</Text>
                 <Text style={styles.nutritionLabel}>Calories</Text>
               </View>
             </View>
@@ -241,7 +288,7 @@ export default function ProductDetailScreen() {
               <View style={styles.nutrientRow}>
                 <View style={styles.nutrientLabelContainer}>
                   <Text style={styles.nutrientLabel}>Glucides</Text>
-                  <Text style={styles.nutrientValue}>{product.carbs}g</Text>
+                  <Text style={styles.nutrientValue}>{recipe.carbs}g</Text>
                 </View>
                 <View style={styles.nutrientBarContainer}>
                   <View
@@ -249,7 +296,7 @@ export default function ProductDetailScreen() {
                       styles.nutrientBar,
                       styles.carbsBar,
                       {
-                        width: `${calculatePercentage(product.carbs, 100)}%`,
+                        width: `${calculatePercentage(recipe.carbs, 100)}%`,
                       },
                     ]}
                   />
@@ -260,7 +307,7 @@ export default function ProductDetailScreen() {
               <View style={styles.nutrientRow}>
                 <View style={styles.nutrientLabelContainer}>
                   <Text style={styles.nutrientLabel}>Protéines</Text>
-                  <Text style={styles.nutrientValue}>{product.proteins}g</Text>
+                  <Text style={styles.nutrientValue}>{recipe.proteins}g</Text>
                 </View>
                 <View style={styles.nutrientBarContainer}>
                   <View
@@ -268,7 +315,7 @@ export default function ProductDetailScreen() {
                       styles.nutrientBar,
                       styles.proteinsBar,
                       {
-                        width: `${calculatePercentage(product.proteins, 50)}%`,
+                        width: `${calculatePercentage(recipe.proteins, 50)}%`,
                       },
                     ]}
                   />
@@ -279,14 +326,14 @@ export default function ProductDetailScreen() {
               <View style={styles.nutrientRow}>
                 <View style={styles.nutrientLabelContainer}>
                   <Text style={styles.nutrientLabel}>Lipides</Text>
-                  <Text style={styles.nutrientValue}>{product.fats}g</Text>
+                  <Text style={styles.nutrientValue}>{recipe.fats}g</Text>
                 </View>
                 <View style={styles.nutrientBarContainer}>
                   <View
                     style={[
                       styles.nutrientBar,
                       styles.fatsBar,
-                      { width: `${calculatePercentage(product.fats, 50)}%` },
+                      { width: `${calculatePercentage(recipe.fats, 50)}%` },
                     ]}
                   />
                 </View>
@@ -295,36 +342,35 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Ingredients */}
-          {ingredients.length > 0 && (
-            <View style={styles.ingredientsCard}>
-              <Text style={styles.sectionTitle}>Ingrédients</Text>
-              {ingredients.map((ingredient, index) => (
-                <View key={index} style={styles.ingredientItem}>
-                  <View style={styles.bulletPoint} />
-                  <Text style={styles.ingredientText}>{ingredient}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          <View style={styles.ingredientsCard}>
+            <Text style={styles.sectionTitle}>Ingrédients</Text>
+            {ingredients.map((ingredient, index) => (
+              <View key={index} style={styles.ingredientItem}>
+                <View style={styles.bulletPoint} />
+                <Text style={styles.ingredientText}>{ingredient}</Text>
+              </View>
+            ))}
+          </View>
 
-          {/* Barcode */}
-          {product.barcode && (
-            <View style={styles.barcodeContainer}>
-              <Ionicons
-                name="barcode-outline"
-                size={20}
-                color={Colors.gray.dark}
-              />
-              <Text style={styles.barcodeText}>{product.barcode}</Text>
-            </View>
-          )}
+          {/* Instructions */}
+          <View style={styles.instructionsCard}>
+            <Text style={styles.sectionTitle}>Préparation</Text>
+            {instructions.map((step, index) => (
+              <View key={index} style={styles.instructionItem}>
+                <View style={styles.instructionNumberContainer}>
+                  <Text style={styles.instructionNumber}>{index + 1}</Text>
+                </View>
+                <Text style={styles.instructionText}>{step}</Text>
+              </View>
+            ))}
+          </View>
 
           {/* Tags */}
-          {product.tags && product.tags.length > 0 && (
+          {recipe.tags && recipe.tags.length > 0 && (
             <View style={styles.tagsContainer}>
               <Text style={styles.tagsTitle}>Catégories :</Text>
               <View style={styles.tagsList}>
-                {product.tags.map((tag) => (
+                {recipe.tags.map((tag) => (
                   <View key={tag.id} style={styles.tagChip}>
                     <Text style={styles.tagText}>
                       {tag.name.charAt(0).toUpperCase() +
@@ -358,7 +404,7 @@ export default function ProductDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ajouter {productName}</Text>
+              <Text style={styles.modalTitle}>Ajouter {recipe.name}</Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
                 <Ionicons
                   name="close-outline"
@@ -369,13 +415,13 @@ export default function ProductDetailScreen() {
             </View>
 
             <View style={styles.modalBody}>
-              <Text style={styles.modalLabel}>Quantité (g)</Text>
+              <Text style={styles.modalLabel}>Nombre de portions</Text>
               <TextInput
                 style={styles.quantityInput}
-                value={quantity}
-                onChangeText={setQuantity}
+                value={portions}
+                onChangeText={setPortions}
                 keyboardType="numeric"
-                placeholder="100"
+                placeholder="1"
               />
 
               <Text style={styles.modalLabel}>Repas</Text>
@@ -489,14 +535,13 @@ export default function ProductDetailScreen() {
 
               <View style={styles.nutritionSummary}>
                 <Text style={styles.summaryLabel}>
-                  Calories pour {quantity}g :
+                  Calories pour {portions} portion
+                  {parseInt(portions) > 1 ? "s" : ""} :
                 </Text>
                 <Text style={styles.summaryValue}>
-                  {isNaN(parseInt(quantity))
+                  {isNaN(parseInt(portions))
                     ? "0"
-                    : Math.round(
-                      (product.calories * parseInt(quantity)) / 100
-                    )}{" "}
+                    : Math.round(recipe.calories * parseInt(portions))}{" "}
                   cal
                 </Text>
               </View>
@@ -508,13 +553,13 @@ export default function ProductDetailScreen() {
                 variant="outline"
                 onPress={() => setShowAddModal(false)}
                 style={styles.modalButton}
-                disabled={isSubmitting}
+                disabled={isAdding}
               />
               <Button
-                text={isSubmitting ? "Ajout en cours..." : "Ajouter"}
+                text={isAdding ? "Ajout en cours..." : "Ajouter"}
                 onPress={handleAddToTracking}
                 style={styles.modalButton}
-                disabled={isSubmitting}
+                disabled={isAdding}
               />
             </View>
           </View>
@@ -540,7 +585,6 @@ const styles = StyleSheet.create({
   loadingText: {
     ...TextStyles.body,
     color: Colors.gray.dark,
-    marginTop: Layout.spacing.md,
   },
   errorContainer: {
     flex: 1,
@@ -557,13 +601,10 @@ const styles = StyleSheet.create({
     marginTop: Layout.spacing.md,
   },
   imageContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.gray.ultraLight,
+    width: "100%",
     height: 250,
-    padding: Layout.spacing.lg,
   },
-  productImage: {
+  recipeImage: {
     width: "100%",
     height: "100%",
   },
@@ -571,21 +612,36 @@ const styles = StyleSheet.create({
     padding: Layout.spacing.lg,
     paddingBottom: 100, // Extra padding for button
   },
-  productHeader: {
+  recipeHeader: {
     marginBottom: Layout.spacing.lg,
   },
-  productName: {
+  recipeName: {
     ...TextStyles.h3,
-    marginBottom: Layout.spacing.xs,
+    marginBottom: Layout.spacing.md,
   },
-  productBrand: {
-    ...TextStyles.bodyLarge,
-    color: Colors.brandBlue[0],
-    marginBottom: Layout.spacing.xs,
+  recipeMetaInfo: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  productWeight: {
-    ...TextStyles.body,
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: Layout.spacing.md,
+  },
+  metaText: {
+    ...TextStyles.bodySmall,
     color: Colors.gray.dark,
+    marginLeft: 4,
+  },
+  metaBadge: {
+    backgroundColor: Colors.brandBlue[1],
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Layout.borderRadius.pill,
+  },
+  metaBadgeText: {
+    ...TextStyles.caption,
+    color: Colors.white,
   },
   nutritionCard: {
     backgroundColor: Colors.gray.ultraLight,
@@ -687,15 +743,35 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     flex: 1,
   },
-  barcodeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  instructionsCard: {
+    backgroundColor: Colors.gray.ultraLight,
+    borderRadius: Layout.borderRadius.md,
+    padding: Layout.spacing.lg,
     marginBottom: Layout.spacing.lg,
   },
-  barcodeText: {
+  instructionItem: {
+    flexDirection: "row",
+    marginBottom: Layout.spacing.md,
+    alignItems: "flex-start",
+  },
+  instructionNumberContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.brandBlue[0],
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Layout.spacing.sm,
+    marginTop: 2,
+  },
+  instructionNumber: {
+    ...TextStyles.bodySmall,
+    color: Colors.white,
+    fontWeight: "bold",
+  },
+  instructionText: {
     ...TextStyles.body,
-    color: Colors.gray.dark,
-    marginLeft: Layout.spacing.sm,
+    flex: 1,
   },
   tagsContainer: {
     marginBottom: Layout.spacing.xl,

@@ -7,6 +7,7 @@ import objectivesService from '../../services/objectives.service';
 import apiService from '../../services/api.service';
 import dataService from '../../services/data.service';
 import { router } from 'expo-router';
+import { format } from 'date-fns';
 
 // Mocks
 jest.mock('../../services/auth.service');
@@ -21,11 +22,18 @@ jest.mock('../../context/AuthContext', () => ({
     }),
 }));
 
-jest.mock('expo-router', () => ({
-    router: {
-        push: jest.fn(),
-    },
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const back = jest.fn();
+    const router = { push, back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useLocalSearchParams: jest.fn().mockReturnValue({}),
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [callback])),
+    };
+});
 
 jest.mock('@expo/vector-icons', () => ({
     Ionicons: 'Ionicons',
@@ -75,9 +83,7 @@ describe('Dashboard', () => {
             ],
         });
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
 
         (apiService.get as jest.Mock).mockResolvedValue({
             weeklySchedule: [
@@ -114,7 +120,7 @@ describe('Dashboard', () => {
         await waitFor(() => expect(getByText('Bon retour,')).toBeTruthy());
 
         fireEvent.press(getByText('Calories absorbées'));
-        expect(router.push).toHaveBeenCalledWith('/user/dashboard/nutrition-monitoring');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/dashboard/nutrition-monitoring', params: { from: 'dashboard' } });
 
         fireEvent.press(getByText('Séance du jour'));
         expect(router.push).toHaveBeenCalledWith('/user/dashboard/sport-monitoring');
@@ -151,6 +157,6 @@ describe('Dashboard', () => {
         await waitFor(() => expect(getByTestId('badge-button')).toBeTruthy());
 
         fireEvent.press(getByTestId('badge-button'));
-        expect(router.push).toHaveBeenCalledWith('/user/dashboard/badge-monitoring');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/dashboard/badge-monitoring', params: { from: 'dashboard' } });
     });
 });

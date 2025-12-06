@@ -9,7 +9,7 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -28,11 +28,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [progressStats, setProgressStats] = useState<any>(null);
-
-  // Charger les données du profil
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -55,6 +50,13 @@ export default function ProfileScreen() {
       setLoading(false);
     }
   };
+
+  // Charger les données du profil
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -80,7 +82,7 @@ export default function ProfileScreen() {
   };
 
   const navigateToBadges = () => {
-    router.push("/user/dashboard/badge-monitoring" as any);
+    router.push("/user/profile/badges" as any);
   };
 
   const navigateToEditProfile = () => {

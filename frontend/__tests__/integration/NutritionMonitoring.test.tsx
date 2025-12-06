@@ -9,12 +9,18 @@ import { router } from 'expo-router';
 // Mocks
 jest.mock('../../services/nutrition.service');
 jest.mock('../../context/AuthContext');
-jest.mock('expo-router', () => ({
-    router: {
-        back: jest.fn(),
-        push: jest.fn(),
-    },
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const back = jest.fn();
+    const router = { push, back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useLocalSearchParams: jest.fn().mockReturnValue({}),
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [callback])),
+    };
+});
 jest.mock('../../components/layout/Header', () => {
     const React = require('react');
     const { Text, TouchableOpacity } = require('react-native');
@@ -98,22 +104,22 @@ describe('NutritionMonitoring', () => {
         fireEvent.press(deleteButton);
 
         expect(Alert.alert).toHaveBeenCalled();
-        
+
         await waitFor(() => {
-             expect(nutritionService.deleteNutritionEntry).toHaveBeenCalledWith(1);
+            expect(nutritionService.deleteNutritionEntry).toHaveBeenCalledWith(1);
         });
     });
 
     it('navigates to discover', async () => {
         const { getByTestId } = render(<NutritionMonitoring />);
-        
+
         // Wait for load
         await waitFor(() => expect(nutritionService.getNutritionSummary).toHaveBeenCalled());
 
         const fab = getByTestId('fab-add');
         fireEvent.press(fab);
 
-        expect(router.push).toHaveBeenCalledWith('/user/nutrition/nutrition-discover');
+        expect(router.push).toHaveBeenCalledWith({ pathname: '/user/nutrition/nutrition-discover', params: { from: 'monitoring' } });
     });
 
     it('handles load error', async () => {

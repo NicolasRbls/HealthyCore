@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { format } from "date-fns";
 import { router, useLocalSearchParams } from "expo-router";
 import Colors from "../../../../constants/Colors";
 import Layout from "../../../../constants/Layout";
@@ -198,7 +199,7 @@ export default function ProgramDetailsScreen() {
     setIsStarting(true);
     try {
       // Appel API pour démarrer le programme
-      const startDate = new Date().toISOString();
+      const startDate = format(new Date(), "yyyy-MM-dd");
       const response = await programsService.startProgram(programId, startDate);
 
       // Mettre à jour l'état local pour refléter que le programme a démarré

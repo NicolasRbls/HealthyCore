@@ -58,6 +58,14 @@ export default function UserLayout() {
             />
           ),
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            const { router } = require("expo-router");
+            router.dismissAll();
+            router.replace("/user/nutrition/nutrition-discover");
+          },
+        })}
       />
 
       <Tabs.Screen

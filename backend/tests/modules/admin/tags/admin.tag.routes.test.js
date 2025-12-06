@@ -179,7 +179,7 @@ describe('Admin Tag Routes', () => {
             // Create a temporary tag to delete
             const tagToDelete = await prisma.tags.create({
                 data: {
-                    nom: 'Delete Me',
+                    nom: `Delete Me ${Date.now()}`,
                     type: 'aliment'
                 }
             });

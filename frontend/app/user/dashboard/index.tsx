@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { format } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../context/AuthContext";
 import Colors from "../../../constants/Colors";
@@ -70,10 +71,6 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -138,9 +135,7 @@ export default function Dashboard() {
         );
 
         // Obtenir la date du jour pour comparer
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+        const todayStr = format(new Date(), "yyyy-MM-dd"); // Format YYYY-MM-DD
 
         // Vérifier s'il y a une séance pour aujourd'hui dans le planning hebdomadaire
         if (
@@ -188,6 +183,13 @@ export default function Dashboard() {
       setIsLoading(false);
     }
   };
+
+  // Use useFocusEffect to refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -254,7 +256,7 @@ export default function Dashboard() {
     <TouchableOpacity
       style={[styles.card, styles.nutritionCard]}
       activeOpacity={0.7}
-      onPress={() => router.push("/user/dashboard/nutrition-monitoring")}
+      onPress={() => router.push({ pathname: "/user/dashboard/nutrition-monitoring", params: { from: "dashboard" } })}
     >
       <Text style={styles.cardTitle}>Calories absorbées</Text>
       <Text style={styles.calorieValue}>
@@ -338,7 +340,7 @@ export default function Dashboard() {
             <TouchableOpacity
               testID="badge-button"
               style={styles.badgeButton}
-              onPress={() => router.push("/user/dashboard/badge-monitoring")}
+              onPress={() => router.push({ pathname: "/user/dashboard/badge-monitoring", params: { from: "dashboard" } })}
             >
               <Ionicons name="trophy" size={24} color="#A091FF" />
             </TouchableOpacity>

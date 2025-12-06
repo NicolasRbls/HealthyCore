@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Image } from "expo-image";
+import { format } from "date-fns";
 import imageMapping from "../../../../constants/imageMapping";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -183,7 +184,7 @@ export default function SessionDetailsScreen() {
     if (!session) return;
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = format(new Date(), "yyyy-MM-dd");
       const response = await programsService.completeSession(sessionId, today);
 
       router.push("/user/dashboard/sport-monitoring");

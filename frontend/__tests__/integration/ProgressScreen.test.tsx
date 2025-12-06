@@ -7,11 +7,16 @@ import { router } from 'expo-router';
 
 // Mocks
 jest.mock('../../services/user.service');
-jest.mock('expo-router', () => ({
-    router: {
-        back: jest.fn(),
-    },
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const back = jest.fn();
+    const router = { back };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [callback])),
+    };
+});
 jest.mock('../../components/layout/Header', () => 'Header');
 jest.mock('../../components/ui/DatePicker', () => 'DatePicker');
 jest.mock('react-native-svg', () => {

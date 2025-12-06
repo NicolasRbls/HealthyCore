@@ -7,6 +7,15 @@ import { AuthProvider } from "../context/AuthContext";
 import { RegistrationProvider } from "../context/RegistrationContext";
 import StatusBar from "../components/ui/StatusBar";
 import Colors from "../constants/Colors";
+import { LogBox } from "react-native";
+
+// Ignore specific warnings
+if (LogBox) {
+  LogBox.ignoreLogs([
+    'Prop "resizeMode" is deprecated',
+    "The action 'POP_TO_TOP' was not handled by any navigator.",
+  ]);
+}
 
 // Empêcher l'écran de splash de se cacher automatiquement
 SplashScreen.preventAutoHideAsync();

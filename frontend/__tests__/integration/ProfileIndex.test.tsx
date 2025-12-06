@@ -9,11 +9,16 @@ import { router } from 'expo-router';
 // Mocks
 jest.mock('../../services/user.service');
 jest.mock('../../services/auth.service');
-jest.mock('expo-router', () => ({
-    router: {
-        push: jest.fn(),
-    },
-}));
+jest.mock('expo-router', () => {
+    const React = require('react');
+    const push = jest.fn();
+    const router = { push };
+    return {
+        useRouter: jest.fn(() => router),
+        router,
+        useFocusEffect: jest.fn((callback) => React.useEffect(callback, [callback])),
+    };
+});
 jest.mock('../../components/layout/Header', () => {
     const { Text } = require('react-native');
     return ({ title }: any) => <Text>{title}</Text>;
@@ -106,7 +111,7 @@ describe('ProfileScreen', () => {
         expect(router.push).toHaveBeenCalledWith('/user/profile/progress');
 
         fireEvent.press(getByTestId('badges-button'));
-        expect(router.push).toHaveBeenCalledWith('/user/dashboard/badge-monitoring');
+        expect(router.push).toHaveBeenCalledWith('/user/profile/badges');
 
         fireEvent.press(getByTestId('edit-profile-button'));
         expect(router.push).toHaveBeenCalledWith('/user/profile/edit');
