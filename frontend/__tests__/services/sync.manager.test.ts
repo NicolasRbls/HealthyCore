@@ -95,7 +95,8 @@ describe('SyncManager', () => {
 
         await syncManager.synchronize();
 
-        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Sync skipped'), expect.stringContaining('SyntaxError'));
+        // The log is now silenced
+        expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('Invalid JSON response'));
         expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining('Sync failed'), expect.anything());
 
         consoleLogSpy.mockRestore();

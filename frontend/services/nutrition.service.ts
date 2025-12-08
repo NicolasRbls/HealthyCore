@@ -125,15 +125,44 @@ const nutritionService = {
     try {
       const queryString = buildQueryString(params);
       const response = await apiService.get(`/nutrition${queryString}`);
+
+      // Cache-Aside: Sauvegarde si première page et pas de filtres complexes
+      // Pour les recettes et produits
+      const isDefaultPage = !params.page || params.page === 1;
+      const isSimpleFilter = !params.search && !params.source;
+
+      if (isDefaultPage && isSimpleFilter) {
+        // On utilise une clé différente selon le type pour ne pas mélanger
+        const cacheKey = params.type === 'recette' ?
+          `${CACHE_KEYS.NUTRITION_PAGE}_recipes` :
+          CACHE_KEYS.NUTRITION_PAGE;
+        await cacheService.save(cacheKey, response);
+      }
       return response;
     } catch (error) {
       console.error("Error fetching foods:", error);
 
-      // Fallback Cache
+      // Fallback 1: Cache Cache-Aside (Prioritaire)
+      const cacheKey = params.type === 'recette' ?
+        `${CACHE_KEYS.NUTRITION_PAGE}_recipes` :
+        CACHE_KEYS.NUTRITION_PAGE;
+
+      const cachedPage = await cacheService.get(cacheKey);
+      if (cachedPage) {
+        return cachedPage;
+      }
+
+      // Fallback 2: Cache Sync (Backup)
       const cachedFoods = await cacheService.get(CACHE_KEYS.NUTRITION);
       if (cachedFoods) {
+        // Filtrer selon le type demandé si possible
+        let filteredFoods = cachedFoods;
+        if (params.type) {
+          filteredFoods = cachedFoods.filter((f: any) => f.type === params.type);
+        }
+
         return {
-          foods: cachedFoods.map((f: any) => ({
+          foods: filteredFoods.map((f: any) => ({
             id: f.id_aliment,
             name: f.nom,
             image: f.image,
@@ -146,10 +175,10 @@ const nutritionService = {
             tags: [] // Tags manquants dans sync simple
           })),
           pagination: { // Mock pagination
-            total: cachedFoods.length,
+            total: filteredFoods.length,
             totalPages: 1,
             currentPage: 1,
-            limit: cachedFoods.length
+            limit: filteredFoods.length
           }
         };
       }

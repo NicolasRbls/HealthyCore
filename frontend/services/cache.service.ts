@@ -8,6 +8,7 @@ export const CACHE_KEYS = {
     NUTRITION_SUMMARY: 'cache_nutrition_summary',
     NUTRITION_TODAY: 'cache_nutrition_today',
     NUTRITION_HISTORY: 'cache_nutrition_history',
+    NUTRITION_PAGE: 'cache_nutrition_page',
     BADGES: 'cache_badges',
     EVOLUTION: 'cache_evolution',
     PROGRESS_STATS: 'cache_progress_stats',

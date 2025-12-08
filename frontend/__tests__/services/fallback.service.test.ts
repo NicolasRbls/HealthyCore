@@ -87,6 +87,32 @@ describe('Service Offline Fallbacks', () => {
     });
 
     describe('NutritionService', () => {
+        it('should cache and return recipes on success (Cache-Aside)', async () => {
+            const mockRecipes = { foods: [{ id: 1, type: 'recette', name: 'Pasta' }], pagination: {} };
+            (apiService.get as jest.Mock).mockResolvedValue(mockRecipes);
+
+            const result = await nutritionService.getAllFoods({ type: 'recette', page: 1 });
+
+            expect(result).toEqual(mockRecipes);
+            expect(cacheService.save).toHaveBeenCalledWith(`${CACHE_KEYS.NUTRITION_PAGE}_recipes`, mockRecipes);
+        });
+
+        it('should return cached recipes on failure', async () => {
+            (apiService.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
+            const cachedRecipes = { foods: [{ id: 1, type: 'recette', name: 'Cached Pasta' }], pagination: {} };
+
+            (cacheService.get as jest.Mock).mockImplementation((key) => {
+                if (key === `${CACHE_KEYS.NUTRITION_PAGE}_recipes`) {
+                    return Promise.resolve(cachedRecipes);
+                }
+                return Promise.resolve(null);
+            });
+
+            const result = await nutritionService.getAllFoods({ type: 'recette', page: 1 });
+
+            expect(result).toEqual(cachedRecipes);
+        });
+
         it('should cache today nutrition on success', async () => {
             const mockData = { date: '2023-01-01', totals: { calories: 2000 } };
             (apiService.get as jest.Mock).mockResolvedValue(mockData);

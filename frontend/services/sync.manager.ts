@@ -99,7 +99,7 @@ class SyncManager {
             // Filtrer les erreurs de parsing JSON (souvent dues à une réponse HTML d'erreur 404/500/Proxy)
             const errorMsg = String(error);
             if (errorMsg.includes('SyntaxError') && errorMsg.includes('Unexpected character')) {
-                console.log('[SyncManager] Sync skipped (Invalid JSON response)', errorMsg);
+                // Silecing error as requested by user
             } else {
                 console.error('[SyncManager] Sync failed', error);
             }
