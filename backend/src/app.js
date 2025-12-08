@@ -86,6 +86,7 @@ app.use("/api/admin/programs", adminProgramsRoutes);
 
 app.use("/api/objectives", objectivesRoutes);
 app.use("/api/signalements", require("./modules/signalement/signalement.routes"));
+app.use("/api/sync", require("./modules/sync/sync.routes"));
 
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
