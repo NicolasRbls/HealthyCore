@@ -42,6 +42,7 @@ interface DataTableProps<T> {
   };
   searchable?: boolean;
   onSearch?: (query: string) => void;
+  isLoading?: boolean;
 }
 
 export function DataTable<T>({
@@ -50,6 +51,7 @@ export function DataTable<T>({
   pagination,
   searchable = false,
   onSearch,
+  isLoading = false,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -100,7 +102,18 @@ export function DataTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  <div className="flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : data.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={columns.length}

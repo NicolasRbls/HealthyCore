@@ -70,7 +70,9 @@ export interface UsersResponse {
       total: number;
       totalPages: number;
       currentPage: number;
-      limit: number;
+      perPage: number;
+      limit?: number;
+      hasMore: boolean;
     };
   };
   message: string;
@@ -98,7 +100,7 @@ export interface NewUserDetailResponse {
 export interface UserCountResponse {
   status: string;
   data: {
-    totalCount: number;
+    count: number;
   };
   message: string;
 }

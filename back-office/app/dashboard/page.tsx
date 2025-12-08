@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
         // Mettre à jour les statistiques avec les données réelles
         setStats({
-          userCount: userCountResponse.data.totalCount || 0,
+          userCount: userCountResponse.data.count || 0,
           programCount: programsResponse.data.pagination?.total || 0,
           sessionCount: sessionsResponse.data.pagination?.total || 0,
           exerciseCount: exercisesResponse.data.pagination?.total || 0,
