@@ -70,7 +70,9 @@ export interface UsersResponse {
       total: number;
       totalPages: number;
       currentPage: number;
-      limit: number;
+      perPage: number;
+      limit?: number;
+      hasMore: boolean;
     };
   };
   message: string;
