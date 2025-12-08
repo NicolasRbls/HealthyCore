@@ -112,4 +112,12 @@ describe('LoginScreen', () => {
 
         expect(router.push).toHaveBeenCalledWith('/register/step1_profile');
     });
+
+    it('navigates to forgot password screen', () => {
+        const { getByText } = render(<LoginScreen />);
+
+        fireEvent.press(getByText('Mot de passe oublié ?'));
+
+        expect(router.push).toHaveBeenCalledWith('/auth/forgot-password');
+    });
 });
