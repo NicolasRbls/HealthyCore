@@ -46,7 +46,7 @@ describe('Password Recovery Integration', () => {
             // 4. Verify "Back to login" button appears
             expect(getByText('Retour à la connexion')).toBeTruthy();
             fireEvent.press(getByText('Retour à la connexion'));
-            expect(router.replace).toHaveBeenCalledWith('/auth/login');
+            expect(router.back).toHaveBeenCalled();
         });
 
         it('should handle API errors', async () => {

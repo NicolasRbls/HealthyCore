@@ -10,7 +10,11 @@ jest.mock('expo-router', () => ({
     router: {
         push: jest.fn(),
         back: jest.fn(),
+        replace: jest.fn(),
     },
+    useNavigation: () => ({
+        canGoBack: jest.fn().mockReturnValue(true),
+    }),
 }));
 
 // Mock useForm to test integration with the screen's onSubmit logic
