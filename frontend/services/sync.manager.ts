@@ -57,12 +57,13 @@ class SyncManager {
             // 2. Appeler le backend (POST /api/sync)
             // Note: On utilise apiService.post directement. 
             // Assumption: api.service gère déjà l'auth header
-            const response = await apiService.post('/sync', {
+            // Assumption: api.service gère déjà l'auth header
+            const response = await apiService.post<SyncResponse>('/sync', {
                 lastSync: lastSync,
                 push: {} // Pour l'instant on ne push rien (Consultation only)
             });
 
-            const syncData: SyncResponse = response.data;
+            const syncData: SyncResponse = response;
 
             if (!syncData || !syncData.pull) {
                 console.warn('[SyncManager] Invalid sync response', syncData);
@@ -82,7 +83,9 @@ class SyncManager {
             // On va simplifier et stocker tout ce qui est reçu.
 
             // Ici on stocke par "domaine" pour simplifier l'accès
-            await this.mergeAndSave(CACHE_KEYS.PROFILE, syncData.pull.users, 'id_user');
+            // Note: CACHE_KEYS.PROFILE est géré par userService (Format Objet), on ne le touche pas ici pour éviter les conflits de types (Array vs Object)
+            // await this.mergeAndSave(CACHE_KEYS.PROFILE, syncData.pull.users, 'id_user');
+
             await this.mergeAndSave('cache_seances', syncData.pull.seances, 'id_seance');
             await this.mergeAndSave('cache_exercices', syncData.pull.exercices, 'id_exercice');
             await this.mergeAndSave(CACHE_KEYS.NUTRITION, syncData.pull.aliments, 'id_aliment');
@@ -116,7 +119,8 @@ class SyncManager {
         if (!newItems || newItems.length === 0) return;
 
         // 1. Lire cache existant
-        const existingData = await cacheService.get(cacheKey) || [];
+        const rawData = await cacheService.get(cacheKey);
+        const existingData = Array.isArray(rawData) ? rawData : [];
 
         // 2. Convertir en Map pour accès rapide et déduplication par ID
         const dataMap = new Map();
