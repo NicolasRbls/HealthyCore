@@ -75,7 +75,7 @@ export default function ForgotPasswordScreen() {
                         <Text style={styles.successText}>{successMessage}</Text>
                         <Button
                             text="Retour à la connexion"
-                            onPress={() => router.replace("/auth/login")}
+                            onPress={() => router.back()}
                             style={styles.button}
                             fullWidth
                         />
