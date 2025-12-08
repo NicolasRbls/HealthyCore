@@ -2,7 +2,9 @@ import React from 'react';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import Dashboard from '../../app/user/dashboard/index';
 import authService from '../../services/auth.service';
+import userService from '../../services/user.service';
 import { nutritionService } from '../../services/nutrition.service';
+import programsService from '../../services/programs.service';
 import objectivesService from '../../services/objectives.service';
 import apiService from '../../services/api.service';
 import dataService from '../../services/data.service';
@@ -11,10 +13,12 @@ import { format } from 'date-fns';
 
 // Mocks
 jest.mock('../../services/auth.service');
+jest.mock('../../services/user.service');
 jest.mock('../../services/nutrition.service');
 jest.mock('../../services/objectives.service');
 jest.mock('../../services/api.service');
 jest.mock('../../services/data.service');
+jest.mock('../../services/programs.service');
 
 jest.mock('../../context/AuthContext', () => ({
     useAuth: () => ({
@@ -69,7 +73,7 @@ describe('Dashboard', () => {
 
     it('renders correctly with data', async () => {
         // Mock responses
-        (authService.getProfile as jest.Mock).mockResolvedValue({ user: { firstName: 'John' } });
+        (userService.getUserProfile as jest.Mock).mockResolvedValue({ user: { firstName: 'John' } });
         (nutritionService.getNutritionSummary as jest.Mock).mockResolvedValue({
             caloriesConsumed: 1500,
             calorieGoal: 2000,
@@ -85,7 +89,7 @@ describe('Dashboard', () => {
 
         const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-        (apiService.get as jest.Mock).mockResolvedValue({
+        (programsService.getSportProgress as jest.Mock).mockResolvedValue({
             weeklySchedule: [
                 {
                     date: todayStr,
@@ -109,7 +113,7 @@ describe('Dashboard', () => {
     });
 
     it('handles navigation', async () => {
-        (authService.getProfile as jest.Mock).mockResolvedValue({ user: { firstName: 'John' } });
+        (userService.getUserProfile as jest.Mock).mockResolvedValue({ user: { firstName: 'John' } });
         (nutritionService.getNutritionSummary as jest.Mock).mockResolvedValue({});
         (objectivesService.getDailyObjectives as jest.Mock).mockResolvedValue({});
         (apiService.get as jest.Mock).mockResolvedValue({});
@@ -127,30 +131,37 @@ describe('Dashboard', () => {
     });
 
     it('handles fallback data on error', async () => {
-        (authService.getProfile as jest.Mock).mockRejectedValue(new Error('Failed'));
+        (userService.getUserProfile as jest.Mock).mockRejectedValue(new Error('Failed'));
         (nutritionService.getNutritionSummary as jest.Mock).mockRejectedValue(new Error('Failed'));
         (objectivesService.getDailyObjectives as jest.Mock).mockRejectedValue(new Error('Failed'));
-        (apiService.get as jest.Mock).mockRejectedValue(new Error('Failed'));
-        (dataService.getUserPreferences as jest.Mock).mockResolvedValue({ preferences: { calories_quotidiennes: '2500' } });
+
+        // programsService ne throw pas d'erreur mais retourne structure vide
+        (programsService.getSportProgress as jest.Mock).mockResolvedValue({
+            activeProgram: null,
+            weeklySchedule: [],
+            stats: {}
+        });
 
         const { getByText } = render(<Dashboard />);
 
         await waitFor(() => {
             // Should render fallback user name
             expect(getByText('Utilisateur')).toBeTruthy();
-            // Should render fallback objectives
-            expect(getByText('Ajouter un repas au suivi nutritionnel')).toBeTruthy();
-            // Should render fallback session
-            expect(getByText('Push')).toBeTruthy();
+            // Should render 0 cal
+            expect(getByText('0 cal')).toBeTruthy();
+            // Should render fallback session empty state (Repos)
+            expect(getByText('Repos')).toBeTruthy();
+            expect(getByText('Aucune séance prévue')).toBeTruthy();
+            // Should NOT render mock objectives
+            expect(getByText('Mes objectifs')).toBeTruthy();
         });
     });
 
     it('navigates to badge monitoring', async () => {
-        (authService.getProfile as jest.Mock).mockResolvedValue({ user: { firstName: 'John' } });
+        (userService.getUserProfile as jest.Mock).mockResolvedValue({ user: { firstName: 'John' } });
         (nutritionService.getNutritionSummary as jest.Mock).mockResolvedValue({});
         (objectivesService.getDailyObjectives as jest.Mock).mockResolvedValue({});
-        (apiService.get as jest.Mock).mockResolvedValue({});
-        (dataService.getUserPreferences as jest.Mock).mockResolvedValue({ preferences: { calories_quotidiennes: '2000' } });
+        (programsService.getSportProgress as jest.Mock).mockResolvedValue({});
 
         const { getByTestId } = render(<Dashboard />);
 

@@ -1,8 +1,10 @@
 import programsService from '../../services/programs.service';
 import apiService from '../../services/api.service';
+import cacheService, { CACHE_KEYS } from '../../services/cache.service';
 
 // Mock apiService
 jest.mock('../../services/api.service');
+jest.mock('../../services/cache.service');
 
 describe('programsService', () => {
     beforeEach(() => {
@@ -22,6 +24,7 @@ describe('programsService', () => {
             const result = await programsService.getPrograms();
 
             expect(apiService.get).toHaveBeenCalledWith('/data/programs?page=1&limit=10');
+            expect(cacheService.save).toHaveBeenCalledWith(CACHE_KEYS.PROGRAMS_PAGE, response);
             expect(result).toEqual(response);
         });
 
@@ -35,22 +38,49 @@ describe('programsService', () => {
             expect(result).toEqual(response);
         });
 
-        it('handles error gracefully', async () => {
+        it('handles error gracefully and returns cache if available', async () => {
             (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+            const cachedResponse = { programs: [{ id: 1 }], recommendedPrograms: [], pagination: {} };
+            // Mock cache hit
+            (cacheService.get as jest.Mock).mockReturnValue(Promise.resolve(cachedResponse));
 
             const result = await programsService.getPrograms();
 
-            expect(result).toEqual({
-                recommendedPrograms: [],
-                programs: [],
-                pagination: {
-                    total: 0,
-                    totalPages: 0,
-                    currentPage: 1,
-                    limit: 10,
-                },
-            });
+            expect(result).toEqual(cachedResponse);
             expect(console.error).toHaveBeenCalled();
+        });
+
+        it('returns empty if error and no cache', async () => {
+            (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+            (cacheService.get as jest.Mock).mockReturnValue(Promise.resolve(null));
+
+            const result = await programsService.getPrograms();
+
+            // Resultat attendu: structure vide
+            expect(result.programs).toEqual([]);
+        });
+    });
+
+    describe('getSportProgress', () => {
+        it('gets sport progress and caches it', async () => {
+            const response = { activeProgram: { id: 1 }, weeklySchedule: [] };
+            (apiService.get as jest.Mock).mockResolvedValue(response);
+
+            const result = await programsService.getSportProgress();
+
+            expect(apiService.get).toHaveBeenCalledWith('/data/programs/sport-progress');
+            expect(cacheService.save).toHaveBeenCalledWith(CACHE_KEYS.SPORT_PROGRESS, response);
+            expect(result).toEqual(response);
+        });
+
+        it('returns cached progress on error', async () => {
+            (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+            const cachedResponse = { activeProgram: { id: 1 }, weeklySchedule: [] };
+            (cacheService.get as jest.Mock).mockResolvedValue(cachedResponse);
+
+            const result = await programsService.getSportProgress();
+
+            expect(result).toEqual(cachedResponse);
         });
     });
 
@@ -67,6 +97,7 @@ describe('programsService', () => {
 
         it('handles error', async () => {
             (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+            (cacheService.get as jest.Mock).mockReturnValue(Promise.resolve(null));
             await expect(programsService.getProgramDetails(1)).rejects.toThrow('Error');
         });
     });
@@ -111,6 +142,7 @@ describe('programsService', () => {
 
         it('handles error', async () => {
             (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+            (cacheService.get as jest.Mock).mockReturnValue(Promise.resolve(null));
             await expect(programsService.getSessionDetails(1)).rejects.toThrow('Error');
         });
     });
@@ -144,7 +176,7 @@ describe('programsService', () => {
 
     describe('getActiveUserProgram', () => {
         it('gets active user program', async () => {
-            const response = { activeProgram: { id: 1 } };
+            const response = { activeProgram: { id: 1 }, weeklySchedule: [] };
             (apiService.get as jest.Mock).mockResolvedValue(response);
 
             const result = await programsService.getActiveUserProgram();
@@ -155,6 +187,7 @@ describe('programsService', () => {
 
         it('handles error gracefully', async () => {
             (apiService.get as jest.Mock).mockRejectedValue(new Error('Error'));
+            (cacheService.get as jest.Mock).mockReturnValue(Promise.resolve(null));
 
             const result = await programsService.getActiveUserProgram();
 

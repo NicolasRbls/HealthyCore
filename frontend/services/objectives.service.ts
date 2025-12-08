@@ -1,4 +1,5 @@
 import apiService from "./api.service";
+import cacheService, { CACHE_KEYS } from "./cache.service";
 
 // Types
 interface Objective {
@@ -19,9 +20,12 @@ const objectivesService = {
   async getDailyObjectives() {
     try {
       const response = await apiService.get("/objectives/daily");
+      await cacheService.save(CACHE_KEYS.OBJECTIVES, response);
       return response;
     } catch (error) {
       console.error("Error fetching daily objectives:", error);
+      const cached = await cacheService.get(CACHE_KEYS.OBJECTIVES);
+      if (cached) return cached;
       throw error;
     }
   },

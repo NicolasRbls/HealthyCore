@@ -5,7 +5,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../context/AuthContext";
 import { RegistrationProvider } from "../context/RegistrationContext";
+import { OfflineProvider } from "../context/OfflineContext";
 import StatusBar from "../components/ui/StatusBar";
+import OfflineBanner from "../components/ui/OfflineBanner";
 import Colors from "../constants/Colors";
 import { LogBox } from "react-native";
 
@@ -44,16 +46,19 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
-      <AuthProvider>
-        <RegistrationProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: "slide_from_right",
-            }}
-          />
-        </RegistrationProvider>
-      </AuthProvider>
+      <OfflineProvider>
+        <AuthProvider>
+          <RegistrationProvider>
+            <OfflineBanner />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: "slide_from_right",
+              }}
+            />
+          </RegistrationProvider>
+        </AuthProvider>
+      </OfflineProvider>
     </SafeAreaProvider>
   );
 }

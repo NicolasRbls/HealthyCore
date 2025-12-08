@@ -80,7 +80,13 @@ const apiService = {
       const responseData: ApiResponse<T> = await response.json();
       return responseData.data;
     } catch (error) {
-      console.error(`Request error to ${endpoint}:`, error);
+      const errorMsg = String(error);
+      // Suppress specific HTML/JSON parse errors from clogging the console
+      if (errorMsg.includes('SyntaxError') && errorMsg.includes('Unexpected character')) {
+        // console.log(`[ApiService] Request to ${endpoint} failed with invalid JSON (likely HTML response)`);
+      } else {
+        console.error(`Request error to ${endpoint}:`, error);
+      }
       throw error;
     }
   },
