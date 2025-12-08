@@ -30,16 +30,14 @@ describe('SyncManager', () => {
         (SecureStore.getItemAsync as jest.Mock).mockResolvedValue('valid-token');
         (cacheService.getLastSync as jest.Mock).mockResolvedValue('2023-01-01T00:00:00Z');
         (apiService.post as jest.Mock).mockResolvedValue({
-            data: {
-                timestamp: '2023-01-02T00:00:00Z',
-                pull: {
-                    programmes: [{ id_programme: 1, nom: 'Prog 1' }],
-                    seances: [],
-                    exercices: [],
-                    users: [{ id_user: 1, nom: 'User 1' }],
-                    aliments: [],
-                    objectifs: []
-                }
+            timestamp: '2023-01-02T00:00:00Z',
+            pull: {
+                programmes: [{ id_programme: 1, nom: 'Prog 1' }],
+                seances: [],
+                exercices: [],
+                users: [{ id_user: 1, nom: 'User 1' }],
+                aliments: [],
+                objectifs: []
             }
         });
         (cacheService.get as jest.Mock).mockResolvedValue([]); // Cache vide initialement
@@ -58,9 +56,10 @@ describe('SyncManager', () => {
         expect(cacheService.save).toHaveBeenCalledWith(CACHE_KEYS.PROGRAMS, expect.arrayContaining([
             expect.objectContaining({ id_programme: 1 })
         ]));
-        expect(cacheService.save).toHaveBeenCalledWith(CACHE_KEYS.PROFILE, expect.arrayContaining([
-            expect.objectContaining({ id_user: 1 })
-        ]));
+        // Note: PROFILE sync removed from SyncManager
+        // expect(cacheService.save).toHaveBeenCalledWith(CACHE_KEYS.PROFILE, expect.arrayContaining([
+        //     expect.objectContaining({ id_user: 1 })
+        // ]));
 
         // Vérifier update timestamp
         expect(cacheService.setLastSync).toHaveBeenCalledWith('2023-01-02T00:00:00Z');
@@ -116,19 +115,17 @@ describe('SyncManager', () => {
 
         // API renvoie update pour id 1 et new id 2
         (apiService.post as jest.Mock).mockResolvedValue({
-            data: {
-                timestamp: '2023-01-02T00:00:00Z',
-                pull: {
-                    programmes: [
-                        { id_programme: 1, nom: 'New Name' },
-                        { id_programme: 2, nom: 'Prog 2' }
-                    ],
-                    seances: [],
-                    exercices: [],
-                    users: [],
-                    aliments: [],
-                    objectifs: []
-                }
+            timestamp: '2023-01-02T00:00:00Z',
+            pull: {
+                programmes: [
+                    { id_programme: 1, nom: 'New Name' },
+                    { id_programme: 2, nom: 'Prog 2' }
+                ],
+                seances: [],
+                exercices: [],
+                users: [],
+                aliments: [],
+                objectifs: []
             }
         });
 
