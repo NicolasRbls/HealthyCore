@@ -1,4 +1,5 @@
 import apiService from "./api.service";
+import cacheService, { CACHE_KEYS } from "./cache.service";
 
 // Types pour les données de nutrition
 export interface Tag {
@@ -127,6 +128,32 @@ const nutritionService = {
       return response;
     } catch (error) {
       console.error("Error fetching foods:", error);
+
+      // Fallback Cache
+      const cachedFoods = await cacheService.get(CACHE_KEYS.NUTRITION);
+      if (cachedFoods) {
+        return {
+          foods: cachedFoods.map((f: any) => ({
+            id: f.id_aliment,
+            name: f.nom,
+            image: f.image,
+            type: f.type,
+            source: f.source,
+            calories: f.calories,
+            proteins: Number(f.proteines),
+            carbs: Number(f.glucides),
+            fats: Number(f.lipides),
+            tags: [] // Tags manquants dans sync simple
+          })),
+          pagination: { // Mock pagination
+            total: cachedFoods.length,
+            totalPages: 1,
+            currentPage: 1,
+            limit: cachedFoods.length
+          }
+        };
+      }
+
       throw error;
     }
   },
@@ -139,6 +166,28 @@ const nutritionService = {
       return await apiService.get(`/nutrition/${id}`);
     } catch (error) {
       console.error(`Error fetching food with id ${id}:`, error);
+      // Fallback: Chercher dans la liste globale en cache
+      const cachedFoods = await cacheService.get(CACHE_KEYS.NUTRITION);
+      if (cachedFoods) {
+        // cachedFoods est un array brut du sync (snake_case) ou du service (camelCase)?
+        // SyncManager stocke le snake_case db. fallBack getAllFoods map le snake_case.
+        // Ici on lit le brut.
+        const food = cachedFoods.find((f: any) => f.id_aliment === id);
+        if (food) {
+          return {
+            id: food.id_aliment,
+            name: food.nom,
+            image: food.image,
+            type: food.type,
+            source: food.source,
+            calories: food.calories,
+            proteins: Number(food.proteines),
+            carbs: Number(food.glucides),
+            fats: Number(food.lipides),
+            tags: []
+          };
+        }
+      }
       throw error;
     }
   },
@@ -148,9 +197,13 @@ const nutritionService = {
    */
   async getNutritionSummary(): Promise<NutritionSummary> {
     try {
-      return await apiService.get("/nutrition/user/summary");
+      const summary = await apiService.get<NutritionSummary>("/nutrition/user/summary");
+      await cacheService.save(CACHE_KEYS.NUTRITION_SUMMARY, summary);
+      return summary;
     } catch (error) {
       console.error("Error fetching nutrition summary:", error);
+      const cached = await cacheService.get(CACHE_KEYS.NUTRITION_SUMMARY);
+      if (cached) return cached;
       throw error;
     }
   },
@@ -160,9 +213,13 @@ const nutritionService = {
    */
   async getTodayNutrition(): Promise<NutritionData> {
     try {
-      return await apiService.get("/nutrition/user/today");
+      const today = await apiService.get<NutritionData>("/nutrition/user/today");
+      await cacheService.save(CACHE_KEYS.NUTRITION_TODAY, today);
+      return today;
     } catch (error) {
       console.error("Error fetching today nutrition:", error);
+      const cached = await cacheService.get(CACHE_KEYS.NUTRITION_TODAY);
+      if (cached) return cached;
       throw error;
     }
   },
@@ -210,9 +267,16 @@ const nutritionService = {
       if (endDate) params.endDate = endDate;
 
       const queryString = buildQueryString(params);
-      return await apiService.get(`/nutrition/user/history${queryString}`);
+      const history = await apiService.get<HistoryData>(`/nutrition/user/history${queryString}`);
+      // On ne met en cache que l'appel par défaut (sans date spécifique ou mois en cours) pour éviter d'écraser avec des partiels
+      // Ou on cache le dernier résultat, tant pis.
+      await cacheService.save(CACHE_KEYS.NUTRITION_HISTORY, history);
+      return history;
     } catch (error) {
       console.error("Error fetching nutrition history:", error);
+      const cached = await cacheService.get(CACHE_KEYS.NUTRITION_HISTORY);
+      // Si les dates demandées correspondent "à peu près" ou en fallback simple
+      if (cached) return cached;
       throw error;
     }
   },

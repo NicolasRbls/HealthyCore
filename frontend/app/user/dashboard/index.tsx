@@ -18,10 +18,12 @@ import { TextStyles } from "../../../constants/Fonts";
 
 // Import services
 import authService from "../../../services/auth.service";
+import userService from "../../../services/user.service";
 import dataService from "../../../services/data.service";
 import apiService from "../../../services/api.service";
 import objectivesService from "../../../services/objectives.service";
 import { nutritionService } from "../../../services/nutrition.service";
+import programsService from "../../../services/programs.service";
 
 // Type definitions
 interface NutritionSummary {
@@ -75,43 +77,32 @@ export default function Dashboard() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // 1. Charger le profil utilisateur
-      const profileData = await authService.getProfile();
-      setUserName(profileData.user.firstName);
-
-      // 2. Charger les données nutritionnelles en utilisant le service de nutrition
+      // 1. Charger le profil utilisateur (Utiliser userService pour le cache)
       try {
-        // Utiliser la fonction correcte du service nutrition importé
+        const profileData = await userService.getUserProfile();
+        setUserName(profileData.user.firstName);
+      } catch (e) {
+        console.log("Error loading profile:", e);
+        setUserName("Utilisateur");
+      }
 
+      // 2. Charger les données nutritionnelles
+      try {
         const nutritionData = await nutritionService.getNutritionSummary();
 
         if (nutritionData && nutritionData.calorieGoal) {
-          // Format de la réponse attendue du service nutrition
-          const consumedCalories = nutritionData.caloriesConsumed || 0;
-          const totalCalories = nutritionData.calorieGoal || 0;
-          const percentage = nutritionData.percentCompleted || 0;
-
           setNutritionSummary({
-            consumedCalories,
-            totalCalories,
-            percentage,
+            consumedCalories: nutritionData.caloriesConsumed || 0,
+            totalCalories: nutritionData.calorieGoal || 0,
+            percentage: nutritionData.percentCompleted || 0,
           });
         } else {
-          // Fallback si la structure n'est pas celle attendue
-          const preferencesData = await dataService.getUserPreferences();
-          const totalCalorieGoal = parseFloat(
-            preferencesData.preferences.calories_quotidiennes
-          );
-          mockNutritionalData(totalCalorieGoal);
+          setNutritionSummary({ consumedCalories: 0, totalCalories: 0, percentage: 0 });
         }
       } catch (error) {
         console.error("Error loading nutrition data:", error);
-        // Fallback aux données mockées en cas d'erreur
-        const preferencesData = await dataService.getUserPreferences();
-        const totalCalorieGoal = parseFloat(
-          preferencesData.preferences.calories_quotidiennes
-        );
-        mockNutritionalData(totalCalorieGoal);
+        // Fallback propre : Zéro
+        setNutritionSummary({ consumedCalories: 0, totalCalories: 0, percentage: 0 });
       }
 
       // 3. Charger les objectifs quotidiens
@@ -120,25 +111,26 @@ export default function Dashboard() {
         if (objectivesResponse && objectivesResponse.objectives) {
           setObjectives(objectivesResponse.objectives);
         } else {
-          // Fallback sur les objectifs mockés
-          mockObjectives();
+          setObjectives([]);
         }
       } catch (error) {
         console.error("Error loading objectives:", error);
-        mockObjectives();
+        setObjectives([]);
       }
 
-      // 4. Charger les données sportives à partir de sport-progress
+      // 4. Charger les données sportives
       try {
-        const sportProgressData = await apiService.get(
-          "/data/programs/sport-progress"
-        );
+        const sportProgressData = await programsService.getSportProgress();
+        // Note: activeUserProgram logic. 
+        // Si l'appel API échoue, pour l'instant pas de cache explicite sur "weeklySchedule" dans `programs.service`
+        // J'ai ajouté `ACTIVE_PROGRAM` cache, mais `sport-progress` renvoie plus que ça.
+        // Pour l'instant, si ça fail, on met vide.
+        // Le mockTodaySession est supprimé pour éviter l'aléatoire.
 
-        // Obtenir la date du jour pour comparer
-        const todayStr = format(new Date(), "yyyy-MM-dd"); // Format YYYY-MM-DD
+        const todayStr = format(new Date(), "yyyy-MM-dd");
 
-        // Vérifier s'il y a une séance pour aujourd'hui dans le planning hebdomadaire
         if (
+          sportProgressData &&
           sportProgressData.weeklySchedule &&
           sportProgressData.weeklySchedule.length > 0
         ) {
@@ -150,35 +142,20 @@ export default function Dashboard() {
             setTodaySession({
               id: todayScheduleItem.session.id,
               name: todayScheduleItem.session.name.split("(")[0],
-              description: todayScheduleItem.session.name
-                .split("(")[1]
-                .replace(")", ""),
+              description: todayScheduleItem.session.name.split("(")[1]?.replace(")", "") || "",
             });
           } else {
-            // Si pas de séance pour aujourd'hui dans le planning
-            setTodaySession({
-              id: 0,
-              name: "Repos",
-              description: "Aucune séance prévue",
-            });
+            setTodaySession({ id: 0, name: "Repos", description: "Aucune séance prévue" });
           }
         } else {
-          // Si aucun planning hebdomadaire
-          setTodaySession({
-            id: 0,
-            name: "Repos",
-            description: "Aucune séance prévue",
-          });
+          setTodaySession({ id: 0, name: "Repos", description: "Aucune séance prévue" });
         }
       } catch (error) {
         console.error("Error loading sport progress data:", error);
-        // Fallback sur les données mockées
-        mockTodaySession();
+        setTodaySession({ id: 0, name: "--", description: "Non disponible hors-ligne" });
       }
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
-      // Fallback complet sur les données mockées
-      fallbackToMockData();
+      console.error("Error loading dashboard data (Global):", error);
     } finally {
       setIsLoading(false);
     }
@@ -200,56 +177,7 @@ export default function Dashboard() {
     }
   };
 
-  const mockNutritionalData = (totalCalorieGoal: number) => {
-    // Pour l'instant, créer des données factices de suivi nutritionnel
-    // Vous pourriez utiliser une valeur aléatoire entre 50-90% de l'objectif
-    const consumedPercentage = Math.floor(Math.random() * 40) + 50; // Entre 50 et 90%
-    const consumedCalories = Math.round(
-      (consumedPercentage / 100) * totalCalorieGoal
-    );
 
-    setNutritionSummary({
-      consumedCalories,
-      totalCalories: totalCalorieGoal,
-      percentage: consumedPercentage,
-    });
-  };
-
-  const mockTodaySession = () => {
-    // Séance fictive facilement identifiable
-    setTodaySession({
-      id: 999,
-      name: "Push",
-      description: "(Pectoraux, Triceps, Épaules)",
-    });
-  };
-
-  const mockObjectives = () => {
-    // Créer deux objectifs simples
-    setObjectives([
-      {
-        id: 1,
-        objectiveId: 1,
-        title: "Ajouter un repas au suivi nutritionnel",
-        completed: false,
-        date: new Date().toISOString().split("T")[0],
-      },
-      {
-        id: 2,
-        objectiveId: 2,
-        title: "Compléter la séance d'entraînement du jour",
-        completed: false,
-        date: new Date().toISOString().split("T")[0],
-      },
-    ]);
-  };
-
-  const fallbackToMockData = () => {
-    setUserName("Utilisateur");
-    mockNutritionalData(2500); // Valeur par défaut
-    mockTodaySession();
-    mockObjectives();
-  };
 
   // Component for nutrition summary card
   const NutritionSummaryCard = () => (

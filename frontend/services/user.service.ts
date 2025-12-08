@@ -1,4 +1,5 @@
 import apiService from "./api.service";
+import cacheService, { CACHE_KEYS } from "./cache.service";
 
 // Types for the user profile
 export interface UserProfile {
@@ -144,14 +145,35 @@ const userService = {
    * Get the user profile
    */
   async getUserProfile(): Promise<UserProfile> {
-    return apiService.get<UserProfile>("/user/profile");
+    try {
+      const profile = await apiService.get<UserProfile>("/user/profile");
+      // Cache-Aside: Sauvegarder le profil complet pour usage hors-ligne
+      await cacheService.save(CACHE_KEYS.PROFILE, profile);
+      return profile;
+    } catch (error) {
+      console.warn("Offline fallback for getUserProfile");
+      const cachedProfile = await cacheService.get(CACHE_KEYS.PROFILE);
+      if (cachedProfile) {
+        return cachedProfile;
+      }
+      throw error;
+    }
   },
 
   /**
    * Get all user badges
    */
   async getUserBadges(): Promise<BadgesResponse> {
-    return apiService.get<BadgesResponse>("/user/badges");
+    try {
+      const badges = await apiService.get<BadgesResponse>("/user/badges");
+      await cacheService.save(CACHE_KEYS.BADGES, badges);
+      return badges;
+    } catch (error) {
+      console.error("Error fetching badges:", error);
+      const cached = await cacheService.get(CACHE_KEYS.BADGES);
+      if (cached) return cached;
+      throw error;
+    }
   },
 
   /**
@@ -184,7 +206,16 @@ const userService = {
       endpoint += `?${params.join("&")}`;
     }
 
-    return apiService.get<EvolutionResponse>(endpoint);
+    try {
+      const evolution = await apiService.get<EvolutionResponse>(endpoint);
+      await cacheService.save(CACHE_KEYS.EVOLUTION, evolution);
+      return evolution;
+    } catch (error) {
+      console.error("Error fetching evolution:", error);
+      const cached = await cacheService.get(CACHE_KEYS.EVOLUTION);
+      if (cached) return cached;
+      throw error;
+    }
   },
 
   /**
@@ -207,9 +238,18 @@ const userService = {
    * @param period Period for statistics ("week", "month", "year")
    */
   async getProgressStats(period: string = "month"): Promise<ProgressStats> {
-    return apiService.get<ProgressStats>(
-      `/user/progress/stats?period=${period}`
-    );
+    try {
+      const stats = await apiService.get<ProgressStats>(
+        `/user/progress/stats?period=${period}`
+      );
+      await cacheService.save(CACHE_KEYS.PROGRESS_STATS, stats);
+      return stats;
+    } catch (error) {
+      console.error("Error fetching progress stats:", error);
+      const cached = await cacheService.get(CACHE_KEYS.PROGRESS_STATS);
+      if (cached) return cached;
+      throw error;
+    }
   },
 
   /**
