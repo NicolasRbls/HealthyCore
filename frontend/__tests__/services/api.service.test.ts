@@ -15,7 +15,7 @@ describe('API Service', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
-    
+
     // Reset fetch mock
     global.fetch = jest.fn();
 
@@ -35,7 +35,7 @@ describe('API Service', () => {
     (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
 
     const result = await apiService.get('/test-endpoint');
-    
+
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/test-endpoint'),
       expect.objectContaining({
@@ -61,7 +61,7 @@ describe('API Service', () => {
     (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
 
     const result = await apiService.post('/create', mockData);
-    
+
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/create'),
       expect.objectContaining({
@@ -83,7 +83,7 @@ describe('API Service', () => {
       })
     };
     (global.fetch as jest.Mock).mockResolvedValue(mockErrorResponse);
-    
+
     try {
       await apiService.get('/not-found');
       // Should not reach here
@@ -95,5 +95,45 @@ describe('API Service', () => {
         status: 404
       });
     }
+  });
+
+
+  it('silences console.error for HTML/JSON syntax errors', async () => {
+    // Mock response that fails to parse as JSON (e.g. HTML <!DOCTYPE...)
+    const mockHtmlResponse = {
+      ok: true, // Fetch thinks it's ok (200 OK)
+      json: () => Promise.reject(new SyntaxError('JSON Parse error: Unexpected character: <'))
+    };
+    (global.fetch as jest.Mock).mockResolvedValue(mockHtmlResponse);
+
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+
+    try {
+      await apiService.get('/sync');
+      fail('Should have thrown SyntaxError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(SyntaxError);
+    }
+
+    // Assert console.error was NOT called
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('logs generic errors with console.error', async () => {
+    // Mock generic network error
+    (global.fetch as jest.Mock).mockRejectedValue(new Error('Network Fail'));
+
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
+
+    try {
+      await apiService.get('/fail');
+    } catch (error) {
+      // expected
+    }
+
+    // Assert console.error WAS called
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 });
