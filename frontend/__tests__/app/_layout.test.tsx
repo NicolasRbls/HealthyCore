@@ -30,6 +30,12 @@ jest.mock('../../context/RegistrationContext', () => ({
     RegistrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+jest.mock('../../context/OfflineContext', () => ({
+    OfflineProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+jest.mock('../../components/ui/OfflineBanner', () => 'OfflineBanner');
+
 jest.mock('../../components/ui/StatusBar', () => 'StatusBar');
 
 describe('RootLayout', () => {
