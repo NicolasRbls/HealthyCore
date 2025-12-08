@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "HealthyCore",
-    "slug": "healthycore",
+    "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
