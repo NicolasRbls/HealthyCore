@@ -164,7 +164,110 @@ const loginUser = async (email, password) => {
   }
 };
 
+/**
+ * Service pour la demande de réinitialisation de mot de passe
+ * @param {string} email - Email de l'utilisateur
+ */
+const forgotPassword = async (email) => {
+  const crypto = require("crypto");
+  const emailService = require("../../services/email.service");
+
+  // 1. Vérifier si l'utilisateur existe
+  const user = await prisma.users.findUnique({
+    where: { email: email.toLowerCase() },
+  });
+
+  if (!user) {
+    // Pour des raisons de sécurité, on ne dit pas si l'email existe ou non
+    // Mais on peut retourner un succès simulé ou une erreur spécifique captée par le contrôleur
+    // Ici, on retourne succès pour ne pas fuiter d'infos
+    return;
+  }
+
+  // 2. Générer le token de réinitialisation
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetTokenHash = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  const resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+  // 3. Sauvegarder le token hashé en base
+  await prisma.users.update({
+    where: { id_user: user.id_user },
+    data: {
+      reset_token: resetTokenHash,
+      reset_token_expires: resetTokenExpires,
+    },
+  });
+
+  // 4. Envoyer l'email
+  try {
+    await emailService.sendPasswordResetEmail(user.email, resetToken);
+  } catch (err) {
+    // Si l'envoi échoue, on nettoie le token pour éviter un blocage
+    await prisma.users.update({
+      where: { id_user: user.id_user },
+      data: {
+        reset_token: null,
+        reset_token_expires: null,
+      },
+    });
+    throw new AppError(
+      "Erreur lors de l'envoi de l'email de réinitialisation",
+      500,
+      "EMAIL_SEND_ERROR"
+    );
+  }
+};
+
+/**
+ * Service pour réinitialiser le mot de passe
+ * @param {string} token - Token de réinitialisation
+ * @param {string} newPassword - Nouveau mot de passe
+ */
+const resetPassword = async (token, newPassword) => {
+  const crypto = require("crypto");
+
+  // 1. Hasher le token reçu
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  // 2. Trouver l'utilisateur avec ce token VALIDE
+  const user = await prisma.users.findFirst({
+    where: {
+      reset_token: hashedToken,
+      reset_token_expires: {
+        gt: new Date(), // Date d'expiration doit être dans le futur
+      },
+    },
+  });
+
+  if (!user) {
+    throw new AppError(
+      "Token invalide ou expiré",
+      400,
+      "INVALID_OR_EXPIRED_TOKEN"
+    );
+  }
+
+  // 3. Hasher le nouveau mot de passe
+  const hashedPassword = await hashPassword(newPassword);
+
+  // 4. Mettre à jour l'utilisateur
+  await prisma.users.update({
+    where: { id_user: user.id_user },
+    data: {
+      mot_de_passe: hashedPassword,
+      reset_token: null,
+      reset_token_expires: null,
+    },
+  });
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  forgotPassword,
+  resetPassword,
 };

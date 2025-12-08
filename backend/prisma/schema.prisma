@@ -323,4 +323,6 @@ model users {
   signalements_utilisateurs signalements_utilisateurs[]
   suivis_nutritionnels      suivis_nutritionnels[]
   suivis_sportifs           suivis_sportifs[]
+  reset_token               String?                     @unique @db.VarChar(255)
+  reset_token_expires       DateTime?                   @db.Timestamp(6)
 }

@@ -10,7 +10,11 @@ jest.mock('expo-router', () => ({
     router: {
         push: jest.fn(),
         back: jest.fn(),
+        replace: jest.fn(),
     },
+    useNavigation: () => ({
+        canGoBack: jest.fn().mockReturnValue(true),
+    }),
 }));
 
 // Mock useForm to test integration with the screen's onSubmit logic
@@ -111,5 +115,13 @@ describe('LoginScreen', () => {
         fireEvent.press(getByText('Inscrivez-vous'));
 
         expect(router.push).toHaveBeenCalledWith('/register/step1_profile');
+    });
+
+    it('navigates to forgot password screen', () => {
+        const { getByText } = render(<LoginScreen />);
+
+        fireEvent.press(getByText('Mot de passe oublié ?'));
+
+        expect(router.push).toHaveBeenCalledWith('/auth/forgot-password');
     });
 });

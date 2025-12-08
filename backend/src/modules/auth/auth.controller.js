@@ -171,3 +171,88 @@ exports.logout = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Contrôleur pour demander la réinitialisation de mot de passe
+ */
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new AppError("L'email est requis", 400, "MISSING_EMAIL");
+    }
+
+    await authService.forgotPassword(email);
+
+    res.status(200).json(
+      success(
+        null,
+        "Si un compte est associé à cet email, vous recevrez un lien de réinitialisation."
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Endpoint de redirection pour le deep linking (contournement Gmail)
+ */
+exports.resetPasswordRedirect = (req, res) => {
+  const { token } = req.query;
+  const deepLink = `healthycore://auth/reset-password?token=${token}`;
+
+  // Page HTML simple qui tente la redirection JS + lien manuel si échec
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Redirection...</title>
+      </head>
+      <body style="font-family: sans-serif; text-align: center; padding: 20px;">
+        <p>Redirection vers l'application HealthyCore...</p>
+        <div id="manual-link" style="display: none;">
+            <p>Si l'application ne s'ouvre pas automatiquement :</p>
+            <a href="${deepLink}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Ouvrir l'application</a>
+        </div>
+        <script>
+          window.location.href = "${deepLink}";
+          setTimeout(function() {
+            var link = document.getElementById('manual-link');
+            if (link) {
+              link.style.display = 'block';
+            }
+          }, 1000);
+        </script>
+      </body>
+    </html>
+  `;
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+};
+
+/**
+ * Contrôleur pour réinitialiser le mot de passe avec le token
+ */
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      throw new AppError("Token et nouveau mot de passe requis", 400, "MISSING_DATA");
+    }
+
+    await authService.resetPassword(token, password);
+
+    res.status(200).json(
+      success(
+        null,
+        "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter."
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+};
