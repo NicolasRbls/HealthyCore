@@ -96,16 +96,15 @@ const NutritionService = {
       // on essaie de chercher via l'API OpenFoodFacts
       let apiResults = [];
 
+
       if (search && foods.length < 5 && (!type || type === "produit")) {
         try {
-          apiResults = await OpenFoodFactsService.searchProducts(search, 5);
-          fullTotal = apiResults.length + total; // Ajouter le nombre de résultats API au total
+          const offResults = await OpenFoodFactsService.searchProducts(search, 10);
+          // Plus besoin de filtrage FR ici, déjà fait dans le service
+          apiResults = offResults.slice(0, 5);
+          fullTotal = apiResults.length + total;
         } catch (error) {
-          console.error(
-            "Erreur lors de la recherche OpenFoodFacts:",
-            error.message
-          );
-          // Continuer avec les résultats locaux en cas d'erreur
+          console.error("Erreur OpenFoodFacts:", error.message);
         }
       }
 

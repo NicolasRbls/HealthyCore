@@ -3,6 +3,7 @@ const NutritionController = require("./nutrition.controller");
 const { checkAuth } = require("../auth/auth.middleware");
 
 const router = express.Router();
+const { validateFoodData } = require("../validation/food.validation");
 
 /**
  * @swagger
@@ -171,5 +172,11 @@ router.delete(
  *         description: Nutrition history
  */
 router.get("/user/history", checkAuth, NutritionController.getNutritionHistory);
+
+
+
+router.post("/foods", validateFoodData, async (req, res) => {
+  // Création de l'aliment (déjà validé)
+});
 
 module.exports = router;

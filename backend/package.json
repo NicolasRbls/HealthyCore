@@ -8,7 +8,9 @@
     "test:ci": "dotenv -e .env.test -- jest --runInBand --ci --coverage",
     "migrate": "prisma migrate dev",
     "migrate:test": "prisma migrate deploy",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "clean:foods": "node src/modules/data/clean-foods.script.js"
+
   },
   "keywords": [],
   "author": "",
