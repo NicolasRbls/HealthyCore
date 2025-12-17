@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Apple, Dumbbell, Activity, Heart } from "lucide-react"
+import { Apple, Dumbbell, Activity, Gamepad} from "lucide-react"
 
 const features = [
   {
@@ -16,12 +16,12 @@ const features = [
   {
     icon: Activity,
     title: "Statistiques Santé",
-    description: "Visualisez vos progrès avec des graphiques détaillés : poids, activité physique, sommeil et plus.",
+    description: "Visualisez vos progrès avec des graphiques détaillés : poids, activité physique, calories et plus.",
   },
   {
-    icon: Heart,
-    title: "Suivi Cardiaque",
-    description: "Connectez vos appareils et suivez votre fréquence cardiaque pour optimiser vos entraînements.",
+    icon: Gamepad,
+    title: "Gamification",
+    description: "Restez motivé grâce à des défis, badges et récompenses pour chaque étape franchie dans votre parcours santé.",
   },
 ]
 
