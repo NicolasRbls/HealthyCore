@@ -31,12 +31,6 @@ export function HeroSection() {
                   {"Télécharger l'APK"}
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="gap-2 bg-transparent">
-                <Link href="#demo">
-                  <Play className="h-5 w-5" />
-                  Voir la démo
-                </Link>
-              </Button>
             </div>
           </div>
 

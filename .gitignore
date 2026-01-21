@@ -41,4 +41,6 @@ frontend/coverage
 # Landing page
 node_modules/
 .next/
-*.apk
+*.
+PLAN.md
+RAPPORT.md

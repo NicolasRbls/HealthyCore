@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
 import Link from "next/link"
+const DOWNLOAD_LINK = "https://drive.google.com/file/d/1bhXCit0iD3TGSZhVlNaYSd6ZTJas1m6q/view?usp=sharing"
 
 export function CTASection() {
   return (
@@ -14,7 +15,7 @@ export function CTASection() {
           et commencez dès aujourd'hui.
         </p>
         <Button size="lg" variant="secondary" className="mt-8 gap-2 text-lg" asChild>
-          <Link href="/healthycore.apk" download>
+          <Link href={DOWNLOAD_LINK} download>
             <Download className="h-5 w-5" />
             {"Télécharger l'APK Gratuit"}
           </Link>
