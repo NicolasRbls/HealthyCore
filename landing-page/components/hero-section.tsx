@@ -40,7 +40,7 @@ export function HeroSection() {
               {/* Phone Frame */}
               <div className="relative h-[500px] w-[250px] overflow-hidden rounded-[3rem] border-8 border-foreground/10 bg-card shadow-2xl md:h-[600px] md:w-[300px]">
                 <img
-                  src="/mobile-fitness-app-dashboard-with-health-stats-and.jpg"
+                  src="/menu-hc.png"
                   alt="HealthyCore App Interface"
                   className="h-full w-full object-cover"
                 />
