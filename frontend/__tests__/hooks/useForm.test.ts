@@ -1,56 +1,93 @@
-// __tests__/hooks/useForm.test.ts
-
-// Import direct du hook
+import { renderHook, act } from '@testing-library/react-native';
 import { useForm } from '../../hooks/useForm';
 
-// Test 
-describe('useForm hook', () => {
-  // Test de l'API du hook
-  it('vérifie que useForm est correctement exporté et a la bonne structure', () => {
-    // Vérifier que useForm est une fonction
-    expect(typeof useForm).toBe('function');
-    
-    // Création d'une instance basique 
-    const mockInstance = {
-      values: { name: "", email: "" },
-      errors: {},
-      touched: {},
-      isSubmitting: false,
-      handleChange: jest.fn(),
-      handleBlur: jest.fn(),
-      handleSubmit: jest.fn(),
-      resetForm: jest.fn(),
-      setFieldValues: jest.fn(),
-      setFieldError: jest.fn(),
-      setGlobalError: jest.fn(),
-      globalError: null
-    };
-    
-    // Vérifier la structure attendue
-    expect(Object.keys(mockInstance)).toEqual(
-      expect.arrayContaining([
-        'values', 'errors', 'touched', 'isSubmitting', 
-        'handleChange', 'handleBlur', 'handleSubmit'
-      ])
-    );
+describe('useForm', () => {
+  const initialValues = { email: '', password: '' };
+  const mockValidate = jest.fn((values) => {
+    const errors: any = {};
+    if (!values.email) errors.email = 'Required';
+    return errors;
   });
-  
-  // Test basique de la logique du hook 
-  it('vérifie les types et la logique basique du useForm', () => {
-    // Simuler le comportement de useForm 
-    const validateMock = jest.fn((values) => {
-      const errors: Record<string, string> = {};
-      if (!values.name) errors.name = 'Name is required';
-      return errors;
+  const mockOnSubmit = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('initializes with default values', () => {
+    const { result } = renderHook(() =>
+      useForm({ initialValues })
+    );
+
+    expect(result.current.values).toEqual(initialValues);
+    expect(result.current.errors).toEqual({});
+    expect(result.current.touched).toEqual({});
+  });
+
+  it('updates values on change', () => {
+    const { result } = renderHook(() =>
+      useForm({ initialValues })
+    );
+
+    act(() => {
+      result.current.handleChange('email', 'test@example.com');
     });
-    
-    // Tester la fonction de validation
-    const testValues = { name: "", email: "test@example.com" };
-    const validationResult = validateMock(testValues);
-    
-    // Vérifier que la validation fonctionne comme prévu
-    expect(validateMock).toHaveBeenCalledWith(testValues);
-    expect(validationResult).toHaveProperty('name', 'Name is required');
-    expect(Object.keys(validationResult).length).toBe(1);
+
+    expect(result.current.values.email).toBe('test@example.com');
+  });
+
+  it('validates on blur', () => {
+    const { result } = renderHook(() =>
+      useForm({ initialValues, validate: mockValidate })
+    );
+
+    act(() => {
+      result.current.handleBlur('email');
+    });
+
+    expect(result.current.touched.email).toBe(true);
+    expect(result.current.errors.email).toBe('Required');
+  });
+
+  it('submits form when valid', async () => {
+    const { result } = renderHook(() =>
+      useForm({ initialValues, validate: mockValidate, onSubmit: mockOnSubmit })
+    );
+
+    act(() => {
+      result.current.handleChange('email', 'test@example.com');
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({ email: 'test@example.com', password: '' });
+  });
+
+  it('does not submit when invalid', async () => {
+    const { result } = renderHook(() =>
+      useForm({ initialValues, validate: mockValidate, onSubmit: mockOnSubmit })
+    );
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+    expect(result.current.errors.email).toBe('Required');
+  });
+
+  it('resets form', () => {
+    const { result } = renderHook(() =>
+      useForm({ initialValues })
+    );
+
+    act(() => {
+      result.current.handleChange('email', 'changed');
+      result.current.resetForm();
+    });
+
+    expect(result.current.values).toEqual(initialValues);
   });
 });

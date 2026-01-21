@@ -57,14 +57,14 @@ export default function UsersPage() {
 
       // Vérifier la structure de la réponse
       if (
-        !response.data?.users?.users ||
-        !Array.isArray(response.data.users.users)
+        !response.data?.users ||
+        !Array.isArray(response.data.users)
       ) {
         throw new Error("Format de réponse inattendu");
       }
 
-      // Extraire correctement le tableau d'utilisateurs depuis la structure imbriquée
-      const usersList = response.data.users.users;
+      // Extraire correctement le tableau d'utilisateurs
+      const usersList = response.data.users;
       setUsers(usersList);
 
       // Extraire et convertir les données de pagination en nombres
@@ -134,77 +134,77 @@ export default function UsersPage() {
     accessorKey: keyof User;
     cell?: (item: User) => React.ReactNode;
   }[] = [
-    {
-      header: "ID",
-      accessorKey: "id_user",
-    },
-    {
-      header: "Nom",
-      accessorKey: "nom",
-      cell: (item: User) => (
-        <div className="font-medium">
-          {item.prenom} {item.nom}
-        </div>
-      ),
-    },
-    {
-      header: "Email",
-      accessorKey: "email",
-    },
-    {
-      header: "Genre",
-      accessorKey: "sexe",
-      cell: (item: User) => (
-        <Badge variant="outline">
-          {item.sexe === "H"
-            ? "Homme"
-            : item.sexe === "F"
-            ? "Femme"
-            : "Non spécifié"}
-        </Badge>
-      ),
-    },
-    {
-      header: "Date d'inscription",
-      accessorKey: "cree_a",
-      cell: (item: User) => (
-        <span>
-          {format(new Date(item.cree_a), "dd MMM yyyy", { locale: fr })}
-        </span>
-      ),
-    },
-    {
-      header: "Rôle",
-      accessorKey: "role",
-      cell: (item: User) => (
-        <Badge variant={item.role === "admin" ? "destructive" : "default"}>
-          {item.role === "admin" ? "Admin" : "Utilisateur"}
-        </Badge>
-      ),
-    },
-    {
-      header: "Actions",
-      accessorKey: "id_user",
-      cell: (item: User) => (
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleViewUser(item)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="destructive"
-            size="icon"
-            onClick={() => handleDeleteClick(item)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+      {
+        header: "ID",
+        accessorKey: "id_user",
+      },
+      {
+        header: "Nom",
+        accessorKey: "nom",
+        cell: (item: User) => (
+          <div className="font-medium">
+            {item.prenom} {item.nom}
+          </div>
+        ),
+      },
+      {
+        header: "Email",
+        accessorKey: "email",
+      },
+      {
+        header: "Genre",
+        accessorKey: "sexe",
+        cell: (item: User) => (
+          <Badge variant="outline">
+            {item.sexe === "H"
+              ? "Homme"
+              : item.sexe === "F"
+                ? "Femme"
+                : "Non spécifié"}
+          </Badge>
+        ),
+      },
+      {
+        header: "Date d'inscription",
+        accessorKey: "cree_a",
+        cell: (item: User) => (
+          <span>
+            {format(new Date(item.cree_a), "dd MMM yyyy", { locale: fr })}
+          </span>
+        ),
+      },
+      {
+        header: "Rôle",
+        accessorKey: "role",
+        cell: (item: User) => (
+          <Badge variant={item.role === "admin" ? "destructive" : "default"}>
+            {item.role === "admin" ? "Admin" : "Utilisateur"}
+          </Badge>
+        ),
+      },
+      {
+        header: "Actions",
+        accessorKey: "id_user",
+        cell: (item: User) => (
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleViewUser(item)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={() => handleDeleteClick(item)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ];
 
   return (
     <>
@@ -213,9 +213,8 @@ export default function UsersPage() {
       <div className="container mx-auto px-6 py-8">
         <PageHeader
           title="Utilisateurs"
-          description={`Total : ${pagination.total} utilisateur${
-            pagination.total > 1 ? "s" : ""
-          }`}
+          description={`Total : ${pagination.total} utilisateur${pagination.total > 1 ? "s" : ""
+            }`}
         />
 
         {error && (

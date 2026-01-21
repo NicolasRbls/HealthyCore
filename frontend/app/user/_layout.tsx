@@ -58,6 +58,14 @@ export default function UserLayout() {
             />
           ),
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            const { router } = require("expo-router");
+            router.dismissAll();
+            router.replace("/user/nutrition/nutrition-discover");
+          },
+        })}
       />
 
       <Tabs.Screen
@@ -72,6 +80,17 @@ export default function UserLayout() {
             />
           ),
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            // Empêcher le comportement par défaut (qui préserve l'état)
+            e.preventDefault();
+            // Rediriger vers l'écran principal du sport
+            // On utilise un timeout pour laisser le temps à l'événement de se propager si nécessaire
+            // et on utilise router.replace pour remplacer la vue actuelle
+            const { router } = require("expo-router");
+            router.replace("/user/sport/sport-discover");
+          },
+        })}
       />
 
       <Tabs.Screen

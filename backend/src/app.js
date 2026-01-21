@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const config = require("./config/config");
 const errorMiddleware = require("./middleware/error.middleware");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
 
 // Import routes from modules
 const authRoutes = require("./modules/auth/auth.routes");
@@ -26,25 +28,44 @@ const app = express();
 
 // Configure middleware
 app.use(
-  cors({
-    origin: config.CORS_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+    cors({
+        origin: config.CORS_ORIGIN,
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
 );
 app.use(express.json());
 
 // Logger middleware
 app.use((req, res, next) => {
-  if (config.NODE_ENV !== "test") {
-    console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
-  }
-  next();
+    if (config.NODE_ENV !== "test") {
+        console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
+    }
+    next();
 });
 
-// Configure health check
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Health check
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: System is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 version:
+ *                   type: string
+ */
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "healthy", version: config.VERSION });
+    res.status(200).json({ status: "healthy", version: config.VERSION });
 });
 
 // Configure API routes
@@ -64,6 +85,11 @@ app.use("/api/admin/sessions", adminSessionsRoutes);
 app.use("/api/admin/programs", adminProgramsRoutes);
 
 app.use("/api/objectives", objectivesRoutes);
+app.use("/api/signalements", require("./modules/signalement/signalement.routes"));
+app.use("/api/sync", require("./modules/sync/sync.routes"));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Error handling middleware (should be last)
 app.use(errorMiddleware);

@@ -5,83 +5,199 @@ const { checkAuth } = require("../auth/auth.middleware");
 
 
 /**
- * Route to get the user's profile.
- * 
- * @route GET /profile
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.getUserProfile - Controller to handle fetching the user's profile data.
+ * @swagger
+ * tags:
+ *   name: User
+ *   description: User profile and data management
+ */
+
+/**
+ * @swagger
+ * /api/user/profile:
+ *   get:
+ *     summary: Get user profile
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile data
+ *       401:
+ *         description: Not authenticated
  */
 router.get("/profile", checkAuth, userController.getUserProfile);
 
 /**
-* Route to get the user's badges.
-* 
-* @route GET /badges
-* @middleware checkAuth - Middleware to verify user authentication.
-* @controller userController.getBadgesController - Controller to handle fetching the user's badges data.
-*/
+ * @swagger
+ * /api/user/badges:
+ *   get:
+ *     summary: Get user badges
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user badges
+ */
 router.get("/badges", checkAuth, userController.getBadgesController);
 
 /**
- * Route to check the user's badges.
- * 
- * @route POST /badges/check
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.checkBadgesController - Controller to handle checking the user's badges.
+ * @swagger
+ * /api/user/badges/check:
+ *   post:
+ *     summary: Check for new badges
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of newly unlocked badges
  */
 router.post("/badges/check", checkAuth, userController.checkBadgesController);
 
 /**
- * Route to get the user's evolution data.
- * 
- * @route GET /evolution
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.getUserEvolutionController - Controller to handle fetching the user's evolution data.
+ * @swagger
+ * /api/user/evolution:
+ *   get:
+ *     summary: Get user evolution data
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for evolution data
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for evolution data
+ *     responses:
+ *       200:
+ *         description: User evolution data
  */
 router.get("/evolution", checkAuth, userController.getUserEvolutionController);
 
 /**
- * Route to add a new evolution entry for the user.
- * 
- * @route POST /evolution
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.addEvolutionController - Controller to handle adding a new evolution entry for the user.
+ * @swagger
+ * /api/user/evolution:
+ *   post:
+ *     summary: Add a new evolution entry
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - weight
+ *               - height
+ *               - date
+ *             properties:
+ *               weight:
+ *                 type: number
+ *               height:
+ *                 type: number
+ *               date:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Evolution entry added successfully
  */
 router.post("/evolution", checkAuth, userController.addEvolutionController);
 
 /**
- * Route to get the user's progress statistics.
- * 
- * @route GET /progress/stats
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.getProgressStatsController - Controller to handle fetching the user's progress statistics.
+ * @swagger
+ * /api/user/progress/stats:
+ *   get:
+ *     summary: Get user progress statistics
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year]
+ *         description: Period for statistics
+ *     responses:
+ *       200:
+ *         description: Progress statistics
  */
 router.get("/progress/stats", checkAuth, userController.getProgressStatsController);
 
 /**
- * Route to edit the user's data.
- * 
- * @route GET /progress
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.getProgressController - Controller to handle fetching the user's progress data.
+ * @swagger
+ * /api/user/edit-profile:
+ *   put:
+ *     summary: Update user profile
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               gender:
+ *                 type: string
+ *               birthDate:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
  */
 router.put("/edit-profile", checkAuth, userController.updateUserProfile);
 
 /**
- * Route to edit the user's preferences.
- * 
- * @route GET /preferences
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.getPreferencesController - Controller to handle fetching the user's preferences data.
+ * @swagger
+ * /api/user/edit-preferences:
+ *   put:
+ *     summary: Update user preferences
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Preferences updated successfully
  */
 router.put("/edit-preferences", checkAuth, userController.updatePreferencesController);
 
 /**
- * Route to get the user's weight update status.
- * 
- * @route GET /weight-update-status
- * @middleware checkAuth - Middleware to verify user authentication.
- * @controller userController.getWeightUpdateStatusController - Controller to handle fetching the user's weight update status.
+ * @swagger
+ * /api/user/weight-update-status:
+ *   get:
+ *     summary: Get weight update status
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Weight update status
  */
 router.get("/weight-update-status", checkAuth, userController.getWeightUpdateStatusController);
 

@@ -5,9 +5,32 @@ const { checkAuth } = require("../auth/auth.middleware");
 const router = express.Router();
 
 /**
- * @route GET /api/openfoodfacts/product/:barcode
- * @desc Récupère un produit par code-barres
- * @access Private
+ * @swagger
+ * tags:
+ *   name: OpenFoodFacts
+ *   description: OpenFoodFacts integration
+ */
+
+/**
+ * @swagger
+ * /api/openfoodfacts/product/{barcode}:
+ *   get:
+ *     summary: Get product by barcode
+ *     tags: [OpenFoodFacts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: barcode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product barcode
+ *     responses:
+ *       200:
+ *         description: Product details
+ *       404:
+ *         description: Product not found
  */
 router.get(
   "/product/:barcode",
@@ -16,9 +39,28 @@ router.get(
 );
 
 /**
- * @route GET /api/openfoodfacts/search
- * @desc Recherche de produits par mot-clé
- * @access Private
+ * @swagger
+ * /api/openfoodfacts/search:
+ *   get:
+ *     summary: Search products
+ *     tags: [OpenFoodFacts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of results
+ *     responses:
+ *       200:
+ *         description: Search results
  */
 router.get("/search", checkAuth, OpenFoodFactsController.searchProducts);
 

@@ -11,6 +11,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { format } from "date-fns";
 import Svg, { Path, Line, Circle, Text as SvgText } from "react-native-svg";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -20,7 +21,7 @@ import Card from "../../../components/ui/Card";
 import Header from "../../../components/layout/Header";
 import NumericInput from "../../../components/ui/NumericInput";
 import DatePicker from "../../../components/ui/DatePicker";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import userService, {
   EvolutionEntry,
   EvolutionStatistics,
@@ -44,13 +45,8 @@ export default function ProgressScreen() {
   const [newEvolution, setNewEvolution] = useState({
     weight: "",
     height: "",
-    date: new Date().toISOString().split("T")[0],
+    date: format(new Date(), "yyyy-MM-dd"),
   });
-
-  useEffect(() => {
-    fetchEvolutionData();
-    fetchProgressStats();
-  }, [period]);
 
   const fetchEvolutionData = async () => {
     try {
@@ -93,6 +89,13 @@ export default function ProgressScreen() {
     }
   };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchEvolutionData();
+      fetchProgressStats();
+    }, [period])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -131,7 +134,7 @@ export default function ProgressScreen() {
       setNewEvolution({
         weight: "",
         height: "",
-        date: new Date().toISOString().split("T")[0],
+        date: format(new Date(), "yyyy-MM-dd"),
       });
       setShowAddModal(false);
 
@@ -163,13 +166,13 @@ export default function ProgressScreen() {
     const scaleX = (index: number) =>
       padding.left +
       (index / Math.max(data.length - 1, 1)) *
-        (width - padding.left - padding.right);
+      (width - padding.left - padding.right);
 
     const scaleY = (value: number) =>
       height -
       padding.bottom -
       ((value - minWeight) / Math.max(maxWeight - minWeight, 1)) *
-        (height - padding.top - padding.bottom);
+      (height - padding.top - padding.bottom);
 
     // Générer le chemin de la ligne
     let pathD = "";
@@ -226,9 +229,9 @@ export default function ProgressScreen() {
           data.map((d, i) =>
             // Only show labels for first, middle and last point if too many points
             data.length <= 5 ||
-            i === 0 ||
-            i === Math.floor(data.length / 2) ||
-            i === data.length - 1 ? (
+              i === 0 ||
+              i === Math.floor(data.length / 2) ||
+              i === data.length - 1 ? (
               <SvgText
                 key={`label-${i}`}
                 x={scaleX(i)}
@@ -389,13 +392,13 @@ export default function ProgressScreen() {
               {period === "all"
                 ? "toute la période"
                 : period === "month"
-                ? "le mois"
-                : "l'année"}
+                  ? "le mois"
+                  : "l'année"}
             </Text>
 
             {statistics &&
-            statistics.initialWeight &&
-            statistics.currentWeight ? (
+              statistics.initialWeight &&
+              statistics.currentWeight ? (
               <>
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
@@ -451,7 +454,7 @@ export default function ProgressScreen() {
                       <Text style={[styles.statValue]}>
                         {formatNumber(
                           Number(statistics.currentBmi) -
-                            Number(statistics.initialBmi)
+                          Number(statistics.initialBmi)
                         )}
                       </Text>
                     ) : (
@@ -465,10 +468,10 @@ export default function ProgressScreen() {
                         ? Number(statistics.currentBmi) < 18.5
                           ? "Maigreur"
                           : Number(statistics.currentBmi) < 25
-                          ? "Normal"
-                          : Number(statistics.currentBmi) < 30
-                          ? "Surpoids"
-                          : "Obésité"
+                            ? "Normal"
+                            : Number(statistics.currentBmi) < 30
+                              ? "Surpoids"
+                              : "Obésité"
                         : "Non disponible"}
                     </Text>
                   </View>
@@ -511,15 +514,15 @@ export default function ProgressScreen() {
                     <Text style={styles.statLabel}>Catégorie</Text>
                     <Text style={styles.statValue}>
                       {Number(evolutionData[evolutionData.length - 1].bmi) <
-                      18.5
+                        18.5
                         ? "Maigreur"
                         : Number(evolutionData[evolutionData.length - 1].bmi) <
                           25
-                        ? "Normal"
-                        : Number(evolutionData[evolutionData.length - 1].bmi) <
-                          30
-                        ? "Surpoids"
-                        : "Obésité"}
+                          ? "Normal"
+                          : Number(evolutionData[evolutionData.length - 1].bmi) <
+                            30
+                            ? "Surpoids"
+                            : "Obésité"}
                     </Text>
                   </View>
                 </View>
@@ -582,9 +585,9 @@ export default function ProgressScreen() {
                   <Text style={styles.progressValue}>
                     {progressStats.activity?.mostFrequentActivity
                       ? progressStats.activity.mostFrequentActivity
-                          .charAt(0)
-                          .toUpperCase() +
-                        progressStats.activity.mostFrequentActivity.slice(1)
+                        .charAt(0)
+                        .toUpperCase() +
+                      progressStats.activity.mostFrequentActivity.slice(1)
                       : "Aucune"}
                   </Text>
                 </View>
@@ -671,7 +674,7 @@ export default function ProgressScreen() {
                     ...newEvolution,
                     date: date
                       ? date.toISOString().split("T")[0]
-                      : new Date().toISOString().split("T")[0],
+                      : format(new Date(), "yyyy-MM-dd"),
                   })
                 }
                 maxDate={new Date()}

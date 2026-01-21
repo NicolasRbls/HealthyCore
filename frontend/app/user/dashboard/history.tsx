@@ -10,7 +10,7 @@ import {
   Alert,
   Dimensions,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -55,6 +55,7 @@ const DAY_ITEM_WIDTH = SCREEN_WIDTH / 4 - 16; // 4 items per row with some spaci
 
 export default function NutritionHistoryScreen() {
   const { user } = useAuth();
+  const { from } = useLocalSearchParams();
   const [historyData, setHistoryData] = useState<HistoryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -65,6 +66,14 @@ export default function NutritionHistoryScreen() {
   useEffect(() => {
     loadHistoryData();
   }, []);
+
+  const handleBackPress = () => {
+    if (from === "monitoring") {
+      router.push("/user/dashboard/nutrition-monitoring");
+    } else {
+      router.back();
+    }
+  };
 
   const loadHistoryData = async (start?: string, end?: string) => {
     setIsLoading(true);
@@ -186,17 +195,16 @@ export default function NutritionHistoryScreen() {
     nutritionService
       .getFoodById(foodId)
       .then((food) => {
-        const route =
-          food.type === "recette"
-            ? `/user/nutrition/recipes/${foodId}`
-            : `/user/nutrition/products/${foodId}`;
-
-        router.push(route as any);
+        if (food.type === "recette") {
+          router.push(`/nutrition-details/recipes/${foodId}` as any);
+        } else {
+          router.push(`/nutrition-details/products/${foodId}` as any);
+        }
       })
       .catch((error) => {
         console.error("Error fetching food details:", error);
         // Fallback to products route
-        router.push(`/user/nutrition/products/${foodId}` as any);
+        router.push(`/nutrition-details/products/${foodId}` as any);
       });
   };
 
@@ -232,6 +240,7 @@ export default function NutritionHistoryScreen() {
         onPress={() => setSelectedDay(item.date)}
         activeOpacity={0.7}
         key={`day-${item.date}-${index}`}
+        testID={`day-item-${item.date}`}
       >
         <Text
           style={[
@@ -285,8 +294,8 @@ export default function NutritionHistoryScreen() {
       <Card
         style={styles.foodCard}
         onPress={() => navigateToFoodDetail(item.foodId)}
-        activeOpacity={0.8}
         key={`entry-${item.id}-${index}`}
+        testID={`food-entry-${item.id}`}
       >
         <View style={styles.foodRow}>
           <View style={styles.mealTag}>
@@ -396,7 +405,7 @@ export default function NutritionHistoryScreen() {
         <Header
           title="Historique nutritionnel"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.loadingContainer}>
@@ -413,7 +422,7 @@ export default function NutritionHistoryScreen() {
         <Header
           title="Historique nutritionnel"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
         />
         <View style={styles.emptyContainer}>
@@ -428,8 +437,12 @@ export default function NutritionHistoryScreen() {
           <TouchableOpacity
             style={styles.emptyButton}
             onPress={() =>
-              router.push("/user/nutrition/nutrition-discover" as any)
+              router.push({
+                pathname: "/user/nutrition/nutrition-discover",
+                params: { from: "history" },
+              } as any)
             }
+            testID="empty-history-button"
           >
             <Text style={styles.emptyButtonText}>Ajouter des aliments</Text>
           </TouchableOpacity>
@@ -443,7 +456,7 @@ export default function NutritionHistoryScreen() {
       <Header
         title="Historique nutritionnel"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         style={{ marginTop: Layout.spacing.md }}
       />
 
@@ -464,10 +477,10 @@ export default function NutritionHistoryScreen() {
           <Text style={styles.summaryValue}>
             {historyData.summary.totalDays > 0
               ? Math.round(
-                  (historyData.summary.daysCompleted /
-                    historyData.summary.totalDays) *
-                    100
-                )
+                (historyData.summary.daysCompleted /
+                  historyData.summary.totalDays) *
+                100
+              )
               : 0}
             %
           </Text>

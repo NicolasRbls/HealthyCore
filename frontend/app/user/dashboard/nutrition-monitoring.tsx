@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../../constants/Colors";
 import Layout from "../../../constants/Layout";
@@ -69,6 +69,7 @@ interface NutritionData {
 
 export default function NutritionMonitoring() {
   const { user } = useAuth();
+  const { from } = useLocalSearchParams();
   const [summary, setSummary] = useState<NutritionSummary | null>(null);
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(
     null
@@ -77,10 +78,6 @@ export default function NutritionMonitoring() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteInProgress, setDeleteInProgress] = useState<number | null>(null);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -91,22 +88,20 @@ export default function NutritionMonitoring() {
         setSummary(summaryData);
       }
 
-      // Load today's nutrition data
+      // Load today's nutrition details
       const todayData = await nutritionService.getTodayNutrition();
       if (todayData) {
         setNutritionData(todayData);
 
-        // Flatten meals into a single array for display
+        // Flatten meals into a single list of food entries
         const allEntries: FoodEntry[] = [];
-        Object.entries(todayData.meals).forEach(([mealType, entries]) => {
-          entries.forEach((entry) => {
-            allEntries.push({
-              ...entry,
-              meal: mealType,
-            });
-          });
+        Object.keys(todayData.meals).forEach((mealType) => {
+          const mealEntries = todayData.meals[mealType].map((entry) => ({
+            ...entry,
+            meal: mealType,
+          }));
+          allEntries.push(...mealEntries);
         });
-
         setFoodEntries(allEntries);
       }
     } catch (error) {
@@ -117,6 +112,20 @@ export default function NutritionMonitoring() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
+
+  const handleBackPress = () => {
+    if (from === "dashboard") {
+      router.push("/user/dashboard");
+    } else {
+      router.back();
     }
   };
 
@@ -160,12 +169,12 @@ export default function NutritionMonitoring() {
 
   // Navigate to discover page
   const navigateToDiscover = () => {
-    router.push("/user/nutrition/nutrition-discover");
+    router.push({ pathname: "/user/nutrition/nutrition-discover", params: { from: "monitoring" } } as any);
   };
 
   // Navigate to history page
   const navigateToHistory = () => {
-    router.push("/user/dashboard/history");
+    router.push({ pathname: "/user/dashboard/history", params: { from: "monitoring" } } as any);
   };
 
   // Macro nutrient component
@@ -247,17 +256,16 @@ export default function NutritionMonitoring() {
     nutritionService
       .getFoodById(foodId)
       .then((food) => {
-        const route =
-          food.type === "recette"
-            ? `/user/nutrition/recipes/${foodId}`
-            : `/user/nutrition/products/${foodId}`;
-
-        router.push(route as any);
+        if (food.type === "recette") {
+          router.push(`/nutrition-details/recipes/${foodId}` as any);
+        } else {
+          router.push(`/nutrition-details/products/${foodId}` as any);
+        }
       })
       .catch((error) => {
         console.error("Error fetching food details:", error);
         // Fallback to products route
-        router.push(`/user/nutrition/products/${foodId}` as any);
+        router.push(`/nutrition-details/products/${foodId}` as any);
       });
   };
 
@@ -275,6 +283,7 @@ export default function NutritionMonitoring() {
       <Card
         style={styles.foodCard}
         onPress={() => navigateToFoodDetail(item.foodId)}
+        testID={`food-card-${item.id}`}
       >
         <View style={styles.foodRow}>
           <View style={styles.foodImageContainer}>
@@ -311,6 +320,7 @@ export default function NutritionMonitoring() {
             {/* Delete button */}
             <TouchableOpacity
               style={styles.deleteButton}
+              testID={`delete-button-${item.id}`}
               onPress={() => {
                 Alert.alert(
                   "Confirmer la suppression",
@@ -389,7 +399,7 @@ export default function NutritionMonitoring() {
         <Header
           title="Suivi nutritionnel"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
           style={{ marginTop: Layout.spacing.md }}
           rightIconName="calendar-outline"
           onRightIconPress={navigateToHistory}
@@ -428,7 +438,7 @@ export default function NutritionMonitoring() {
       <Header
         title="Suivi nutritionnel"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
         style={{ marginTop: Layout.spacing.md }}
         rightIconName="calendar-outline"
         onRightIconPress={navigateToHistory}
@@ -508,6 +518,7 @@ export default function NutritionMonitoring() {
               <TouchableOpacity
                 style={styles.emptyStateButton}
                 onPress={navigateToDiscover}
+                testID="empty-state-button"
               >
                 <Text style={styles.emptyStateButtonText}>
                   Ajouter des aliments
@@ -523,6 +534,7 @@ export default function NutritionMonitoring() {
         style={styles.fab}
         onPress={navigateToDiscover}
         activeOpacity={0.8}
+        testID="fab-add"
       >
         <Ionicons name="add" size={24} color={Colors.white} />
       </TouchableOpacity>

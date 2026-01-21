@@ -184,7 +184,7 @@ export default function SearchProductsScreen() {
       // Si on a un produit, naviguer vers la page de détail
       if (response.data && response.data.id) {
         // Navigate to the product detail page
-        router.push(`/user/nutrition/products/${response.data.id}` as any);
+        router.push(`/nutrition-details/products/${response.data.id}` as any);
       } else {
         // Dans le cas où la structure de réponse est inattendue
         setTimeout(() => {
@@ -336,7 +336,7 @@ export default function SearchProductsScreen() {
 
   // Navigate to food detail
   const navigateToProductDetail = (productId: number) => {
-    router.push(`/user/nutrition/products/${productId}` as any);
+    router.push(`/nutrition-details/products/${productId}` as any);
   };
 
   // Product list item component
@@ -351,6 +351,7 @@ export default function SearchProductsScreen() {
         style={styles.productItem}
         onPress={() => navigateToProductDetail(product.id)}
         activeOpacity={0.8}
+        testID={`product-item-${product.id}`}
       >
         <Image
           source={getFoodImage(product)}
@@ -508,7 +509,7 @@ export default function SearchProductsScreen() {
             onSubmitEditing={handleSearch}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={resetSearch}>
+            <TouchableOpacity onPress={resetSearch} testID="clear-search-button">
               <Ionicons
                 name="close-circle"
                 size={18}
@@ -523,6 +524,7 @@ export default function SearchProductsScreen() {
             setShowQRScanner(true);
             resetCamera();
           }}
+          testID="qr-scan-button"
         >
           <Ionicons name="barcode-outline" size={24} color={Colors.white} />
         </TouchableOpacity>
@@ -535,6 +537,7 @@ export default function SearchProductsScreen() {
         </View>
       ) : !hasSearched ? (
         <FlatList
+          testID="initial-empty-list"
           contentContainerStyle={styles.emptyStateContainer}
           data={[]}
           keyExtractor={() => "empty"}
@@ -553,6 +556,7 @@ export default function SearchProductsScreen() {
         />
       ) : products.length === 0 ? (
         <FlatList
+          testID="no-results-list"
           contentContainerStyle={styles.emptyStateContainer}
           data={[]}
           keyExtractor={() => "no-results"}
@@ -571,6 +575,7 @@ export default function SearchProductsScreen() {
         />
       ) : (
         <FlatList
+          testID="products-list"
           data={products}
           renderItem={({ item }) => <ProductItem product={item} />}
           keyExtractor={(item) =>

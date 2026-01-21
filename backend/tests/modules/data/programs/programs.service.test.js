@@ -1,0 +1,427 @@
+const { PrismaClient } = require('@prisma/client');
+const { getUserPrograms, getProgramDetails, startProgram, getUserSessions, getSessionDetails, completeSession, getSportProgress } = require('../../../../src/modules/data/programs/programs.service');
+
+// Mock the Prisma client
+jest.mock('@prisma/client', () => {
+    const mPrismaClient = {
+        preferences: { findFirst: jest.fn() },
+        programmes_utilisateurs: { findMany: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
+        programmes: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn() },
+        suivis_sportifs: { count: jest.fn(), findFirst: jest.fn(), create: jest.fn(), findMany: jest.fn() },
+        seances: { findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn() },
+    };
+    return { PrismaClient: jest.fn(() => mPrismaClient) };
+});
+
+let prisma;
+
+beforeEach(() => {
+    prisma = new PrismaClient();
+    // Reset mocks before each test
+    jest.clearAllMocks();
+});
+
+describe('User Programs Service', () => {
+
+    describe('getUserPrograms', () => {
+        it('should return a list of programs and recommendations', async () => {
+            // Mock data
+            const mockUserPreferences = {
+                preferences_activites: [],
+                seances_par_semaines: 3,
+            };
+            const mockActivePrograms = [];
+            const mockPrograms = [
+                { id_programme: 1, nom: 'Program 1', duree: 7, programmes_tags: [], seances_programmes: [] },
+            ];
+            const mockTotal = mockPrograms.length;
+
+            // Mock Prisma calls
+            prisma.preferences.findFirst.mockResolvedValue(mockUserPreferences);
+            prisma.programmes_utilisateurs.findMany.mockResolvedValue(mockActivePrograms);
+            prisma.programmes.findMany.mockResolvedValueOnce(mockPrograms) // For the main query
+                .mockResolvedValueOnce(mockPrograms); // For the recommendation query
+            prisma.programmes.count.mockResolvedValue(mockTotal);
+
+            const result = await getUserPrograms(1);
+
+            expect(result).toHaveProperty('programs');
+            expect(result).toHaveProperty('recommendedPrograms');
+            expect(result.programs.length).toBe(1);
+            expect(result.programs[0].name).toBe('Program 1');
+            expect(prisma.preferences.findFirst).toHaveBeenCalledWith({ where: { id_user: 1 }, include: expect.any(Object) });
+        });
+
+        it('should filter programs by tagId', async () => {
+            // Mock data with tags
+            const mockPrograms = [
+                {
+                    id_programme: 1, nom: 'Program 1', duree: 7,
+                    programmes_tags: [{ id_tag: 1, tags: { id_tag: 1, nom: 'Cardio' } }],
+                    seances_programmes: []
+                },
+                {
+                    id_programme: 2, nom: 'Program 2', duree: 14,
+                    programmes_tags: [{ id_tag: 2, tags: { id_tag: 2, nom: 'Strength' } }],
+                    seances_programmes: []
+                },
+            ];
+
+            // Mock Prisma calls
+            prisma.preferences.findFirst.mockResolvedValue(null);
+            prisma.programmes_utilisateurs.findMany.mockResolvedValue([]);
+            prisma.programmes.findMany.mockResolvedValue([mockPrograms[0]]); // Only return the first program
+            prisma.programmes.count.mockResolvedValue(1);
+
+            const result = await getUserPrograms(1, 1, 10, 1); // Filtering for tagId: 1
+
+            expect(result.programs.length).toBe(1);
+            expect(result.programs[0].name).toBe('Program 1');
+            expect(prisma.programmes.findMany).toHaveBeenCalledWith(expect.objectContaining({
+                where: {
+                    programmes_tags: {
+                        some: { id_tag: 1 }
+                    }
+                }
+            }));
+        });
+
+        it('should return recommended programs based on user preferences', async () => {
+            const mockUserPreferences = {
+                preferences_activites: [
+                    { id_activite: 1, activites: { nom: 'Cardio' } }
+                ],
+                seances_par_semaines: 5,
+            };
+            const mockPrograms = [
+                {
+                    id_programme: 1, nom: 'Cardio Blast', duree: 7,
+                    programmes_tags: [{ id_tag: 1, tags: { id_tag: 1, nom: 'Cardio' } }],
+                    seances_programmes: [{ ordre_seance: 1 }, { ordre_seance: 2 }, { ordre_seance: 3 }]
+                },
+                {
+                    id_programme: 2, nom: 'Strength Program', duree: 14,
+                    programmes_tags: [{ id_tag: 2, tags: { id_tag: 2, nom: 'Strength' } }],
+                    seances_programmes: [{ ordre_seance: 1 }]
+                },
+            ];
+
+            prisma.preferences.findFirst.mockResolvedValue(mockUserPreferences);
+            prisma.programmes_utilisateurs.findMany.mockResolvedValue([]);
+            prisma.programmes.findMany.mockResolvedValueOnce([]) // First call for non-recommended
+                .mockResolvedValueOnce(mockPrograms); // Second call for recommendations
+            prisma.programmes.count.mockResolvedValue(0);
+
+            const result = await getUserPrograms(1);
+
+            expect(result.recommendedPrograms.length).toBeGreaterThan(0);
+            expect(result.recommendedPrograms[0].name).toBe('Cardio Blast');
+            expect(result.recommendedPrograms[0].matchScore).toBeGreaterThan(0);
+        });
+    });
+
+    describe('getProgramDetails', () => {
+        it('should return null if program not found', async () => {
+            prisma.programmes.findUnique.mockResolvedValue(null);
+
+            await expect(getProgramDetails(1, 999)).rejects.toThrow('Programme non trouvé');
+        });
+
+        it('should return program details with user progress if active', async () => {
+            const mockProgram = {
+                id_programme: 1,
+                nom: 'Active Program',
+                duree: 14,
+                description: 'A test program',
+                programmes_tags: [],
+                seances_programmes: [
+                    {
+                        ordre_seance: 1,
+                        seances: {
+                            id_seance: 1,
+                            nom: 'Session 1',
+                            exercices_seances: [{ id_exercice: 101, series: 3, repetitions: 12, duree: 0, exercices: { id_exercice: 101, nom: 'Push-ups' } }]
+                        }
+                    },
+                ],
+                programmes_utilisateurs: []
+            };
+            const mockUserProgram = {
+                id_user: 1,
+                id_programme: 1,
+                date_debut: new Date('2023-01-01'),
+                date_fin: new Date('2023-01-15'),
+            };
+
+            prisma.programmes.findUnique.mockResolvedValue(mockProgram);
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(mockUserProgram);
+            prisma.suivis_sportifs.count.mockResolvedValue(1); // User completed 1 session
+
+            const result = await getProgramDetails(1, 1);
+
+            expect(result.name).toBe('Active Program');
+            expect(result.inProgress).toBe(true);
+            expect(result).toHaveProperty('userProgress');
+            expect(result.userProgress.completedSessions).toBe(1);
+            expect(result.sessions.length).toBe(1);
+            expect(result.sessions[0].name).toBe('Session 1');
+        });
+    });
+
+    describe('startProgram', () => {
+        it('should throw an error if program is already started', async () => {
+            prisma.programmes.findUnique.mockResolvedValue({ id_programme: 1, seances_programmes: [] });
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue({ id_programme_utilisateur: 1 });
+
+            await expect(startProgram(1, 1)).rejects.toThrow('Vous suivez déjà ce programme');
+        });
+
+        it('should successfully start a program for a user', async () => {
+            const mockProgram = { id_programme: 1, nom: 'New Program', duree: 7, seances_programmes: [] };
+            const mockCreatedUserProgram = { id_programme_utilisateur: 123, id_programme: 1, date_debut: new Date(), date_fin: new Date() };
+
+            prisma.programmes.findUnique.mockResolvedValue(mockProgram);
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(null); // Not already started
+            prisma.programmes_utilisateurs.create.mockResolvedValue(mockCreatedUserProgram);
+
+            const result = await startProgram(1, 1);
+
+            expect(result.programId).toBe(1);
+            expect(result.programName).toBe('New Program');
+            expect(prisma.programmes_utilisateurs.create).toHaveBeenCalled();
+        });
+
+        it('should calculate end date correctly based on weeks (duration * 7)', async () => {
+            const userId = 1;
+            const programId = 1;
+            const durationWeeks = 10;
+            const startDate = new Date('2023-01-01T00:00:00.000Z');
+
+            // Mock program data
+            prisma.programmes.findUnique.mockResolvedValue({
+                id_programme: programId,
+                nom: 'Test Program',
+                duree: durationWeeks,
+                seances_programmes: [],
+            });
+
+            // Mock no existing program
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(null);
+
+            // Mock creation
+            prisma.programmes_utilisateurs.create.mockImplementation((args) => {
+                return {
+                    id_programme_utilisateur: 1,
+                    ...args.data,
+                };
+            });
+
+            const result = await startProgram(userId, programId, startDate.toISOString());
+
+            const expectedEndDate = new Date(startDate);
+            expectedEndDate.setDate(expectedEndDate.getDate() + durationWeeks * 7);
+            expectedEndDate.setHours(0, 0, 0, 0);
+
+            expect(result.endDate).toEqual(expectedEndDate);
+
+            // Verify that the difference is exactly 70 days
+            const diffTime = Math.abs(result.endDate - new Date(result.startDate));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            expect(diffDays).toBe(70);
+        });
+    });
+
+    describe('getUserSessions', () => {
+        it('should return a paginated list of sessions', async () => {
+            const mockSessions = [
+                { id_seance: 1, nom: 'Session 1', exercices_seances: [], seances_tags: [] },
+                { id_seance: 2, nom: 'Session 2', exercices_seances: [], seances_tags: [] }
+            ];
+            prisma.seances.findMany.mockResolvedValue(mockSessions);
+            prisma.seances.count.mockResolvedValue(mockSessions.length);
+
+            const { sessions, pagination } = await getUserSessions(1, 10, null);
+
+            expect(sessions.length).toBe(2);
+            expect(pagination.total).toBe(2);
+            expect(sessions[0].name).toBe('Session 1');
+        });
+    });
+
+    describe('getSessionDetails', () => {
+        it('should return details for a specific session', async () => {
+            const mockSession = {
+                id_seance: 1,
+                nom: 'Full Body Workout',
+                seances_tags: [],
+                exercices_seances: [
+                    { ordre_exercice: 1, series: 3, repetitions: 10, duree: 0, exercices: { id_exercice: 101, nom: 'Squats' } },
+                    { ordre_exercice: 2, series: 3, repetitions: 12, duree: 0, exercices: { id_exercice: 102, nom: 'Bench Press' } }
+                ]
+            };
+            prisma.seances.findUnique.mockResolvedValue(mockSession);
+
+            const result = await getSessionDetails(1);
+
+            expect(result.name).toBe('Full Body Workout');
+            expect(result.exercises.length).toBe(2);
+            expect(result.exercises[0].name).toBe('Squats');
+        });
+
+        it('should throw an error if the session is not found', async () => {
+            prisma.seances.findUnique.mockResolvedValue(null);
+            await expect(getSessionDetails(999)).rejects.toThrow('Séance non trouvée');
+        });
+    });
+
+    describe('getTodaySession', () => {
+        const { getTodaySession } = require('../../../../src/modules/data/programs/programs.service');
+
+        it('should return the completed session if done today (with time component)', async () => {
+            const userId = 1;
+            const sessionId = 1;
+            // Simulate completion "now" (e.g., 14:30)
+            const completionDate = new Date();
+
+            // Mock findFirst for completedToday
+            // The bug is that the service queries with exactly midnight, so if we mock it to return null 
+            // when called with midnight but return something when called with range, we can simulate the DB behavior.
+            // But since we are mocking Prisma, we have to inspect the call arguments.
+
+            prisma.suivis_sportifs.findFirst.mockResolvedValue(null); // Default to not found
+
+            // We want to verify that it FAILS to find it if the query is too specific (exact date match)
+            // But here we are testing the service logic. 
+            // Let's mock the return value assuming the query *would* fail in a real DB if checking equality.
+            // Actually, better: let's inspect what findFirst is called with.
+
+            await getTodaySession(userId);
+
+            // Check the arguments passed to findFirst
+            const findFirstCall = prisma.suivis_sportifs.findFirst.mock.calls[0];
+            const query = findFirstCall[0];
+
+            // We expect the query to use a range (gte/lte) or handle time, 
+            // BUT currently it likely uses exact equality.
+            // If the code is buggy, it passes a specific Date object (midnight).
+            // If we want to PROVE it's buggy, we show that it passes a Date object, not a range.
+
+            const dateQuery = query.where.date;
+
+            // If dateQuery is a Date object, it means it's doing exact match -> BUG/FRAGILE
+            // If dateQuery is an object with gte/lte, it's robust.
+
+            // For this test to be a "reproduction", we assert that it IS doing the wrong thing (or we assert the right thing and watch it fail).
+            // Let's assert the RIGHT thing (that it uses a range) and expect it to FAIL.
+
+            const isRangeQuery = dateQuery && (dateQuery.gte || dateQuery.lte);
+            expect(isRangeQuery).toBeTruthy();
+        });
+    });
+
+    describe('completeSession', () => {
+        it('should successfully mark a session as complete', async () => {
+            prisma.seances.findUnique.mockResolvedValue({ id_seance: 1, nom: 'Leg Day' });
+            prisma.suivis_sportifs.findFirst.mockResolvedValue(null);
+            prisma.suivis_sportifs.create.mockResolvedValue({ id_suivi_sportif: 1, id_seance: 1, id_user: 1 });
+
+            const result = await completeSession(1, 1);
+
+            expect(result.sessionId).toBe(1);
+            expect(result.sessionName).toBe('Leg Day');
+            expect(prisma.suivis_sportifs.create).toHaveBeenCalled();
+        });
+
+        it('should throw an error if the session does not exist', async () => {
+            prisma.seances.findUnique.mockResolvedValue(null);
+            await expect(completeSession(1, 999)).rejects.toThrow('Séance non trouvée');
+        });
+
+        it('should throw an error if the session is already completed for that day', async () => {
+            prisma.seances.findUnique.mockResolvedValue({ id_seance: 1, nom: 'Leg Day' });
+            prisma.suivis_sportifs.findFirst.mockResolvedValue({ id_suivi_sportif: 1 });
+
+            await expect(completeSession(1, 1)).rejects.toThrow('Cette séance a déjà été marquée comme terminée pour cette date');
+        });
+    });
+
+    describe('getSportProgress', () => {
+        it('should return progress for a user with an active program', async () => {
+            const mockActiveProgram = {
+                id_programme: 1,
+                date_debut: new Date('2023-01-01'),
+                date_fin: new Date('2023-01-31'),
+                programmes: {
+                    nom: '30-Day Challenge',
+                    seances_programmes: [
+                        { ordre_seance: 1, seances: { id_seance: 1, nom: 'Session 1' } },
+                        { ordre_seance: 2, seances: { id_seance: 2, nom: 'Session 2' } }
+                    ]
+                }
+            };
+            const mockFollowUps = [
+                { id_suivi_sportif: 1, id_seance: 1, date: new Date(), seances: { nom: 'Session 1' } }
+            ];
+
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(mockActiveProgram);
+            prisma.suivis_sportifs.findMany.mockResolvedValue(mockFollowUps);
+
+            const result = await getSportProgress(1);
+
+            expect(result.activeProgram).not.toBeNull();
+            expect(result.activeProgram.name).toBe('30-Day Challenge');
+            expect(result.recentSessions.length).toBe(1);
+        });
+
+        it('should return null active program for a user with no active program', async () => {
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(null);
+
+            const result = await getSportProgress(1);
+
+            expect(result.activeProgram).toBeNull();
+            expect(result.recentSessions.length).toBe(0);
+        });
+
+        it('should calculate progress correctly considering program duration in weeks', async () => {
+            const mockActiveProgram = {
+                id_programme: 1,
+                date_debut: new Date(new Date().setDate(new Date().getDate() - 14)), // Started 14 days ago (2 weeks)
+                date_fin: new Date(new Date().setDate(new Date().getDate() + 56)), // Ends in future
+                programmes: {
+                    nom: '10 Week Program',
+                    duree: 10, // 10 weeks
+                    seances_programmes: [
+                        { ordre_seance: 1, seances: { id_seance: 1, nom: 'S1' } },
+                        { ordre_seance: 2, seances: { id_seance: 2, nom: 'S2' } },
+                        { ordre_seance: 3, seances: { id_seance: 3, nom: 'S3' } }
+                    ]
+                }
+            };
+            // User completed 3 sessions
+            const mockFollowUps = [
+                { id_suivi_sportif: 1, id_seance: 1, date: new Date(), seances: { nom: 'S1' } },
+                { id_suivi_sportif: 2, id_seance: 2, date: new Date(), seances: { nom: 'S2' } },
+                { id_suivi_sportif: 3, id_seance: 3, date: new Date(), seances: { nom: 'S3' } }
+            ];
+
+            prisma.programmes_utilisateurs.findFirst.mockResolvedValue(mockActiveProgram);
+            prisma.suivis_sportifs.findMany.mockResolvedValue(mockFollowUps);
+            prisma.suivis_sportifs.count.mockResolvedValue(3);
+
+            const result = await getSportProgress(1);
+
+            // Total sessions should be 3 sessions/week * 10 weeks = 30
+            expect(result.activeProgram.totalSessions).toBe(30);
+
+            // Expected sessions after 14 days:
+            // 14 days / 70 days total = 20%
+            // 20% of 30 sessions = 6 sessions expected
+            expect(result.activeProgram.expectedSessions).toBe(6);
+
+            expect(result.activeProgram.completedSessions).toBe(3);
+
+            // Progress percentage: 3 completed / 30 total = 10%
+            expect(result.activeProgram.progressPercentage).toBe(10);
+        });
+    });
+});

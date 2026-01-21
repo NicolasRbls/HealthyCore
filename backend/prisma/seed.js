@@ -998,6 +998,14 @@ async function main() {
       }
     }
   }
+  // Ajout des types de signalements
+  const signalements = [
+    { titre: "Information incorrecte" },
+    { titre: "Aliment dangereux" },
+    { titre: "Doublon" },
+    { titre: "Autre" },
+  ];
+  await prisma.signalements.createMany({ data: signalements });
 }
 
 main()

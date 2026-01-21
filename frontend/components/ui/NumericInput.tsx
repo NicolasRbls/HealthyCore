@@ -112,11 +112,13 @@ const NumericInput: React.FC<NumericInputProps> = ({
         value={value}
         onChangeText={onChangeTextHandler}
         error={error || undefined}
+        touched={!!error}
       />
 
       {showControls && (
         <View style={[styles.controlsContainer, controlsContainerStyle]}>
           <TouchableOpacity
+            testID="decrement-button"
             style={[
               styles.controlButton,
               styles.decrementButton,
@@ -131,6 +133,7 @@ const NumericInput: React.FC<NumericInputProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="increment-button"
             style={[
               styles.controlButton,
               styles.incrementButton,

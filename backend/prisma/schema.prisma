@@ -35,6 +35,7 @@ model aliments {
   recettes_du_jour          recettes_du_jour?
   signalements_utilisateurs signalements_utilisateurs[]
   suivis_nutritionnels      suivis_nutritionnels[]
+  updatedAt                 DateTime                    @default(now()) @updatedAt
 }
 
 model aliments_tags {
@@ -90,6 +91,7 @@ model exercices {
   equipement        String?             @db.VarChar(255)
   exercices_seances exercices_seances[]
   exercices_tags    exercices_tags[]
+  updatedAt         DateTime            @default(now()) @updatedAt
 }
 
 model exercices_seances {
@@ -125,6 +127,7 @@ model objectifs {
   id_objectif            Int                      @id @default(autoincrement())
   titre                  String                   @db.VarChar(100)
   objectifs_utilisateurs objectifs_utilisateurs[]
+  updatedAt              DateTime                 @default(now()) @updatedAt
 }
 
 model objectifs_utilisateurs {
@@ -135,6 +138,7 @@ model objectifs_utilisateurs {
   statut                  String    @default("not_done") @db.VarChar(10)
   objectifs               objectifs @relation(fields: [id_objectif], references: [id_objectif], onDelete: NoAction, onUpdate: NoAction, map: "fk_objectif")
   users                   users     @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+  updatedAt               DateTime  @default(now()) @updatedAt
 }
 
 model preferences {
@@ -176,6 +180,7 @@ model programmes {
   programmes_tags         programmes_tags[]
   programmes_utilisateurs programmes_utilisateurs[]
   seances_programmes      seances_programmes[]
+  updatedAt               DateTime                  @default(now()) @updatedAt
 }
 
 model programmes_tags {
@@ -195,6 +200,7 @@ model programmes_utilisateurs {
   date_fin                 DateTime   @db.Date
   programmes               programmes @relation(fields: [id_programme], references: [id_programme], onDelete: NoAction, onUpdate: NoAction, map: "fk_programme")
   users                    users      @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "fk_user")
+  updatedAt                DateTime   @default(now()) @updatedAt
 }
 
 model recettes_du_jour {
@@ -231,6 +237,7 @@ model seances {
   seances_programmes seances_programmes[]
   seances_tags       seances_tags[]
   suivis_sportifs    suivis_sportifs[]
+  updatedAt          DateTime             @default(now()) @updatedAt
 }
 
 model seances_programmes {
@@ -298,6 +305,7 @@ model tags {
   exercices_tags  exercices_tags[]
   programmes_tags programmes_tags[]
   seances_tags    seances_tags[]
+  updatedAt       DateTime        @default(now()) @updatedAt
 }
 
 model users {
@@ -323,4 +331,6 @@ model users {
   signalements_utilisateurs signalements_utilisateurs[]
   suivis_nutritionnels      suivis_nutritionnels[]
   suivis_sportifs           suivis_sportifs[]
+  reset_token               String?                     @unique @db.VarChar(255)
+  reset_token_expires       DateTime?                   @db.Timestamp(6)
 }

@@ -9,7 +9,7 @@ exports.getTotalUserCount = catchAsync(async (req, res) => {
   res.status(200).json({
     status: "success",
     data: {
-      totalCount,
+      count: totalCount,
     },
     message: "Nombre total d'utilisateurs récupéré avec succès",
   });
@@ -27,15 +27,13 @@ exports.getAllUsers = catchAsync(async (req, res) => {
     sortBy = "createdAt",
     order = "desc",
   } = req.query;
-  const users = await adminUserService.getPaginatedUsers({
+  const { users, total } = await adminUserService.getPaginatedUsers({
     page,
     limit,
     search,
     sortBy,
     order,
   });
-
-  const total = await adminUserService.getUserCount();
   const totalPages = Math.ceil(total / limit);
 
   res.status(200).json({
@@ -73,8 +71,8 @@ exports.getUserById = catchAsync(async (req, res, next) => {
       today.getFullYear() -
       birthDate.getFullYear() -
       (today.getMonth() < birthDate.getMonth() ||
-      (today.getMonth() === birthDate.getMonth() &&
-        today.getDate() < birthDate.getDate())
+        (today.getMonth() === birthDate.getMonth() &&
+          today.getDate() < birthDate.getDate())
         ? 1
         : 0);
   }
@@ -106,15 +104,15 @@ exports.getUserById = catchAsync(async (req, res, next) => {
     age: age,
     metrics: latestEvolution
       ? {
-          currentWeight: Number(latestEvolution.poids),
-          currentHeight: Number(latestEvolution.taille),
-          bmi: bmi,
-          targetWeight: preferences ? Number(preferences.objectif_poids) : 0,
-          dailyCalories: preferences
-            ? Number(preferences.calories_quotidiennes)
-            : 0,
-          sessionsPerWeek: preferences ? preferences.seances_par_semaines : 0,
-        }
+        currentWeight: Number(latestEvolution.poids),
+        currentHeight: Number(latestEvolution.taille),
+        bmi: bmi,
+        targetWeight: preferences ? Number(preferences.objectif_poids) : 0,
+        dailyCalories: preferences
+          ? Number(preferences.calories_quotidiennes)
+          : 0,
+        sessionsPerWeek: preferences ? preferences.seances_par_semaines : 0,
+      }
       : undefined,
     preferences: preferences || undefined,
   };
@@ -147,7 +145,7 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
     throw new AppError("ID d'utilisateur manquant", 400, "USER_ID_MISSING");
   }
 
-  const user = await adminUserService.deleteUser(id);
+  const user = await adminUserService.deleteUser(parseInt(id));
   if (!user) {
     throw new AppError("Utilisateur non trouvé", 404, "USER_NOT_FOUND");
   }

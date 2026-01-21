@@ -17,6 +17,7 @@ interface CardProps {
   elevation?: "none" | "sm" | "md" | "lg";
   backgroundColor?: string;
   disabled?: boolean;
+  testID?: string;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -27,6 +28,7 @@ const Card: React.FC<CardProps> = ({
   elevation = "sm",
   backgroundColor = Colors.white,
   disabled = false,
+  testID,
 }) => {
   // Animation pour l'effet de press
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
@@ -89,6 +91,7 @@ const Card: React.FC<CardProps> = ({
           onPressOut={handlePressOut}
           activeOpacity={0.8}
           style={[...getCardStyles(), style]}
+          testID={testID}
         >
           {children}
         </TouchableOpacity>
@@ -97,7 +100,7 @@ const Card: React.FC<CardProps> = ({
   }
 
   // Sinon, utiliser un View simple
-  return <View style={[...getCardStyles(), style]}>{children}</View>;
+  return <View style={[...getCardStyles(), style]} testID={testID}>{children}</View>;
 };
 
 const styles = StyleSheet.create({});

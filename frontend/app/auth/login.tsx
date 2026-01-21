@@ -13,13 +13,14 @@ import Layout from "../../constants/Layout";
 import { TextStyles } from "../../constants/Fonts";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { useForm } from "../../hooks/useForm";
 import Header from "../../components/layout/Header";
 
 export default function LoginScreen() {
   const { login, loading, error, clearError } = useAuth();
+  const navigation = useNavigation();
 
   // Configuration du formulaire avec validation
   const {
@@ -61,6 +62,8 @@ export default function LoginScreen() {
     },
   });
 
+
+
   const [showPassword, setShowPassword] = useState(false);
 
   const togglePasswordVisibility = () => {
@@ -87,12 +90,20 @@ export default function LoginScreen() {
     router.push("/register/step1_profile" as any);
   };
 
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header
         title="Connexion"
         showBackButton
-        onBackPress={() => router.back()}
+        onBackPress={handleBackPress}
       />
 
       <ScrollView
@@ -113,6 +124,7 @@ export default function LoginScreen() {
               onChangeText={(text) => handleChange("email", text)}
               onBlur={() => handleBlur("email")}
               error={touched.email ? errors.email : undefined}
+              touched={touched.email}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="votre@email.com"
@@ -125,6 +137,7 @@ export default function LoginScreen() {
               onChangeText={(text) => handleChange("password", text)}
               onBlur={() => handleBlur("password")}
               error={touched.password ? errors.password : undefined}
+              touched={touched.password}
               isPassword={true}
               showPassword={showPassword}
               togglePasswordVisibility={togglePasswordVisibility}
@@ -133,9 +146,7 @@ export default function LoginScreen() {
 
             <TouchableOpacity
               style={styles.forgotPasswordContainer}
-              onPress={() =>
-                Alert.alert("Info", "Fonctionnalité en développement")
-              }
+              onPress={() => router.push("/auth/forgot-password")}
             >
               <Text style={styles.forgotPasswordText}>
                 Mot de passe oublié ?

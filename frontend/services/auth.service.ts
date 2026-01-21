@@ -70,6 +70,28 @@ const authService = {
   async getProfile(): Promise<{ user: User }> {
     return apiService.get<{ user: User }>("/auth/me");
   },
+
+  /**
+   * Demande de réinitialisation de mot de passe
+   * @param email - Email de l'utilisateur
+   */
+  async forgotPassword(email: string): Promise<void> {
+    return apiService.post<void>("/auth/forgot-password", { email }, {}, false);
+  },
+
+  /**
+   * Réinitialisation de mot de passe avec token
+   * @param token - Token de réinitialisation
+   * @param password - Nouveau mot de passe
+   */
+  async resetPassword(token: string, password: string): Promise<void> {
+    return apiService.post<void>(
+      "/auth/reset-password",
+      { token, password },
+      {},
+      false
+    );
+  },
 };
 
 export default authService;

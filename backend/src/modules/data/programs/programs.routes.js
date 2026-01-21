@@ -4,66 +4,163 @@ const programsController = require("./programs.controller");
 const { checkAuth } = require("../../auth/auth.middleware");
 
 /**
- * Routes protégées nécessitant une authentification
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * tags:
+ *   name: DataProgram
+ *   description: User programs and sessions management
+ */
+
+/**
+ * @swagger
+ * /api/data/programs:
+ *   get:
+ *     summary: Get available programs
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of programs
  */
 router.get("/", checkAuth, programsController.getPrograms);
 
 /**
- * Récupérer les séances de la semaine
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/today-session:
+ *   get:
+ *     summary: Get today's session
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Today's session details
  */
 router.get("/today-session", checkAuth, programsController.getTodaySession);
 
 /**
- * Récupérer le suivi sportif de l'utilisateur
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/sport-progress:
+ *   get:
+ *     summary: Get user sport progress
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Sport progress data
  */
 router.get("/sport-progress", checkAuth, programsController.getSportProgress);
 
 /**
- * Récupérer les séances d'un programme spécifique
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/sessions:
+ *   get:
+ *     summary: Get sessions for a specific program
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: programId
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of sessions
  */
 router.get("/sessions", checkAuth, programsController.getSessions);
 
 /**
- * Récupérer les détails d'une séance spécifique
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/sessions/{sessionId}:
+ *   get:
+ *     summary: Get session details
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Session ID
+ *     responses:
+ *       200:
+ *         description: Session details
  */
 router.get("/sessions/:sessionId", checkAuth, programsController.getSessionDetails);
 
 /**
- * Récupérer les séances de l'utilisateur
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/sessions/{sessionId}/complete:
+ *   post:
+ *     summary: Mark a session as complete
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Session ID
+ *     responses:
+ *       200:
+ *         description: Session marked as complete
  */
 router.post("/sessions/:sessionId/complete", checkAuth, programsController.completeSession);
 
 /**
- * Récupérer les détails d'un programme spécifique
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/{programId}:
+ *   get:
+ *     summary: Get program details
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: programId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Program ID
+ *     responses:
+ *       200:
+ *         description: Program details
  */
 router.get("/:programId", checkAuth, programsController.getProgramDetails);
 
 /**
- * Démarrer un programme pour l'utilisateur
- * @param {Object} req - Requête HTTP
- * @param {Object} res - Réponse HTTP
- * @param {Function} next - Fonction middleware pour passer au prochain middleware
+ * @swagger
+ * /api/data/programs/{programId}/start:
+ *   post:
+ *     summary: Start a program
+ *     tags: [DataProgram]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: programId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Program ID
+ *     responses:
+ *       200:
+ *         description: Program started successfully
  */
 router.post("/:programId/start", checkAuth, programsController.startProgram);
 
